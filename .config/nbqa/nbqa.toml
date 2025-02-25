@@ -1,13 +1,1 @@
-[nbqa.ruff]
-line-length = 120
-
-[nbqa.ruff.lint]
-select = ["E", "F", "I", "RUF", "B", "N", "D", "S", "A", "C4", "PT", "SIM", "PLR"]
-ignore = [
-    "E402",  # Module level import not at top of file
-    "D100",  # Missing docstring in public module
-    "D103",  # Missing docstring in public function
-]
-
-[nbqa.exclude]
-ruff = "^deprecated_notebooks/" 
+.config/nbqa/nbqa.toml

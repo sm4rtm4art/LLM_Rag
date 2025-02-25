@@ -50,6 +50,17 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      # Add caching for UV and pip
+      - name: Cache UV packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/uv
+            .llm_rag
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-uv-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-python-${{ matrix.python-version }}-uv-
+
       - name: Create and activate virtual environment
         run: |
           python -m venv .llm_rag
@@ -58,13 +69,12 @@ jobs:
       - name: Install UV
         run: |
           source .llm_rag/bin/activate
-          pip install uv
+          curl -LsSf https://astral.sh/uv/install.sh | sh
 
       - name: Install dependencies
         run: |
           source .llm_rag/bin/activate
-          uv pip install ruff mypy nbqa jupyter
-          uv pip install -r requirements.txt
+          uv pip install ".[dev]"
 
       - name: Run Ruff format check on Python files
         run: |
