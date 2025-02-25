@@ -18,15 +18,25 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Create and activate virtual environment
+        run: |
+          python -m venv .llm_rag
+          source .llm_rag/bin/activate
+
       - name: Install security tools
         run: |
+          source .llm_rag/bin/activate
           uv pip install bandit safety
 
       - name: Run Bandit
-        run: bandit -r src/ -c pyproject.toml -ll
+        run: |
+          source .llm_rag/bin/activate
+          bandit -r src/ -c pyproject.toml -ll
 
       - name: Run Safety Check
-        run: safety check
+        run: |
+          source .llm_rag/bin/activate
+          safety check
 
   lint:
     runs-on: ubuntu-latest
@@ -40,27 +50,42 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Create and activate virtual environment
+        run: |
+          python -m venv .llm_rag
+          source .llm_rag/bin/activate
+
       - name: Install UV
-        run: pip install uv
+        run: |
+          source .llm_rag/bin/activate
+          pip install uv
 
       - name: Install dependencies
         run: |
+          source .llm_rag/bin/activate
           uv pip install ruff mypy nbqa jupyter
           uv pip install -r requirements.txt
 
       - name: Run Ruff format check on Python files
-        run: ruff format --check --config .config/ruff/ruff.toml "src/" "tests/"
+        run: |
+          source .llm_rag/bin/activate
+          ruff format --check --config .config/ruff/ruff.toml "src/" "tests/"
 
       - name: Run Ruff linting on Python files
-        run: ruff check --config .config/ruff/ruff.toml "src/" "tests/"
+        run: |
+          source .llm_rag/bin/activate
+          ruff check --config .config/ruff/ruff.toml "src/" "tests/"
 
       - name: Run Ruff on notebooks
         run: |
+          source .llm_rag/bin/activate
           nbqa ruff notebooks/
           nbqa ruff format notebooks/
 
       - name: Run mypy
-        run: mypy --config-file .config/mypy/mypy.ini src tests
+        run: |
+          source .llm_rag/bin/activate
+          mypy --config-file .config/mypy/mypy.ini src tests
 
   test:
     runs-on: ubuntu-latest
@@ -74,16 +99,21 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install UV
-        run: pip install uv
+      - name: Create and activate virtual environment
+        run: |
+          python -m venv .llm_rag
+          source .llm_rag/bin/activate
 
       - name: Install dependencies
         run: |
+          source .llm_rag/bin/activate
           uv pip install pytest pytest-cov
           uv pip install -r requirements.txt
 
       - name: Run tests with coverage
-        run: pytest --cov=src tests/ --cov-report=xml
+        run: |
+          source .llm_rag/bin/activate
+          pytest --cov=src tests/ --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
