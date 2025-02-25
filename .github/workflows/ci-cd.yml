@@ -49,10 +49,10 @@ jobs:
           uv pip install -r requirements.txt
 
       - name: Run Ruff format check on Python files
-        run: ruff format --check "src/" "tests/"
+        run: ruff format --check --config .config/ruff/ruff.toml "src/" "tests/"
 
       - name: Run Ruff linting on Python files
-        run: ruff check "src/" "tests/"
+        run: ruff check --config .config/ruff/ruff.toml "src/" "tests/"
 
       - name: Run Ruff on notebooks
         run: |
@@ -60,7 +60,7 @@ jobs:
           nbqa ruff format notebooks/
 
       - name: Run mypy
-        run: mypy src tests
+        run: mypy --config-file .config/mypy/mypy.ini src tests
 
   test:
     runs-on: ubuntu-latest
