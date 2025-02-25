@@ -1,0 +1,14 @@
+[project]
+name = "llm-rag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.bandit]
+exclude_dirs = ["tests", "notebooks"]
+skips = ["B101"]  # Skip assert statements
+
+[tool.bandit.assert_used]
+skips = ["*_test.py", "test_*.py"]

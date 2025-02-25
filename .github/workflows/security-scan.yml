@@ -1,0 +1,61 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Daily at midnight UTC
+  workflow_dispatch: # Allow manual triggers
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install security tools
+        run: |
+          uv pip install bandit safety pip-audit trivy-scanner
+
+      - name: Run Bandit (comprehensive)
+        run: |
+          bandit -r . -f json -o bandit-results.json
+          bandit -r . -ll -i
+
+      - name: Run Safety Check
+        run: safety check --full-report
+
+      - name: Run pip-audit
+        run: pip-audit
+
+      - name: Run Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload security scan results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-scan-results
+          path: |
+            bandit-results.json
+
+      - name: Send Notification
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Security vulnerabilities detected',
+              body: 'Security scan detected vulnerabilities. Please check the latest security scan results.'
+            })
