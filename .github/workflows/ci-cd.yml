@@ -18,31 +18,36 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Create and activate virtual environment
+      # Add caching for dependencies
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/bin
+          key: ${{ runner.os }}-python-3.12-uv-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-python-3.12-uv-
+
+      - name: Install UV
         run: |
-          python -m venv .llm_rag
-          source .llm_rag/bin/activate
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install security tools
-        run: |
-          source .llm_rag/bin/activate
-          uv pip install bandit safety
+        run: uv pip install --system bandit safety
 
       - name: Run Bandit
-        run: |
-          source .llm_rag/bin/activate
-          bandit -r src/ -c pyproject.toml -ll
+        run: bandit -r src/ -c pyproject.toml -ll
 
       - name: Run Safety Check
-        run: |
-          source .llm_rag/bin/activate
-          safety check
+        run: safety check
 
   lint:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.12"] # Enforcing only Python 3.12 due to requirement
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
@@ -50,58 +55,42 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # Add caching for UV and pip
-      - name: Cache UV packages
+      - name: Cache UV and dependencies
         uses: actions/cache@v3
         with:
           path: |
             ~/.cache/uv
-            .llm_rag
+            ~/.local/bin
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-uv-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-python-${{ matrix.python-version }}-uv-
 
-      - name: Create and activate virtual environment
-        run: |
-          python -m venv .llm_rag
-          source .llm_rag/bin/activate
-
       - name: Install UV
         run: |
-          source .llm_rag/bin/activate
           curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: |
-          source .llm_rag/bin/activate
-          uv pip install ".[dev]"
+        run: uv pip install --system ".[dev]"
 
       - name: Run Ruff format check on Python files
-        run: |
-          source .llm_rag/bin/activate
-          ruff format --check --config .config/ruff/ruff.toml "src/" "tests/"
+        run: ruff format --check --config .config/ruff/ruff.toml "src/" "tests/"
 
       - name: Run Ruff linting on Python files
-        run: |
-          source .llm_rag/bin/activate
-          ruff check --config .config/ruff/ruff.toml "src/" "tests/"
+        run: ruff check --config .config/ruff/ruff.toml "src/" "tests/"
 
       - name: Run Ruff on notebooks
-        run: |
-          source .llm_rag/bin/activate
-          nbqa ruff notebooks/
+        run: nbqa ruff notebooks/
           nbqa ruff format notebooks/
 
       - name: Run mypy
-        run: |
-          source .llm_rag/bin/activate
-          mypy --config-file .config/mypy/mypy.ini src tests
+        run: mypy --config-file .config/mypy/mypy.ini src tests
 
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.12"] # Enforcing only Python 3.12
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
@@ -109,21 +98,28 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Create and activate virtual environment
+      - name: Cache UV and dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/bin
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-uv-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-python-${{ matrix.python-version }}-uv-
+
+      - name: Install UV
         run: |
-          python -m venv .llm_rag
-          source .llm_rag/bin/activate
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
         run: |
-          source .llm_rag/bin/activate
-          uv pip install pytest pytest-cov
-          uv pip install -r requirements.txt
+          uv pip install --system pytest pytest-cov
+          uv pip install --system -r requirements.txt
 
       - name: Run tests with coverage
-        run: |
-          source .llm_rag/bin/activate
-          pytest --cov=src tests/ --cov-report=xml
+        run: pytest --cov=src tests/ --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -140,6 +136,4 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t llm-rag \
-            --build-arg PYTHON_VERSION=3.12 \
-            .
+          docker build -t llm-rag --build-arg PYTHON_VERSION=3.12 .
