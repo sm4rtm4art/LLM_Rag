@@ -10,4 +10,11 @@ repos:
     rev: v1.5.1
     hooks:
     -   id: mypy
-        additional_dependencies: [types-all] 
+        additional_dependencies:
+            - types-requests
+            - types-setuptools
+            - pytest
+
+# Add this to ensure hooks run on commit
+default_language_version:
+    python: python3.12 

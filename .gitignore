@@ -175,3 +175,6 @@ ruff.toml
 mypy.ini
 .pre-commit-config.yaml
 !.config/**
+
+# Pre-commit
+.pre-commit-config.yaml.cache
