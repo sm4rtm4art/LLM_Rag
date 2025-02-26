@@ -12,11 +12,14 @@ def main() -> None:
     Currently, it prints a simple hello message for testing purposes.
 
     Returns:
+    -------
         None: This function doesn't return any value.
 
     Example:
+    -------
         >>> main()
         Hello from llm-rag!
+
     """
     print("Hello from llm-rag!")
 

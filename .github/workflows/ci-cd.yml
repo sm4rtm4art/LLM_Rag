@@ -56,7 +56,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       # Add cache before installing UV
       - name: Cache UV packages
@@ -99,7 +99,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       # Add cache before installing UV
       - name: Cache UV packages
@@ -120,11 +120,16 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install --system pytest pytest-cov
+          uv pip install --system pytest pytest-cov pytest-asyncio
+          uv pip install --system sentence-transformers chromadb
           uv pip install --system ".[dev]"
 
       - name: Run tests with coverage
-        run: pytest --cov=src/llm_rag tests/ --cov-report=xml
+        run: |
+          python -m pytest tests/ \
+            --cov=src/llm_rag \
+            --cov-report=xml \
+            -v
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -146,7 +151,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       # Add cache before installing UV
       - name: Cache UV packages

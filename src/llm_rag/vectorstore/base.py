@@ -1,18 +1,43 @@
-"""Vector store abstractions."""
+"""Base vector store interface."""
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import Any, Dict, List, Optional
 
 
 class VectorStore(ABC):
-    """Abstract base class for vector stores."""
+    """Base class for vector store implementations."""
 
     @abstractmethod
-    async def add_documents(self, documents: List[Dict[str, Any]]) -> None:
-        """Add documents to the vector store."""
+    def add_documents(
+        self, documents: List[str], metadatas: Optional[List[Dict[str, Any]]] = None
+    ) -> None:
+        """Add documents to the vector store.
+
+        Args:
+        ----
+            documents: List of document texts to add
+            metadatas: Optional metadata for each document
+
+        """
         pass
 
     @abstractmethod
-    async def query(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        """Query the vector store."""
+    def search(self, query: str, n_results: int = 5) -> List[Dict[str, Any]]:
+        """Search for similar documents.
+
+        Args:
+        ----
+            query: Search query text
+            n_results: Number of results to return
+
+        Returns:
+        -------
+            List of dictionaries containing matched documents and metadata
+
+        """
+        pass
+
+    @abstractmethod
+    def delete_collection(self) -> None:
+        """Delete the entire collection."""
         pass
