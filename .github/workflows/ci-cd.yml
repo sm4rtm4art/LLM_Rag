@@ -62,6 +62,17 @@ jobs:
       - name: Run mypy
         run: mypy src tests
 
+      - name: Cache UV packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.cache/pre-commit  # Only for lint job
+            .pytest_cache  # Only for test job
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
   test:
     runs-on: ubuntu-latest
     steps:
