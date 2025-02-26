@@ -2,21 +2,18 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
 
 import chromadb
-import numpy as np
-from chromadb.api import ClientAPI
+from chromadb.api import ClientAPI, Collection
 from chromadb.api.types import (
-    Collection,
     EmbeddingFunction,
     Metadata,
 )
 from chromadb.config import Settings
-from numpy.typing import NDArray
 from sentence_transformers import SentenceTransformer
 
 from .base import VectorStore
 
 
-class EmbeddingFunctionWrapper:
+class EmbeddingFunctionWrapper(EmbeddingFunction):
     """Wrapper for SentenceTransformer to match ChromaDB's interface."""
 
     def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
@@ -30,7 +27,7 @@ class EmbeddingFunctionWrapper:
         """
         self.model = SentenceTransformer(model_name)
 
-    def __call__(self, input: List[str]) -> NDArray[np.float32]:
+    def __call__(self, input: List[str]) -> List[List[float]]:
         """Generate embeddings for input texts.
 
         Args:
@@ -39,10 +36,19 @@ class EmbeddingFunctionWrapper:
 
         Returns:
         -------
-            NumPy array of embedding vectors.
+            List of embedding vectors as lists of floats.
 
         """
-        return self.model.encode(input)
+        # Get embeddings as numpy array
+        embeddings = self.model.encode(input, convert_to_tensor=False, normalize_embeddings=True)
+
+        # Convert to nested list format that ChromaDB expects
+        if len(input) == 1:
+            # For single input, ensure we return a list containing one list
+            return [embeddings.flatten().tolist()]
+        else:
+            # For multiple inputs, convert each embedding to a list
+            return [embedding.tolist() for embedding in embeddings]
 
 
 class ChromaVectorStore(VectorStore):

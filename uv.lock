@@ -50,6 +50,8 @@ deprecated==1.2.18
     #   opentelemetry-semantic-conventions
 distro==1.9.0
     # via posthog
+duckdb==1.2.0
+    # via llm-rag (pyproject.toml)
 durationpy==0.9
     # via kubernetes
 fastapi==0.115.8
@@ -247,6 +249,7 @@ pyasn1-modules==0.4.1
     # via google-auth
 pydantic==2.10.6
     # via
+    #   llm-rag (pyproject.toml)
     #   chromadb
     #   fastapi
     #   langchain

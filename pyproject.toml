@@ -3,9 +3,11 @@ name = "llm-rag"
 version = "0.1.0"
 description = "LLM RAG exploration project"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "chromadb>=0.6.3",
+    "pydantic>=2.0",
+    "duckdb>=0.8.0",
     "fastapi>=0.115.8",
     "langchain>=0.3.19",
     "numpy>=1.26.4,<2",
@@ -44,13 +46,10 @@ addopts = "-ra -q"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 pythonpath = ["src"]
-asyncio_mode = "auto"
-# Add explicit loop scope configuration
-asyncio_default_fixture_loop_scope = "function"  # This fixes the deprecation warning
 markers = [
     "unit: marks tests as unit tests",
     "integration: marks tests as integration tests",
-    "asyncio: mark test as async test",  # Add asyncio marker
+    "asyncio: mark test as async test",
 ]
 
 [tool.coverage.run]
