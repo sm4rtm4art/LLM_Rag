@@ -4,8 +4,6 @@ This module provides the main entry point for the llm-rag application.
 It currently implements a simple hello world function for testing purposes.
 """
 
-from typing import NoReturn
-
 
 def main() -> None:
     """Execute the main application logic.

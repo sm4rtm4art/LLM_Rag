@@ -8,9 +8,6 @@ client = TestClient(app)
 
 def test_query_endpoint():
     """Test the query endpoint."""
-    response = client.post(
-        "/query",
-        json={"query": "test query"}
-    )
+    response = client.post("/query", json={"query": "test query"})
     assert response.status_code == 200
-    assert "result" in response.json() 
+    assert "result" in response.json()
