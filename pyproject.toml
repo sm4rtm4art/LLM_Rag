@@ -47,5 +47,19 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
-source = ["src"]
+source = ["src/llm_rag"]
 omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "pass",
+    "raise ImportError",
+]
+show_missing = true
+fail_under = 0  # Don't fail
+warn_under = 60  # Warn if coverage is below 60%
