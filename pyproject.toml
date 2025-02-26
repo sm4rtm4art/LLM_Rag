@@ -18,6 +18,9 @@ dependencies = [
     "uvicorn>=0.34.0",
 ]
 
+[project.scripts]
+setup-dev = "pre-commit install --install-hooks"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.4",
