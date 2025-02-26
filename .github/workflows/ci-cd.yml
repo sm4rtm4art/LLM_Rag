@@ -178,6 +178,20 @@ jobs:
         with:
           buildkitd-flags: --debug
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Verify Docker Hub Login
+        run: |
+          echo "Checking Docker Hub login..."
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin <<< ${{ secrets.DOCKERHUB_TOKEN }}
+          echo "Checking if repository exists..."
+          curl -s -f -L -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
+            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/"
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -202,3 +216,10 @@ jobs:
         run: |
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Check Docker Hub Repository
+        if: always() # Run even if previous steps failed
+        run: |
+          echo "Checking Docker Hub for images..."
+          curl -s -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
+            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/" | jq .
