@@ -1,26 +1,28 @@
+# Use the same base image
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && \
+# Change 1: Combine system dependency installation with cache mount
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update && \
     apt-get install -y curl build-essential && \
     rm -rf /var/lib/apt/lists/*
 
-# Install UV using the official installer
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+# Change 2: Add cache mount for UV installation
+RUN --mount=type=cache,target=/root/.cache \
+    curl -LsSf https://astral.sh/uv/install.sh | sh && \
     mv /root/.local/bin/uv /usr/local/bin/
 
-# Ensure UV is installed
-RUN uv --version
-
-# Copy only pyproject.toml for better caching
+# Change 3: Copy only dependency files first
 COPY pyproject.toml .
 
-# Install dependencies using UV (system-wide)
-RUN uv pip install --system .
+# Change 4: Add cache mount for UV dependencies
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system .
 
-# Copy the rest of the application code
-COPY . .
+# Change 5: Copy only necessary directories instead of everything
+COPY src/ src/
+COPY tests/ tests/
 
 CMD ["python", "-m", "llm_rag"]
