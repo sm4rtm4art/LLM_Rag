@@ -11,6 +11,8 @@ on:
 jobs:
   security:
     runs-on: ubuntu-latest
+    env:
+      UV_LINK_MODE: copy
     steps:
       - uses: actions/checkout@v3
 
@@ -46,6 +48,8 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    env:
+      UV_LINK_MODE: copy
     steps:
       - uses: actions/checkout@v3
 
@@ -87,6 +91,8 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    env:
+      UV_LINK_MODE: copy
     steps:
       - uses: actions/checkout@v3
 
@@ -132,6 +138,8 @@ jobs:
     needs: [security, lint, test]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    env:
+      UV_LINK_MODE: copy
     steps:
       - uses: actions/checkout@v3
 

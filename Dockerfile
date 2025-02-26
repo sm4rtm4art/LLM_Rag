@@ -1,6 +1,9 @@
 # Use the same base image
 FROM python:3.12-slim
 
+# Add this line near the top
+ENV UV_LINK_MODE=copy
+
 WORKDIR /app
 
 # Change 1: Combine system dependency installation with cache mount
