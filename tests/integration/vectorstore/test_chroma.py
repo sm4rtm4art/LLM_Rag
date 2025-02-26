@@ -1,32 +1,10 @@
-"""Integration tests for ChromaVectorStore implementation.
-
-This test suite verifies that:
-1. Document Storage & Retrieval:
-   - Documents can be added with metadata
-   - Semantic search returns relevant results
-   - Results include correct metadata and distance scores
-
-2. Persistence:
-   - Data persists between ChromaDB sessions
-   - Collection state is maintained correctly
-
-3. Query Functionality:
-   - Metadata filtering works as expected
-   - Document content filtering is accurate
-   - Search results are properly ranked
-
-4. Error Handling:
-   - Collection deletion handles edge cases
-   - Invalid queries are handled gracefully
-
-These tests ensure the ChromaVectorStore provides reliable vector storage
-and retrieval capabilities for the RAG (Retrieval Augmented Generation) system.
-"""
+"""Integration tests for ChromaDB functionality."""
 
 import tempfile
-from typing import Dict, Generator, List
+from typing import Dict, Generator, List, Union
 
 import pytest
+
 from llm_rag.vectorstore.chroma import ChromaVectorStore, EmbeddingFunctionWrapper
 
 
@@ -72,7 +50,7 @@ def test_add_and_search_documents(chroma_store: ChromaVectorStore) -> None:
         "A lazy dog sleeps all day",
         "The fox is quick and brown",
     ]
-    metadata: List[Dict[str, str]] = [
+    metadata: List[Dict[str, Union[str, int, float, bool]]] = [
         {"source": "story1", "animal": "fox"},
         {"source": "story2", "animal": "dog"},
         {"source": "story3", "animal": "fox"},
@@ -135,9 +113,7 @@ def test_search_with_filters(chroma_store):
 def test_custom_embedding_function(temp_persist_dir):
     """Test using a custom embedding function."""
     custom_embedder = EmbeddingFunctionWrapper("paraphrase-MiniLM-L6-v2")
-    store = ChromaVectorStore(
-        persist_directory=temp_persist_dir, embedding_function=custom_embedder
-    )
+    store = ChromaVectorStore(persist_directory=temp_persist_dir, embedding_function=custom_embedder)
     documents = ["Test document"]
     store.add_documents(documents)
     results = store.search("test")

@@ -1,6 +1,7 @@
 """Unit tests for API endpoints."""
 
 from fastapi.testclient import TestClient
+
 from llm_rag.api.main import app
 
 client = TestClient(app)

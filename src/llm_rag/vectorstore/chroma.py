@@ -1,8 +1,14 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union, cast
 
 import chromadb
 import numpy as np
+from chromadb.api import ClientAPI
+from chromadb.api.types import (
+    Collection,
+    EmbeddingFunction,
+    Metadata,
+)
 from chromadb.config import Settings
 from numpy.typing import NDArray
 from sentence_transformers import SentenceTransformer
@@ -24,7 +30,7 @@ class EmbeddingFunctionWrapper:
         """
         self.model = SentenceTransformer(model_name)
 
-    def __call__(self, input: List[str]) -> List[List[float]]:
+    def __call__(self, input: List[str]) -> NDArray[np.float32]:
         """Generate embeddings for input texts.
 
         Args:
@@ -33,12 +39,10 @@ class EmbeddingFunctionWrapper:
 
         Returns:
         -------
-            List of embedding vectors as lists of floats.
+            NumPy array of embedding vectors.
 
         """
-        # Convert numpy array to list explicitly
-        embeddings: NDArray[np.float32] = self.model.encode(input)
-        return [[float(x) for x in vector] for vector in embeddings]
+        return self.model.encode(input)
 
 
 class ChromaVectorStore(VectorStore):
@@ -48,8 +52,8 @@ class ChromaVectorStore(VectorStore):
         self,
         collection_name: str = "llm_rag_docs",
         persist_directory: str = "chroma_data",
-        embedding_function: Optional[Any] = None,
-    ):
+        embedding_function: Optional[EmbeddingFunction] = None,
+    ) -> None:
         """Initialize ChromaDB client and collection.
 
         Args:
@@ -59,11 +63,11 @@ class ChromaVectorStore(VectorStore):
             embedding_function: Optional custom embedding function
 
         """
-        self._persist_directory = persist_directory  # Store as instance variable
+        self._persist_directory = persist_directory
         persist_path = Path(persist_directory)
         persist_path.mkdir(parents=True, exist_ok=True)
 
-        self.client = chromadb.PersistentClient(
+        self.client: ClientAPI = chromadb.PersistentClient(
             path=str(persist_path),
             settings=Settings(anonymized_telemetry=False, is_persistent=True),
         )
@@ -73,16 +77,16 @@ class ChromaVectorStore(VectorStore):
             embedding_function = EmbeddingFunctionWrapper()
 
         # Get or create collection
-        self.collection = self.client.get_or_create_collection(
+        self.collection: Collection = self.client.get_or_create_collection(
             name=collection_name,
             embedding_function=embedding_function,
-            metadata={"hnsw:space": "cosine"},  # Using cosine similarity
+            metadata={"hnsw:space": "cosine"},
         )
 
     def add_documents(
         self,
         documents: List[str],
-        metadatas: Optional[List[dict]] = None,
+        metadatas: Optional[List[Dict[str, Union[str, int, float, bool]]]] = None,
         ids: Optional[List[str]] = None,
     ) -> None:
         """Add documents to ChromaDB.
@@ -97,7 +101,11 @@ class ChromaVectorStore(VectorStore):
         if ids is None:
             ids = [str(i) for i in range(len(documents))]
 
-        self.collection.add(documents=documents, metadatas=metadatas, ids=ids)
+        self.collection.add(
+            documents=documents,
+            metadatas=cast(Optional[List[Metadata]], metadatas),
+            ids=ids,
+        )
 
     def search(
         self,
@@ -105,7 +113,7 @@ class ChromaVectorStore(VectorStore):
         n_results: int = 5,
         where: Optional[Dict] = None,
         where_document: Optional[Dict] = None,
-    ) -> List[dict]:
+    ) -> List[Dict[str, Any]]:
         """Search for similar documents.
 
         Args:
@@ -129,19 +137,20 @@ class ChromaVectorStore(VectorStore):
 
         # Format results
         formatted_results = []
-        for i in range(len(results["ids"][0])):
-            formatted_results.append(
-                {
-                    "id": results["ids"][0][i],
-                    "document": results["documents"][0][i],
-                    "metadata": results["metadatas"][0][i]
-                    if results["metadatas"]
-                    else None,
-                    "distance": results["distances"][0][i]
-                    if "distances" in results
-                    else None,
-                }
-            )
+        if results["documents"] and results["documents"][0]:
+            for i in range(len(results["documents"][0])):
+                formatted_results.append(
+                    {
+                        "id": results["ids"][0][i],
+                        "document": results["documents"][0][i],
+                        "metadata": results["metadatas"][0][i]
+                        if results["metadatas"] and results["metadatas"][0]
+                        else None,
+                        "distance": results["distances"][0][i]
+                        if "distances" in results and results["distances"]
+                        else None,
+                    }
+                )
 
         return formatted_results
 

@@ -72,6 +72,12 @@ fail_under = 0  # Don't fail
 warn_under = 60  # Warn if coverage is below 60%
 
 [tool.ruff]
+# Target Python version
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+# Enable rules
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
@@ -80,17 +86,21 @@ select = [
     "B",  # flake8-bugbear
     "D",  # pydocstyle
 ]
+
+# Ignore specific rules
 ignore = [
     "D100",  # Missing docstring in public module
     "D104",  # Missing docstring in public package
     "D203",  # One blank line before class (conflicts with D211)
     "D213",  # Multi-line summary second line (conflicts with D212)
 ]
-line-length = 88
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D"]  # Ignore docstring issues in tests
 ".llm_rag/bin/*" = ["D", "E", "W"]  # Ignore issues in virtual environment scripts
+
+[tool.ruff.lint.isort]
+known-first-party = ["llm_rag"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -105,8 +115,8 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
-exclude = [".llm_rag/*"]  # Exclude virtual environment
-mypy_path = "src"
+# Fix path issues
+mypy_path = ["src"]
 packages = ["llm_rag"]
 namespace_packages = true
 explicit_package_bases = true
@@ -114,6 +124,10 @@ explicit_package_bases = true
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "numpy.*"
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "sentence_transformers.*"
