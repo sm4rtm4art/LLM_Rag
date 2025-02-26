@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-rag
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: llm-rag
+  template:
+    spec:
+      containers:
+      - name: llm-rag
+        image: llm-rag:latest
+        resources:
+          limits:
+            memory: "4Gi"
+            cpu: "2" 

@@ -1,7 +1,7 @@
 [project]
 name = "llm-rag"
 version = "0.1.0"
-description = "Add your description here"
+description = "LLM RAG exploration project"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -10,11 +10,24 @@ dependencies = [
     "langchain>=0.3.19",
     "numpy>=2.2.3",
     "pandas>=2.2.3",
+    "pytest>=8.3.4",
     "scikit-learn>=1.6.1",
     "sentence-transformers>=3.4.1",
     "torch>=2.6.0",
     "transformers>=4.49.0",
     "uvicorn>=0.34.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "pytest-asyncio>=0.23.5",  # Added for async tests
+    "ruff>=0.9.7",
+    "mypy>=1.15.0",
+    "nbqa>=1.9.1",
+    "jupyter>=1.1.1",
+    "httpx>=0.24.0",  # Required for FastAPI TestClient
 ]
 
 [tool.bandit]
@@ -24,12 +37,15 @@ skips = ["B101"]  # Skip assert statements
 [tool.bandit.assert_used]
 skips = ["*_test.py", "test_*.py"]
 
-[dependency-groups]
-dev = [
-    "jupyter>=1.1.1",
-    "mypy>=1.15.0",
-    "nbqa>=1.9.1",
-    "pytest>=8.3.4",
-    "pytest-cov>=6.0.0",
-    "ruff>=0.9.7",
-]
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+asyncio_mode = "auto"
+# Add explicit loop scope configuration
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*"]
