@@ -15,4 +15,4 @@ spec:
         resources:
           limits:
             memory: "4Gi"
-            cpu: "2" 
+            cpu: "2"
