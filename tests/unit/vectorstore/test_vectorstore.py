@@ -23,17 +23,13 @@ from llm_rag.vectorstore.base import VectorStore
 class MockVectorStore(VectorStore):
     """Mock implementation of VectorStore for testing."""
 
-    def add_documents(
-        self, documents: List[str], metadatas: Optional[List[Dict[str, Any]]] = None
-    ) -> None:
+    def add_documents(self, documents: List[str], metadatas: Optional[List[Dict[str, Any]]] = None) -> None:
         """Mock adding documents."""
         return None
 
     def search(self, query: str, n_results: int = 5) -> List[Dict[str, Any]]:
         """Mock search implementation."""
-        return [
-            {"id": "1", "document": "test document", "metadata": None, "distance": 0.5}
-        ]
+        return [{"id": "1", "document": "test document", "metadata": None, "distance": 0.5}]
 
     def delete_collection(self) -> None:
         """Mock collection deletion."""

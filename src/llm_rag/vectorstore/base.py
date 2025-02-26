@@ -8,9 +8,7 @@ class VectorStore(ABC):
     """Base class for vector store implementations."""
 
     @abstractmethod
-    def add_documents(
-        self, documents: List[str], metadatas: Optional[List[Dict[str, Any]]] = None
-    ) -> None:
+    def add_documents(self, documents: List[str], metadatas: Optional[List[Dict[str, Any]]] = None) -> None:
         """Add documents to the vector store.
 
         Args:
