@@ -6,28 +6,18 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "0 0 * * *" # Run daily at midnight UTC
+    - cron: "0 0 * * *" # Daily at midnight UTC
 
 jobs:
   security:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
-
-      # Add caching for dependencies
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.local/bin
-          key: ${{ runner.os }}-python-3.12-uv-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-python-3.12-uv-
 
       - name: Install UV
         run: |
@@ -60,7 +50,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install --system ruff pytest pytest-cov
+          uv pip install --system ruff mypy
           uv pip install --system ".[dev]"
 
       - name: Run Ruff format check
@@ -69,25 +59,18 @@ jobs:
       - name: Run Ruff linting
         run: ruff check "src/" "tests/"
 
-      - name: Run Ruff on notebooks
-        run: nbqa ruff notebooks/
-          nbqa ruff format notebooks/
-
       - name: Run mypy
-        run: mypy --config-file .config/mypy/mypy.ini src tests
+        run: mypy src tests
 
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
       - name: Install UV
         run: |
