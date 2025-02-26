@@ -29,7 +29,7 @@ class EmbeddingFunctionWrapper(EmbeddingFunction):
         """
         self.model = SentenceTransformer(model_name)
 
-    def __call__(self, input: List[str]) -> List[NDArray[np.float32]]:
+    def __call__(self, input: List[str]) -> List[NDArray[Union[np.float32, np.int32]]]:
         """Generate embeddings for input texts.
 
         Args:
