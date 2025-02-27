@@ -2,8 +2,8 @@ name: Security Scan
 
 on:
   schedule:
-    - cron: "0 0 * * *"  # Runs daily at midnight UTC
-  workflow_dispatch:  # Allow manual triggers
+    - cron: "0 0 * * *" # Runs daily at midnight UTC
+  workflow_dispatch: # Allow manual triggers
 
 jobs:
   security-scan:
