@@ -2,36 +2,40 @@ name: Security Scan
 
 on:
   schedule:
-    - cron: "0 0 * * *" # Daily at midnight UTC
-  workflow_dispatch: # Allow manual triggers
+    - cron: "0 0 * * *"  # Runs daily at midnight UTC
+  workflow_dispatch:  # Allow manual triggers
 
 jobs:
   security-scan:
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
 
-      - name: Install security tools
+      - name: Install Security Tools
         run: |
-          uv pip install bandit safety pip-audit trivy-scanner
+          uv pip install bandit safety pip-audit
+          pip install trivy
 
-      - name: Run Bandit (comprehensive)
+      - name: Run Bandit (Python Security Static Analysis)
         run: |
           bandit -r . -f json -o bandit-results.json
           bandit -r . -ll -i
 
-      - name: Run Safety Check
+      - name: Run Safety Check (Vulnerable Dependencies)
         run: safety check --full-report
 
-      - name: Run pip-audit
+      - name: Run pip-audit (Python Dependency Security Scanner)
         run: pip-audit
 
-      - name: Run Trivy scan
+      - name: Run Trivy Scan (File System Vulnerability Scan)
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: "fs"
@@ -40,7 +44,12 @@ jobs:
           ignore-unfixed: true
           severity: "CRITICAL,HIGH"
 
-      - name: Upload security scan results
+      - name: Run CodeQL Analysis (Static Analysis for Python)
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:python"
+
+      - name: Upload Security Scan Results
         if: always()
         uses: actions/upload-artifact@v3
         with:
@@ -48,7 +57,7 @@ jobs:
           path: |
             bandit-results.json
 
-      - name: Send Notification
+      - name: Send Notification on Failure
         if: failure()
         uses: actions/github-script@v6
         with:
