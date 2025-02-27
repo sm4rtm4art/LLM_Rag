@@ -29,8 +29,8 @@ jobs:
           bandit -r . -f json -o bandit-results.json
           bandit -r . -ll -i
 
-      - name: Run Safety Check (Vulnerable Dependencies)
-        run: safety check --full-report
+      - name: Run Safety Scan (New Command)
+        run: safety scan --json > safety-results.json
 
       - name: Run pip-audit (Python Dependency Security Scanner)
         run: pip-audit
@@ -56,6 +56,7 @@ jobs:
           name: security-scan-results
           path: |
             bandit-results.json
+            safety-results.json
 
       - name: Send Notification on Failure
         if: failure()
