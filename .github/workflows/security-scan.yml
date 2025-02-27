@@ -29,8 +29,10 @@ jobs:
           bandit -r . -f json -o bandit-results.json
           bandit -r . -ll -i
 
-      - name: Run Safety Scan (New Command)
-        run: safety scan --json > safety-results.json
+      - name: Run Safety Scan
+        run: |
+          safety scan --output json > safety-results.json
+          safety scan --output text
 
       - name: Run pip-audit (Python Dependency Security Scanner)
         run: pip-audit
