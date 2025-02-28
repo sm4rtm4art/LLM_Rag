@@ -41,6 +41,7 @@ class EmbeddingModel:
         Returns:
         -------
             List of numpy arrays containing embeddings.
+
         """
         embeddings = self.model.encode(input, normalize_embeddings=True, batch_size=32)
         # Convert to list of numpy arrays
@@ -59,6 +60,7 @@ class EmbeddingModel:
         Returns:
         -------
             List of numpy arrays containing embeddings.
+
         """
         # Simple implementation without actual retries for now
         return self.__call__(input)

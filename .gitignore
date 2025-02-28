@@ -181,3 +181,6 @@ mypy.ini
 
 # Debug files
 debug_*.py
+
+# ignore venv
+.llm_rag/

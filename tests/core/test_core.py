@@ -3,7 +3,30 @@
 import sys
 from unittest.mock import MagicMock, patch
 
-from llm_rag.main import main
+
+# Create a mock EmbeddingModel class
+class MockEmbeddingModel:
+    def __init__(self, model_name=None, device=None):
+        self.model_name = model_name
+        self.device = device
+        # No SentenceTransformer initialization here
+
+    def embed_query(self, text):
+        return [0.1] * 384
+
+    def get_embedding_dimension(self):
+        return 384
+
+    def __call__(self, input):
+        return [[0.1] * 384] * len(input)
+
+    def embed_with_retries(self, input, **kwargs):
+        return self.__call__(input)
+
+
+# Now patch the EmbeddingModel before importing main
+with patch("llm_rag.models.embeddings.EmbeddingModel", MockEmbeddingModel):
+    from llm_rag.main import main
 
 
 def test_main_output(capsys):
@@ -25,10 +48,6 @@ def test_main_output(capsys):
         mock_loader = MagicMock()
         mock_loader.load.return_value = [{"content": "test content", "metadata": {}}]
 
-        # Mock SentenceTransformer
-        mock_transformer = MagicMock()
-        mock_transformer.encode.return_value = [[0.1] * 384]  # Embedding size
-
         # Create LlamaCpp mock
         mock_llama = MagicMock()
         mock_llama.invoke.return_value = "Test response"
@@ -40,11 +59,7 @@ def test_main_output(capsys):
             "langchain_community.llms.LlamaCpp.__init__", return_value=None
         ), patch("langchain_community.llms.LlamaCpp.__call__", return_value="Test response"), patch(
             "langchain_community.llms.LlamaCpp.invoke", return_value="Test response"
-        ), patch("sentence_transformers.SentenceTransformer.__init__", return_value=None), patch(
-            "sentence_transformers.SentenceTransformer", return_value=mock_transformer
-        ), patch("sentence_transformers.util.load_file_path", return_value=None), patch("os.makedirs"), patch(
-            "sys.exit"
-        ), patch("os.path.exists", return_value=True):
+        ), patch("os.makedirs"), patch("sys.exit"), patch("os.path.exists", return_value=True):
             main()
 
         # Get captured output

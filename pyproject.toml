@@ -133,3 +133,16 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "sentence_transformers.*"
 ignore_missing_imports = true
+
+[tool.semantic_release]
+version_variable = ["src/llm_rag/__init__.py:__version__"]
+version_toml = ["pyproject.toml:project.version"]
+branch = "main"
+upload_to_pypi = false
+upload_to_release = true
+build_command = "pip install build && python -m build"
+commit_message = "{version}\n\n{changelog}"
+changelog_file = "CHANGELOG.md"
+changelog_scope = false
+major_on_zero = true
+tag_format = "v{version}"

@@ -6,13 +6,13 @@ default_install_hook_types:
   - post-rewrite
 
 default_language_version:
-    python: python3.11
+  python: python3.12
 
 default_stages: [pre-commit, pre-push]
 
 ci:
-    autofix_commit_msg: 'ci: auto fixes from pre-commit hooks'
-    autoupdate_commit_msg: 'ci: pre-commit autoupdate'
+  autofix_commit_msg: 'ci: auto fixes from pre-commit hooks'
+  autoupdate_commit_msg: 'ci: pre-commit autoupdate'
 
 # Then list all repositories
 repos:

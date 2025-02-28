@@ -177,6 +177,20 @@ mypy .
 pre-commit install
 ```
 
+### Versioning
+
+This project follows [Semantic Versioning](https://semver.org/) and uses [Python Semantic Release](https://python-semantic-release.readthedocs.io/) for automated versioning and changelog generation.
+
+For more details on how to write commit messages that trigger version bumps, see [docs/semantic_versioning.md](docs/semantic_versioning.md).
+
+```bash
+# Check what the next version would be
+semantic-release version --print
+
+# Manually trigger a version bump and release
+semantic-release publish
+```
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
