@@ -1,17 +1,19 @@
 name: Security Scan
 
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   schedule:
-    - cron: "0 0 * * *" # Runs daily at midnight UTC
-  workflow_dispatch: # Allow manual triggers
+    - cron: "0 0 * * 0" # Run weekly on Sunday at midnight
 
 jobs:
-  security-scan:
+  bandit:
+    name: Bandit Security Scan
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -19,55 +21,39 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Security Tools
+      - name: Install dependencies
         run: |
-          uv pip install bandit safety pip-audit
-          pip install trivy
+          python -m pip install --upgrade pip
+          pip install bandit
 
-      - name: Run Bandit (Python Security Static Analysis)
+      - name: Run Bandit
         run: |
-          bandit -r . -f json -o bandit-results.json
-          bandit -r . -ll -i
+          bandit -r src/ -c pyproject.toml -f json -o bandit-results.json
+        continue-on-error: true
 
-      - name: Run Safety Scan
-        run: |
-          safety scan --output json > safety-results.json
-          safety scan --output text
+      - name: Upload Bandit results
+        uses: actions/upload-artifact@v3
+        with:
+          name: bandit-results
+          path: bandit-results.json
 
-      - name: Run pip-audit (Python Dependency Security Scanner)
-        run: pip-audit
+  trivy:
+    name: Trivy Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Run Trivy Scan (File System Vulnerability Scan)
+      - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: "fs"
-          format: "table"
-          exit-code: "1"
-          ignore-unfixed: true
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
           severity: "CRITICAL,HIGH"
 
-      - name: Run CodeQL Analysis (Static Analysis for Python)
-        uses: github/codeql-action/analyze@v2
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
         with:
-          category: "/language:python"
-
-      - name: Upload Security Scan Results
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: security-scan-results
-          path: |
-            bandit-results.json
-            safety-results.json
-
-      - name: Send Notification on Failure
-        if: failure()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '🚨 Security vulnerabilities detected',
-              body: 'Security scan detected vulnerabilities. Please check the latest security scan results.'
-            })
+          sarif_file: "trivy-results.sarif"

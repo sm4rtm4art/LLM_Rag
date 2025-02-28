@@ -184,3 +184,9 @@ debug_*.py
 
 # ignore venv
 .llm_rag/
+
+# Vector database
+chroma_db/
+
+# Ruff cache
+.ruff_cache/

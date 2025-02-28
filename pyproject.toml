@@ -34,6 +34,7 @@ dev = [
     "jupyter>=1.1.1",
     "httpx>=0.24.0",  # Required for FastAPI TestClient
     "pre-commit>=4.1.0",  # Added for pre-commit hooks
+    "pandas-stubs>=2.2.3",  # Added for mypy pandas type checking
 ]
 
 [tool.bandit]
@@ -105,7 +106,7 @@ ignore = [
 known-first-party = ["llm_rag"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
