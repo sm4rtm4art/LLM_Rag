@@ -1,173 +1,20 @@
-name: Environment Deployments
+name: Deploy to Production
 
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Environment to deploy to"
-        required: true
-        default: "dev"
-        type: choice
-        options:
-          - dev
-          - staging
-          - prod
       version:
         description: "Version to deploy (leave empty for latest)"
         required: false
         type: string
 
-  push:
-    branches:
-      - main
-    paths:
-      - "src/**"
-      - "Dockerfile"
-      - "k8s/**"
-      - ".github/workflows/deploy-environments.yml"
-
 jobs:
-  determine-version:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.set-version.outputs.version }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
-
-      - name: Set version
-        id: set-version
-        run: |
-          if [ "${{ github.event.inputs.version }}" != "" ]; then
-            echo "Using manually specified version: ${{ github.event.inputs.version }}"
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            # Generate semantic version based on commit history
-            # Format: MAJOR.MINOR.PATCH-BRANCH-COMMIT_SHORT_SHA
-            BRANCH=${GITHUB_REF#refs/heads/}
-            COMMIT_SHA=${GITHUB_SHA::7}
-
-            # Get the current version from pyproject.toml
-            VERSION=$(grep -m 1 'version = ' pyproject.toml | cut -d '"' -f 2)
-
-            if [ "$BRANCH" = "main" ]; then
-              # On main branch, just use the version with commit SHA
-              NEW_VERSION="${VERSION}-${COMMIT_SHA}"
-            else
-              # On feature branches, include branch name
-              SAFE_BRANCH=$(echo $BRANCH | sed 's/[^a-zA-Z0-9]/-/g')
-              NEW_VERSION="${VERSION}-${SAFE_BRANCH}-${COMMIT_SHA}"
-            fi
-
-            echo "Generated version: $NEW_VERSION"
-            echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          fi
-
-  build-and-push:
-    needs: determine-version
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ needs.determine-version.outputs.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy-dev:
-    needs: [determine-version, build-and-push]
-    if: github.event_name == 'push' || github.event.inputs.environment == 'dev'
-    runs-on: ubuntu-latest
-    # Note: Create 'development' environment in GitHub repository settings before uncommenting
-    # environment: development
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-
-      - name: Configure kubectl
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG_DEV }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-
-      - name: Update deployment configuration
-        run: |
-          # Replace image tag and username in deployment file
-          sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ needs.determine-version.outputs.version }}|g" k8s/deployment.yaml
-
-          # Set environment-specific variables
-          sed -i "s|ENVIRONMENT: \".*\"|ENVIRONMENT: \"dev\"|g" k8s/deployment.yaml
-
-          # Apply the configuration
-          kubectl apply -f k8s/deployment.yaml
-          kubectl rollout status deployment/llm-rag
-
-  deploy-staging:
-    needs: [determine-version, build-and-push]
-    if: github.event.inputs.environment == 'staging'
-    runs-on: ubuntu-latest
-    # Note: Create 'staging-env' environment in GitHub repository settings before uncommenting
-    # environment: staging-env
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-
-      - name: Configure kubectl
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG_STAGING }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-
-      - name: Update deployment configuration
-        run: |
-          # Replace image tag and username in deployment file
-          sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ needs.determine-version.outputs.version }}|g" k8s/deployment.yaml
-
-          # Set environment-specific variables
-          sed -i "s|ENVIRONMENT: \".*\"|ENVIRONMENT: \"staging\"|g" k8s/deployment.yaml
-
-          # Apply the configuration
-          kubectl apply -f k8s/deployment.yaml
-          kubectl rollout status deployment/llm-rag
-
-  deploy-prod:
-    needs: [determine-version, build-and-push]
-    if: github.event.inputs.environment == 'prod'
+  deploy-production:
     runs-on: ubuntu-latest
     # Note: Create 'production' environment in GitHub repository settings before uncommenting
     # environment: production
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
@@ -178,13 +25,27 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG_PROD }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
+      - name: Determine version to deploy
+        id: version
+        run: |
+          if [ -z "${{ github.event.inputs.version }}" ]; then
+            # Get latest version from Docker Hub
+            VERSION=$(curl -s -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
+              "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/" | \
+              jq -r '.results[0].name')
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "Using version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Update deployment configuration
         run: |
           # Replace image tag and username in deployment file
-          sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ needs.determine-version.outputs.version }}|g" k8s/deployment.yaml
+          sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ steps.version.outputs.version }}|g" k8s/deployment.yaml
 
           # Set environment-specific variables
-          sed -i "s|ENVIRONMENT: \".*\"|ENVIRONMENT: \"prod\"|g" k8s/deployment.yaml
+          sed -i "s|ENVIRONMENT: \".*\"|ENVIRONMENT: \"production\"|g" k8s/deployment.yaml
 
           # Apply the configuration
           kubectl apply -f k8s/deployment.yaml

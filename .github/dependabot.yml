@@ -5,6 +5,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+      day: "monday"
+      time: "06:00"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
@@ -37,6 +39,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+      day: "monday"
+      time: "06:00"
     open-pull-requests-limit: 3
     labels:
       - "dependencies"
@@ -50,6 +54,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+      day: "monday"
+      time: "06:00"
     open-pull-requests-limit: 3
     labels:
       - "dependencies"
