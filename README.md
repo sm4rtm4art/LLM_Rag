@@ -33,14 +33,6 @@ pip install -e .
 pip install -e '.[dev]'
 ```
 
-### Environment Variables
-
-For using OpenAI models, you need to set your API key:
-
-```bash
-export OPENAI_API_KEY=your_openai_api_key
-```
-
 ## Usage
 
 ### Command Line Interface
