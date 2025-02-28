@@ -33,6 +33,7 @@ dev = [
     "nbqa>=1.9.1",
     "jupyter>=1.1.1",
     "httpx>=0.24.0",  # Required for FastAPI TestClient
+    "pre-commit>=4.1.0",  # Added for pre-commit hooks
 ]
 
 [tool.bandit]
