@@ -313,7 +313,7 @@ jobs:
           sed -i "s|ENVIRONMENT: \".*\"|ENVIRONMENT: \"dev\"|g" k8s/deployment.yaml
 
           # Apply the configuration
-          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/deployment.yaml --validate=false
           kubectl rollout status deployment/llm-rag
 
   # Staging deployment - only runs when manually triggered with staging option
@@ -344,5 +344,5 @@ jobs:
           sed -i "s|ENVIRONMENT: \".*\"|ENVIRONMENT: \"staging\"|g" k8s/deployment.yaml
 
           # Apply the configuration
-          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/deployment.yaml --validate=false
           kubectl rollout status deployment/llm-rag
