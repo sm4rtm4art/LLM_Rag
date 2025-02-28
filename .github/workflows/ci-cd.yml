@@ -228,3 +228,64 @@ jobs:
           echo "Checking Docker Hub for images..."
           curl -s -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
             "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/" | jq .
+
+  # Add deployment jobs after the build job
+  deploy-dev:
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    # Note: Create 'development' environment in GitHub repository settings before uncommenting
+    # environment: development
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_DEV }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Update deployment configuration
+        run: |
+          # Replace image tag and username in deployment file
+          sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}|g" k8s/deployment.yaml
+
+          # Set environment-specific variables
+          sed -i "s|ENVIRONMENT: \".*\"|ENVIRONMENT: \"dev\"|g" k8s/deployment.yaml
+
+          # Apply the configuration
+          kubectl apply -f k8s/deployment.yaml
+          kubectl rollout status deployment/llm-rag
+
+  deploy-staging:
+    needs: [deploy-dev]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    # Note: Create 'staging' environment in GitHub repository settings before uncommenting
+    # environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Update deployment configuration
+        run: |
+          # Replace image tag and username in deployment file
+          sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}|g" k8s/deployment.yaml
+
+          # Set environment-specific variables
+          sed -i "s|ENVIRONMENT: \".*\"|ENVIRONMENT: \"staging\"|g" k8s/deployment.yaml
+
+          # Apply the configuration
+          kubectl apply -f k8s/deployment.yaml
+          kubectl rollout status deployment/llm-rag
