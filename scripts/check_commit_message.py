@@ -19,10 +19,10 @@ def main() -> int:
     pattern = r"^(feat|fix|docs|style|refactor|perf|test|chore)" r"(\([a-z0-9-]+\))?(!)?: .+"
 
     if not re.match(pattern, commit_msg):
-        print("Error: Commit message does not follow semantic versioning format")
+        print("Error: Commit message format invalid")
         print("Expected format: type(scope): description")
         print("Examples:")
-        print("  feat: add new feature")
+        print("  feat: add feature")
         print("  fix(auth): fix login issue")
         print("  docs: update README")
         return 1
