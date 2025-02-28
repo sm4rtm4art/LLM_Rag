@@ -178,3 +178,6 @@ mypy.ini
 
 # Pre-commit
 .pre-commit-config.yaml.cache
+
+# Debug files
+debug_*.py

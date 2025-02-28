@@ -1,164 +1,186 @@
-# LLM RAG Project
+# LLM RAG System
 
-[![codecov](https://codecov.io/gh/sm4rtm4art/LLM_Rag/branch/main/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/sm4rtm4art/LLM_Rag)
+A Python package implementing a Retrieval-Augmented Generation (RAG) system using large language models and vector databases.
 
-## 🚀 Overview
+## Features
 
-This project implements a Retrieval-Augmented Generation (RAG) system using Large Language Models. It provides a scalable architecture for document processing, embedding generation, and intelligent query answering.
+- **Document Processing:** Load and process documents from various sources (text files, CSV, directories)
+- **Text Chunking:** Split documents into manageable chunks with customizable strategies
+- **Embedding Generation:** Generate embeddings for text using sentence-transformers
+- **Vector Storage:** Store and retrieve document embeddings using ChromaDB
+- **RAG Pipeline:** Complete pipeline for retrieval-augmented generation
+- **Conversational Mode:** Support for maintaining conversation history in RAG interactions
+- **API Interface:** FastAPI-based REST API for easy integration
 
-## 🛠 Tech Stack
+## Installation
 
-- Python 3.12
-- LangChain for LLM orchestration
-- Vector storage with ChromaDB
-- FastAPI for API endpoints
-- Docker & Kubernetes for deployment
-- UV for dependency management
-- Comprehensive CI/CD pipeline
-
-## 📋 Prerequisites
+### Prerequisites
 
 - Python 3.12+
-- Docker (optional, for containerization)
-- Git
+- pip or uv (package installer)
 
-## 🔧 Development Setup
-
-### 1. Install UV Package Manager
+### Install from source
 
 ```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Clone the repository
+git clone https://github.com/yourusername/llm-rag.git
+cd llm-rag
 
-# Windows (PowerShell)
-irm https://astral.sh/uv/install.ps1 | iex
+# Install the package and dependencies
+pip install -e .
+
+# For development dependencies
+pip install -e '.[dev]'
 ```
 
-### 2. Clone the Repository
+### Environment Variables
+
+For using OpenAI models, you need to set your API key:
 
 ```bash
-git clone https://github.com/sm4rtm4art/LLM_Rag.git
-cd LLM_Rag
+export OPENAI_API_KEY=your_openai_api_key
 ```
 
-### 3. Create and Activate Virtual Environment
+## Usage
+
+### Command Line Interface
+
+The package provides a command-line interface for ingesting documents and querying the RAG system:
 
 ```bash
-# Create a new virtual environment
-python -m venv .venv
+# Ingest documents from a directory
+python -m llm_rag.main --data-dir /path/to/documents --db-dir ./chroma_db
 
-# Activate the virtual environment
-# On macOS/Linux:
-source .venv/bin/activate
-# On Windows:
-.venv\Scripts\activate
+# Query the system
+python -m llm_rag.main --query "Your question about the documents?" --db-dir ./chroma_db
+
+# Start interactive mode
+python -m llm_rag.main --db-dir ./chroma_db
+
+# Use a specific embedding model
+python -m llm_rag.main --embedding-model all-MiniLM-L6-v2 --db-dir ./chroma_db
+
+# Use a specific OpenAI model
+python -m llm_rag.main --model gpt-3.5-turbo-instruct --db-dir ./chroma_db
 ```
 
-### 4. Install Dependencies
+### Python API
 
-```bash
-# Install project dependencies
-uv pip install .
+You can also use the package as a Python library:
 
-# Install development dependencies
-uv pip install ".[dev]"
+```python
+from llm_rag.models.embeddings import EmbeddingModel
+from llm_rag.document_processing.loaders import DirectoryLoader
+from llm_rag.document_processing.chunking import RecursiveTextChunker
+from llm_rag.vectorstore.chroma import ChromaVectorStore
+from llm_rag.rag.pipeline import RAGPipeline
+from langchain.llms import OpenAI
+import chromadb
+
+# Initialize embedding model
+embedding_model = EmbeddingModel(model_name="all-MiniLM-L6-v2")
+
+# Load and process documents
+loader = DirectoryLoader("/path/to/documents", recursive=True)
+documents = loader.load()
+
+chunker = RecursiveTextChunker(chunk_size=1000, chunk_overlap=200)
+chunked_docs = chunker.split_documents(documents)
+
+# Set up vector store
+chroma_client = chromadb.PersistentClient(path="./chroma_db")
+vector_store = ChromaVectorStore(
+    client=chroma_client,
+    collection_name="rag_documents",
+    embedding_function=embedding_model,
+)
+
+# Add documents to vector store
+vector_store.add_documents(chunked_docs)
+
+# Initialize language model and RAG pipeline
+llm = OpenAI(model_name="gpt-3.5-turbo-instruct")
+rag_pipeline = RAGPipeline(
+    vectorstore=vector_store,
+    llm=llm,
+    top_k=3,
+)
+
+# Query the RAG system
+result = rag_pipeline.query("Your question about the documents?")
+print(result["response"])
 ```
 
-### 5. Set Up Pre-commit Hooks
+### REST API
+
+The package includes a FastAPI-based REST API:
 
 ```bash
-# Install pre-commit
-uv pip install pre-commit
-
-# Install the git hooks
-pre-commit install
-
-# Run against all files (optional)
-pre-commit run --all-files
+# Start the API server
+uvicorn llm_rag.api.main:app --reload
 ```
 
-## 🧪 Running Tests
+Then you can interact with the API:
 
 ```bash
-# Run tests with coverage
-pytest --cov=src/llm_rag tests/ --cov-report=xml
-
-# Run specific test file
-pytest tests/path/to/test_file.py
+# Example query using curl
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Your question about the documents?"}'
 ```
 
-## 🔍 Code Quality
+Or visit `http://localhost:8000/docs` in your browser to use the Swagger UI.
+
+## Architecture
+
+The system is built with a modular architecture:
+
+1. **Document Processing**: Handles loading and parsing documents from various sources
+2. **Text Chunking**: Splits documents into manageable pieces for embedding
+3. **Embedding Generation**: Creates vector representations of text
+4. **Vector Storage**: Stores and retrieves document embeddings efficiently
+5. **RAG Pipeline**: Orchestrates the retrieval and generation process
+6. **API Interface**: Provides REST endpoints for interacting with the system
+
+## Development
+
+### Running Tests
 
 ```bash
-# Format code
-ruff format .
+# Run all tests
+pytest
 
-# Run linter
+# Run with coverage report
+pytest --cov=src/llm_rag
+
+# Run specific test categories
+pytest -m unit
+pytest -m integration
+```
+
+### Code Quality
+
+The project uses several tools to maintain code quality:
+
+- **ruff**: For linting and code style
+- **mypy**: For type checking
+- **pre-commit**: For automated checks before commits
+
+```bash
+# Run linting
 ruff check .
 
-# Run type checker
-mypy src tests
+# Run type checking
+mypy .
+
+# Install pre-commit hooks
+pre-commit install
 ```
 
-## 🐳 Docker Support
+## License
 
-Build and run the application using Docker:
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-```bash
-# Build the image
-docker build -t llm-rag .
+## Contributing
 
-# Run the container
-docker run -p 8000:8000 llm-rag
-```
-
-Using BuildKit for faster builds:
-
-```bash
-# Enable BuildKit
-export DOCKER_BUILDKIT=1
-
-# Build with cache
-docker buildx build --cache-from=type=registry,ref=theflyingd/llm-rag:buildcache \
-                   --cache-to=type=registry,ref=theflyingd/llm-rag:buildcache,mode=max \
-                   -t theflyingd/llm-rag:latest .
-```
-
-## 📦 Project Structure
-
-llm-rag/
-├── src/
-│ └── llm_rag/
-│ ├── api/ # FastAPI endpoints
-│ ├── vectorstore/ # Vector storage implementations
-│ └── main.py # Application entry point
-├── tests/ # Test suite
-├── .github/ # GitHub Actions workflows
-├── k8s/ # Kubernetes manifests
-├── pyproject.toml # Project metadata and dependencies
-└── Dockerfile # Container definition
-
-````
-
-## 🔐 Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-# API Keys and Configurations
-OPENAI_API_KEY=your_api_key_here
-CHROMADB_HOST=localhost
-CHROMADB_PORT=8000
-````
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Contributions are welcome! Please feel free to submit a Pull Request.

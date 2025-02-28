@@ -1,4 +1,8 @@
-def main():
+def main() -> None:
+    """Entry point for the llm-rag application.
+
+    Prints a welcome message when executed directly.
+    """
     print("Hello from llm-rag!")
 
 
