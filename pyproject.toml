@@ -158,5 +158,5 @@ build_command = "pip install build && python -m build"
 commit_message = "{version}\n\n{changelog}"
 changelog_file = "CHANGELOG.md"
 changelog_scope = false
-major_on_zero = true
+major_on_zero = false
 tag_format = "v{version}"
