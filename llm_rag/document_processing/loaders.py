@@ -38,26 +38,20 @@ class TextFileLoader(DocumentLoader):
             raise FileNotFoundError(f"File not found: {file_path}")
 
     def load(self) -> List[Dict[str, Union[str, Dict]]]:
-        """Load the text file and return it as a document.
+        """Load the text file.
 
         Returns
         -------
-            List containing a single document with the file content
+            List containing a single document with the file content.
 
         """
         with open(self.file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Extract filename and extension
-        filename = self.file_path.name
-        # Get file extension without the dot, or default to 'txt' if no extension
-        file_extension = self.file_path.suffix.lstrip(".")
-        filetype = file_extension if file_extension else "txt"
-
         metadata = {
             "source": str(self.file_path),
-            "filename": filename,
-            "filetype": filetype,
+            "filename": self.file_path.name,
+            "filetype": self.file_path.suffix.lstrip(".") or "text",
         }
 
         return [{"content": content, "metadata": metadata}]

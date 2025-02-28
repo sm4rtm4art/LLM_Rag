@@ -15,6 +15,7 @@ dependencies = [
     "numpy>=1.26.4,<2",
     "pandas>=2.2.0",
     "pytest>=8.3.4",
+    "PyPDF2>=3.0.0",
     "scikit-learn>=1.6.1",
     "sentence-transformers>=2.2.2",
     "tiktoken>=0.9.0",
@@ -123,10 +124,17 @@ mypy_path = ["src"]
 packages = ["llm_rag"]
 namespace_packages = true
 explicit_package_bases = true
+exclude = ["src/llm_rag/document_processing", "tests", "scripts"]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
+check_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "scripts.*"
+disallow_untyped_defs = false
+check_untyped_defs = false
 
 [[tool.mypy.overrides]]
 module = "numpy.*"
@@ -145,11 +153,27 @@ module = "langchain_community.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = "langchain_chroma.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "langchain_huggingface.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "transformers.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "chromadb.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "pytest.*"
 ignore_missing_imports = true
 
 [tool.semantic_release]
-version_variable = ["src/llm_rag/__init__.py:__version__"]
+version_variable = ["src/llm_rag/version.py:__version__", "llm_rag/version.py:__version__"]
 version_toml = ["pyproject.toml:project.version"]
 branch = "main"
 upload_to_pypi = false

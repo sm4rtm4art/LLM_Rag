@@ -9,6 +9,7 @@ from chromadb.api.types import (
     Metadata,
 )
 from chromadb.config import Settings
+from langchain_core.documents import Document
 from numpy.typing import NDArray
 from sentence_transformers import SentenceTransformer
 
@@ -167,3 +168,101 @@ class ChromaVectorStore(VectorStore):
         except ValueError as e:
             if "does not exist" not in str(e):
                 raise
+
+    def similarity_search(
+        self,
+        query: str,
+        k: int = 5,
+        where: Optional[Dict] = None,
+        where_document: Optional[Dict] = None,
+    ) -> List[Document]:
+        """Search for similar documents and return as LangChain Documents.
+
+        Args:
+        ----
+            query: Search query text
+            k: Number of results to return
+            where: Optional filter conditions on metadata
+            where_document: Optional filter conditions on document content
+
+        Returns:
+        -------
+            List of LangChain Document objects
+
+        """
+        # Use the existing search method to get results
+        results = self.search(
+            query=query,
+            n_results=k,
+            where=where,
+            where_document=where_document,
+        )
+
+        # Convert to LangChain Document format
+        documents = []
+        for result in results:
+            documents.append(
+                Document(
+                    page_content=result["document"],
+                    metadata=result["metadata"] or {},
+                )
+            )
+
+        return documents
+
+    def as_retriever(self, search_kwargs: Optional[Dict[str, Any]] = None) -> "ChromaRetriever":
+        """Create a retriever from this vector store.
+
+        Args:
+        ----
+            search_kwargs: Optional search parameters
+
+        Returns:
+        -------
+            A retriever object
+
+        """
+        return ChromaRetriever(vectorstore=self, search_kwargs=search_kwargs or {})
+
+
+class ChromaRetriever:
+    """Retriever for ChromaVectorStore."""
+
+    def __init__(
+        self,
+        vectorstore: ChromaVectorStore,
+        search_kwargs: Dict[str, Any],
+    ):
+        """Initialize the retriever.
+
+        Args:
+        ----
+            vectorstore: The vector store to retrieve from
+            search_kwargs: Search parameters
+
+        """
+        self.vectorstore = vectorstore
+        self.search_kwargs = search_kwargs
+
+    def get_relevant_documents(self, query: str) -> List[Document]:
+        """Get documents relevant to the query.
+
+        Args:
+        ----
+            query: The query to search for
+
+        Returns:
+        -------
+            List of relevant documents
+
+        """
+        k = self.search_kwargs.get("k", 5)
+        where = self.search_kwargs.get("where")
+        where_document = self.search_kwargs.get("where_document")
+
+        return self.vectorstore.similarity_search(
+            query=query,
+            k=k,
+            where=where,
+            where_document=where_document,
+        )

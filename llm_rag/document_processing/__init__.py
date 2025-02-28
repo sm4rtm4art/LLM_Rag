@@ -4,10 +4,6 @@ This module contains components for loading and processing documents
 for use in RAG pipelines.
 """
 
-from llm_rag.document_processing.chunking import (
-    CharacterTextChunker,
-    RecursiveTextChunker,
-)
 from llm_rag.document_processing.loaders import (
     CSVLoader,
     DirectoryLoader,
@@ -28,6 +24,4 @@ __all__ = [
     "TextFileLoader",
     "DocumentProcessor",
     "TextSplitter",
-    "CharacterTextChunker",
-    "RecursiveTextChunker",
 ]

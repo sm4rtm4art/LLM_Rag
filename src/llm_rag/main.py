@@ -3,6 +3,7 @@
 This module provides the main entry point for the llm-rag application.
 It demonstrates how to set up and use a simple RAG pipeline.
 """
+
 import argparse
 import os
 import sys

@@ -2,6 +2,7 @@
 
 This module provides a FastAPI interface for interacting with the RAG system.
 """
+
 from typing import Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException

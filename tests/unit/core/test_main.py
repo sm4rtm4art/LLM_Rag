@@ -34,17 +34,20 @@ def test_main_output(capsys):
         mock_llama.invoke.return_value = "Test response"
 
         # Apply all mocks
-        with patch("chromadb.PersistentClient", return_value=mock_client), patch(
-            "llm_rag.vectorstore.chroma.ChromaVectorStore", return_value=mock_vector_store
-        ), patch("llm_rag.document_processing.loaders.DirectoryLoader", return_value=mock_loader), patch(
-            "langchain_community.llms.LlamaCpp.__init__", return_value=None
-        ), patch("langchain_community.llms.LlamaCpp.__call__", return_value="Test response"), patch(
-            "langchain_community.llms.LlamaCpp.invoke", return_value="Test response"
-        ), patch("sentence_transformers.SentenceTransformer.__init__", return_value=None), patch(
-            "sentence_transformers.SentenceTransformer", return_value=mock_transformer
-        ), patch("sentence_transformers.util.load_file_path", return_value=None), patch("os.makedirs"), patch(
-            "sys.exit"
-        ), patch("os.path.exists", return_value=True):
+        with (
+            patch("chromadb.PersistentClient", return_value=mock_client),
+            patch("llm_rag.vectorstore.chroma.ChromaVectorStore", return_value=mock_vector_store),
+            patch("llm_rag.document_processing.loaders.DirectoryLoader", return_value=mock_loader),
+            patch("langchain_community.llms.LlamaCpp.__init__", return_value=None),
+            patch("langchain_community.llms.LlamaCpp.__call__", return_value="Test response"),
+            patch("langchain_community.llms.LlamaCpp.invoke", return_value="Test response"),
+            patch("sentence_transformers.SentenceTransformer.__init__", return_value=None),
+            patch("sentence_transformers.SentenceTransformer", return_value=mock_transformer),
+            patch("sentence_transformers.util.load_file_path", return_value=None),
+            patch("os.makedirs"),
+            patch("sys.exit"),
+            patch("os.path.exists", return_value=True),
+        ):
             main()
 
         # Get captured output

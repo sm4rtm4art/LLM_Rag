@@ -2,6 +2,7 @@
 
 This module provides utilities for generating text embeddings using various models.
 """
+
 from typing import Any, List, Optional, Union
 
 import numpy as np
