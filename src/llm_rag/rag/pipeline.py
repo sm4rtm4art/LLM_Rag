@@ -17,7 +17,7 @@ class RAGPipeline:
 
     def __init__(
         self,
-        vectorstore: Any,  # Will be more specific once we have a VectorStore interface
+        vectorstore: Any,  # Will be more specific once we have a VectorStore
         llm: BaseLLM,
         prompt_template: Optional[Union[str, PromptTemplate]] = None,
         top_k: int = 3,
