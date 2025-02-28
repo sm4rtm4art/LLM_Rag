@@ -76,7 +76,7 @@ warn_under = 60  # Warn if coverage is below 60%
 
 [tool.ruff]
 # Target Python version
-target-version = "py311"
+target-version = "py312"
 line-length = 120
 
 [tool.ruff.lint]
