@@ -1,8 +1,14 @@
 """Document processing utilities for the RAG system."""
 
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, TypeAlias, Union
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+# Type aliases to improve readability and avoid long lines
+DocumentMetadata: TypeAlias = Dict[str, Any]
+DocumentContent: TypeAlias = Union[str, DocumentMetadata]
+Document: TypeAlias = Dict[str, DocumentContent]
+Documents: TypeAlias = List[Document]
 
 
 class TextSplitter:
@@ -46,7 +52,7 @@ class TextSplitter:
         """
         return self.splitter.split_text(text)
 
-    def split_documents(self, documents: List[Dict[str, Union[str, Dict]]]) -> List[Dict[str, Union[str, Dict]]]:
+    def split_documents(self, documents: Documents) -> Documents:
         """Split documents into chunks.
 
         Args:
@@ -59,9 +65,15 @@ class TextSplitter:
 
         """
         # Convert to LangChain document format
-        from langchain.schema import Document
+        from langchain.schema import Document as LangChainDocument
 
-        lc_docs = [Document(page_content=doc["content"], metadata=doc["metadata"]) for doc in documents]
+        lc_docs = [
+            LangChainDocument(
+                page_content=(str(doc["content"]) if not isinstance(doc["content"], str) else doc["content"]),
+                metadata=doc["metadata"],
+            )
+            for doc in documents
+        ]
 
         # Split documents
         split_docs = self.splitter.split_documents(lc_docs)
@@ -83,7 +95,7 @@ class DocumentProcessor:
         """
         self.text_splitter = text_splitter
 
-    def process(self, documents: List[Dict[str, Union[str, Dict]]]) -> List[Dict[str, Union[str, Dict]]]:
+    def process(self, documents: Documents) -> Documents:
         """Process documents for the RAG system.
 
         Args:
@@ -96,7 +108,11 @@ class DocumentProcessor:
 
         """
         # Filter out documents with empty content
-        filtered_docs = [doc for doc in documents if doc.get("content") and doc["content"].strip()]
+        filtered_docs = [
+            doc
+            for doc in documents
+            if (doc.get("content") and isinstance(doc["content"], str) and doc["content"].strip())
+        ]
 
         # Split documents into chunks
         chunked_docs = self.text_splitter.split_documents(filtered_docs)

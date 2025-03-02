@@ -148,8 +148,8 @@ class RecursiveTextChunker(BaseTextChunker):
                 continue
 
             # Process each split
-            chunks = []
-            current_chunk = []
+            chunks: List[str] = []
+            current_chunk: List[str] = []
             current_length = 0
 
             for split in splits:
@@ -161,7 +161,7 @@ class RecursiveTextChunker(BaseTextChunker):
                     chunks.append(separator.join(current_chunk))
 
                     # Handle overlap by keeping some splits for the next chunk
-                    overlap_splits = []
+                    overlap_splits: List[str] = []
                     overlap_length = 0
 
                     # Work backwards through current_chunk to find splits for overlap

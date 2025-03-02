@@ -3,14 +3,17 @@
 import csv
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, TypeVar, Union
+
+# Define a type variable for document loaders
+T = TypeVar("T", bound="DocumentLoader")
 
 
 class DocumentLoader(ABC):
     """Abstract base class for document loaders."""
 
     @abstractmethod
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
+    def load(self) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
         """Load documents from a source.
 
         Returns
@@ -37,7 +40,7 @@ class TextFileLoader(DocumentLoader):
         if not self.file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
 
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
+    def load(self) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
         """Load the text file.
 
         Returns
@@ -78,7 +81,7 @@ class PDFLoader(DocumentLoader):
         except ImportError as err:
             raise ImportError("PyPDF2 is required for PDF loading. " "Install it with 'pip install PyPDF2'") from err
 
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
+    def load(self) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
         """Load the PDF file.
 
         Returns
@@ -134,7 +137,7 @@ class CSVLoader(DocumentLoader):
         self.content_columns = content_columns
         self.metadata_columns = metadata_columns
 
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
+    def load(self) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
         """Load the CSV file.
 
         Returns
@@ -142,7 +145,7 @@ class CSVLoader(DocumentLoader):
             List of documents, one per row in the CSV file.
 
         """
-        documents = []
+        documents: List[Dict[str, Union[str, Dict[str, Any]]]] = []
 
         with open(self.file_path, "r", encoding="utf-8", newline="") as f:
             csv_reader = csv.DictReader(f)
@@ -164,7 +167,7 @@ class CSVLoader(DocumentLoader):
                 content = "\n".join(content_parts)
 
                 # Build metadata
-                metadata = {
+                metadata: Dict[str, Any] = {
                     "source": str(self.file_path),
                     "filename": self.file_path.name,
                     "filetype": "csv",
@@ -206,7 +209,7 @@ class DirectoryLoader(DocumentLoader):
         self.recursive = recursive
         self.glob_pattern = glob_pattern
 
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
+    def load(self) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
         """Load documents from the directory.
 
         Returns
@@ -214,7 +217,7 @@ class DirectoryLoader(DocumentLoader):
             List of documents from all matching files in the directory.
 
         """
-        documents = []
+        documents: List[Dict[str, Union[str, Dict[str, Any]]]] = []
 
         # Determine the glob pattern
         pattern = self.glob_pattern or "*.*"
@@ -240,6 +243,7 @@ class DirectoryLoader(DocumentLoader):
             try:
                 # Select appropriate loader based on file extension
                 extension = file_path.suffix.lower()
+                loader: DocumentLoader
 
                 if extension == ".csv":
                     loader = CSVLoader(file_path)
@@ -248,7 +252,7 @@ class DirectoryLoader(DocumentLoader):
                 elif extension in [".txt", ".md", ".html", ".json"]:
                     loader = TextFileLoader(file_path)
                 else:
-                    print(f"Unsupported file type: {extension}. Skipping {file_path}")
+                    print(f"Unsupported file type: {extension}. " f"Skipping {file_path}")
                     continue
 
                 # Load the file and add documents to the list

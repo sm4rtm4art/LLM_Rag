@@ -7,15 +7,61 @@ It demonstrates how to set up and use a simple RAG pipeline.
 import argparse
 import os
 import sys
+from typing import Any, Dict, List, Union, cast
 
 import chromadb
-from langchain_community.llms import LlamaCpp
+from langchain_community.llms.base import LLM  # type: ignore
 
-from llm_rag.document_processing.chunking import RecursiveTextChunker
-from llm_rag.document_processing.loaders import DirectoryLoader
-from llm_rag.models.embeddings import EmbeddingModel
-from llm_rag.rag.pipeline import RAGPipeline
-from llm_rag.vectorstore.chroma import ChromaVectorStore
+# Import necessary callback handlers for LlamaCpp
+from langchain_core.callbacks import StreamingStdOutCallbackHandler
+from llama_cpp import Llama  # type: ignore
+
+# Use relative imports
+from .document_processing.chunking import RecursiveTextChunker
+from .document_processing.loaders import DirectoryLoader
+from .models.embeddings import EmbeddingModel
+from .rag.pipeline import RAGPipeline
+from .vectorstore.base import VectorStore
+from .vectorstore.chroma import ChromaVectorStore
+
+
+# Create a custom wrapper if needed
+class CustomLlamaCpp(LLM):
+    """Custom wrapper for the Llama model from llama-cpp-python.
+
+    This class provides a LangChain compatible interface to the Llama model.
+    """
+
+    model_path: str
+    # ... other parameters ...
+
+    def __init__(self, model_path, **kwargs):
+        """Initialize the CustomLlamaCpp.
+
+        Args:
+        ----
+            model_path: Path to the Llama model file
+            **kwargs: Additional parameters to pass to the Llama model
+
+        """
+        super().__init__()
+        self.model_path = model_path
+        self.model = Llama(model_path=model_path, **kwargs)
+
+    def _call(self, prompt, **kwargs):
+        """Call the Llama model with the given prompt.
+
+        Args:
+        ----
+            prompt: The prompt to send to the model
+            **kwargs: Additional parameters for the model call
+
+        Returns:
+        -------
+            The generated text response
+
+        """
+        return self.model(prompt, **kwargs)["choices"][0]["text"]
 
 
 def setup_arg_parser() -> argparse.ArgumentParser:
@@ -133,12 +179,50 @@ def ingest_documents(
     chunked_documents = chunker.split_documents(documents)
     print(f"Created {len(chunked_documents)} chunks")
 
-    # Extract content and metadata for vector store
-    doc_contents = [doc["content"] for doc in chunked_documents]
-    doc_metadatas = [doc["metadata"] for doc in chunked_documents]
+    # Process documents to ensure correct format
+    doc_contents: List[str] = []
+    doc_metadatas: List[Dict[str, Any]] = []
+
+    # Process each document to extract content and metadata
+    for i, doc in enumerate(chunked_documents):
+        try:
+            content: str = ""
+            metadata: Dict[str, Any] = {}
+
+            if isinstance(doc, dict):
+                content = cast(str, doc.get("content", ""))
+                metadata = cast(Dict[str, Any], doc.get("metadata", {}))
+            elif hasattr(doc, "page_content") and hasattr(doc, "metadata"):
+                # Handle Document objects
+                content = cast(str, getattr(doc, "page_content", ""))
+                metadata = cast(Dict[str, Any], getattr(doc, "metadata", {}))
+
+            # Only add non-empty content
+            if content:
+                doc_contents.append(content)
+                doc_metadatas.append(metadata)
+        except Exception as e:
+            print(f"Error processing document {i}: {e}")
+            continue
+
+    # Add documents to vector store - ensure all contents are strings
+    # and metadata is properly formatted
+    str_contents = [str(content) for content in doc_contents]
+
+    # Ensure all metadata is a dictionary with string keys and valid values
+    formatted_metadatas: List[Dict[str, Union[str, bool, int, float]]] = []
+    for metadata in doc_metadatas:
+        # Convert all values to strings except booleans, ints, and floats
+        formatted_metadata: Dict[str, Union[str, bool, int, float]] = {}
+        for k, v in metadata.items():
+            if isinstance(v, (bool, int, float)):
+                formatted_metadata[str(k)] = v
+            else:
+                formatted_metadata[str(k)] = str(v)
+        formatted_metadatas.append(formatted_metadata)
 
     # Add documents to vector store
-    vector_store.add_documents(documents=doc_contents, metadatas=doc_metadatas)
+    vector_store.add_documents(documents=str_contents, metadatas=formatted_metadatas)
     print(f"Added {len(chunked_documents)} chunks to vector store")
 
     return vector_store
@@ -170,9 +254,9 @@ def run_interactive_mode(rag_pipeline: RAGPipeline) -> None:
         print("=" * 40)
         print("ANSWER:", result["response"])
         print("=" * 40)
-        print(f"Retrieved {len(result['retrieved_documents'])} documents:")
+        print(f"Retrieved {len(result['source_documents'])} documents:")
 
-        for i, doc in enumerate(result["retrieved_documents"]):
+        for i, doc in enumerate(result["source_documents"]):
             print(f"\nDocument {i+1}:")
             print(f"  Source: {doc.get('metadata', {}).get('source', 'Unknown')}")
             print(f"  Content: {doc.get('content', '')[:100]}...")
@@ -232,7 +316,11 @@ def main() -> None:
         )
 
     # Initialize language model
-    llm = LlamaCpp(
+    # Set up callbacks for streaming output
+    callbacks = [StreamingStdOutCallbackHandler()]
+
+    # Use CustomLlamaCpp instead of ChatLlamaCpp
+    llm = CustomLlamaCpp(
         model_path=args.model_path,
         n_gpu_layers=args.n_gpu_layers,
         n_ctx=args.n_ctx,
@@ -240,11 +328,13 @@ def main() -> None:
         max_tokens=2048,
         top_p=1,
         verbose=True,
+        f16_kv=True,
+        n_batch=512,
     )
 
     # Initialize RAG pipeline
     rag_pipeline = RAGPipeline(
-        vectorstore=vector_store,
+        vectorstore=cast(VectorStore, vector_store),
         llm=llm,
         top_k=args.top_k,
     )
@@ -258,9 +348,9 @@ def main() -> None:
         print("=" * 40)
         print("ANSWER:", result["response"])
         print("=" * 40)
-        print(f"Retrieved {len(result['retrieved_documents'])} documents:")
+        print(f"Retrieved {len(result['source_documents'])} documents:")
 
-        for i, doc in enumerate(result["retrieved_documents"]):
+        for i, doc in enumerate(result["source_documents"]):
             print(f"\nDocument {i+1}:")
             print(f"  Source: {doc.get('metadata', {}).get('source', 'Unknown')}")
             print(f"  Content: {doc.get('content', '')[:100]}...")

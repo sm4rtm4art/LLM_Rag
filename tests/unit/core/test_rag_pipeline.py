@@ -126,14 +126,14 @@ class TestRAGPipeline(unittest.TestCase):
 
         # Check that the result contains all expected keys
         self.assertIn("query", result)
-        self.assertIn("retrieved_documents", result)
+        self.assertIn("source_documents", result)
         self.assertIn("response", result)
 
         # Check that the query was passed correctly
         self.assertEqual(result["query"], "What is RAG?")
 
         # Check that documents were retrieved
-        self.assertEqual(len(result["retrieved_documents"]), 2)
+        self.assertEqual(len(result["source_documents"]), 2)
 
         # Check that a response was generated
         self.assertEqual(result["response"], "This is a test response.")
@@ -146,7 +146,7 @@ class TestConversationalRAGPipeline(unittest.TestCase):
         """Set up test fixtures."""
         # Create mock objects
         self.mock_vectorstore = MagicMock()
-        self.mock_llm = MagicMock()
+        self.mock_llm_chain = MagicMock()
 
         # Configure mock behavior
         self.mock_vectorstore.search.return_value = [
@@ -154,14 +154,13 @@ class TestConversationalRAGPipeline(unittest.TestCase):
             {"content": "Test document 2", "metadata": {"source": "test2.txt"}},
         ]
         response = "This is a conversational response."
-        self.mock_llm.invoke.return_value = response
+        self.mock_llm_chain.predict.return_value = response
 
         # Create pipeline instance
         self.pipeline = ConversationalRAGPipeline(
             vectorstore=self.mock_vectorstore,
-            llm=self.mock_llm,
+            llm_chain=self.mock_llm_chain,
             top_k=2,
-            history_size=3,
         )
 
     def test_init_default_prompt(self):
@@ -244,8 +243,8 @@ class TestConversationalRAGPipeline(unittest.TestCase):
 
         # Check that LLM was called with correct prompt including history
         expected_history = "User: What is RAG?\nAssistant: RAG is a technique..."
-        self.mock_llm.invoke.assert_called_once()
-        call_args = self.mock_llm.invoke.call_args[0][0]
+        self.mock_llm_chain.predict.assert_called_once()
+        call_args = self.mock_llm_chain.predict.call_args[0][0]
         self.assertIn(expected_history, call_args)
         self.assertIn("How does it work?", call_args)
 

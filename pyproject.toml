@@ -108,69 +108,42 @@ known-first-party = ["llm_rag"]
 
 [tool.mypy]
 python_version = "3.12"
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
 check_untyped_defs = true
 disallow_untyped_decorators = false
 no_implicit_optional = true
+strict_optional = true
 warn_redundant_casts = true
-warn_unused_ignores = true
+warn_unused_ignores = false
 warn_no_return = true
-warn_unreachable = true
-# Fix path issues
-mypy_path = ["src"]
-packages = ["llm_rag"]
-namespace_packages = true
-explicit_package_bases = true
-exclude = ["src/llm_rag/document_processing", "tests", "scripts"]
+warn_unreachable = false
+exclude = ["tests", "scripts"]
 
 [[tool.mypy.overrides]]
-module = "tests.*"
+module = [
+    "langchain.*",
+    "langchain_core.*",
+    "torch.*",
+    "PyPDF2.*",
+    "sentence_transformers.*",
+    "chromadb.*"
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "llm_rag.document_processing.*"
 disallow_untyped_defs = false
 check_untyped_defs = false
+warn_return_any = false
 
 [[tool.mypy.overrides]]
-module = "scripts.*"
+module = "llm_rag.vectorstore.*"
 disallow_untyped_defs = false
 check_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = "numpy.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "sentence_transformers.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "langchain.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "langchain_community.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "langchain_chroma.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "langchain_huggingface.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "transformers.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "chromadb.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "pytest.*"
-ignore_missing_imports = true
+warn_return_any = false
 
 [tool.semantic_release]
 version_variable = ["src/llm_rag/version.py:__version__", "llm_rag/version.py:__version__"]

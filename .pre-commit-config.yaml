@@ -33,4 +33,11 @@ repos:
       - id: check-added-large-files
       - id: debug-statements
 
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.15.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests, pandas-stubs]
+        args: [--config-file=pyproject.toml]
+
 exclude: '^\.llm_rag/.*'  # Exclude virtual environment files
