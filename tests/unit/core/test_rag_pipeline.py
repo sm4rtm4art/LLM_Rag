@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 from langchain.prompts import PromptTemplate
 
-from llm_rag.rag.pipeline import ConversationalRAGPipeline, RAGPipeline
+from src.llm_rag.rag.pipeline import ConversationalRAGPipeline, RAGPipeline
 
 
 class TestRAGPipeline(unittest.TestCase):
@@ -68,7 +68,7 @@ class TestRAGPipeline(unittest.TestCase):
         docs = self.pipeline.retrieve("test query")
 
         # Check that vectorstore.search was called with correct parameters
-        self.mock_vectorstore.search.assert_called_once_with("test query", n_results=2)
+        self.mock_vectorstore.search.assert_called_once_with("test query", n_results=2, search_type="similarity")
 
         # Check that the returned documents match the expected format
         self.assertEqual(len(docs), 2)

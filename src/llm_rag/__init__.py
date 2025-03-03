@@ -10,9 +10,12 @@ Main Components:
 - api: REST API endpoints
 """
 
-from llm_rag.version import __version__
+from .version import __version__
 
 # Re-export version
 __version__ = __version__
 __author__ = "Martin"
 __email__ = "your.email@example.com"
+
+# Define public API
+__all__ = ["main", "__version__"]

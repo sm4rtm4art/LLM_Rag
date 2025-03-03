@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from llm_rag.document_processing.loaders import (
+from src.llm_rag.document_processing.loaders import (
     CSVLoader,
     DirectoryLoader,
     DocumentLoader,
@@ -282,7 +282,7 @@ class TestDirectoryLoader(unittest.TestCase):
         self.assertIn(str(self.text_file2), sources)
         self.assertNotIn(str(self.csv_file), sources)
 
-    @patch("llm_rag.document_processing.loaders.TextFileLoader")
+    @patch("src.llm_rag.document_processing.loaders.TextFileLoader")
     def test_error_handling(self, mock_text_loader):
         """Test error handling when loading files."""
         # Make the TextFileLoader raise an exception

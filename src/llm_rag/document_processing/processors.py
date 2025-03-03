@@ -111,7 +111,13 @@ class DocumentProcessor:
         filtered_docs = [
             doc
             for doc in documents
-            if (doc.get("content") and isinstance(doc["content"], str) and doc["content"].strip())
+            if (
+                doc.get("content")
+                and (
+                    (isinstance(doc["content"], str) and doc["content"].strip())
+                    or (not isinstance(doc["content"], str))
+                )
+            )
         ]
 
         # Split documents into chunks

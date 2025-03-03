@@ -1,13 +1,3 @@
-# --- CONFIGMAP for Cloud Provider ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: cloud-provider-config
-data:
-  CLOUD_PROVIDER: ""  # Will be populated by the init container script
-  ENVIRONMENT: "dev"  # Will be updated by deployment script
----
-# --- DEPLOYMENT ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -31,33 +21,14 @@ spec:
           - "/bin/sh"
           - "-c"
           - |
-            # Create directory for cloud config
-            mkdir -p /cloud-config
-
-            # Try to detect cloud provider with timeout and error handling
-            if timeout 5 curl -s -f -H "Metadata-Flavor: Google" http://metadata.google.internal > /dev/null 2>&1; then
-              echo "Detected GCP environment"
-              echo "CLOUD_PROVIDER=GCP" > /cloud-config/cloud.env
-            elif timeout 5 curl -s -f -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2021-02-01" > /dev/null 2>&1; then
-              echo "Detected Azure environment"
-              echo "CLOUD_PROVIDER=AZURE" > /cloud-config/cloud.env
-            elif timeout 5 curl -s -f http://169.254.169.254/latest/meta-data > /dev/null 2>&1; then
-              echo "Detected AWS environment"
-              echo "CLOUD_PROVIDER=AWS" > /cloud-config/cloud.env
-            elif timeout 5 curl -s -f http://169.254.169.254/hetzner/ > /dev/null 2>&1; then
-              echo "Detected Hetzner environment"
-              echo "CLOUD_PROVIDER=HETZNER" > /cloud-config/cloud.env
+            if curl -s -f http://metadata.google.internal; then
+              echo "CLOUD_PROVIDER=GCP" > /configmap-volume/CLOUD_PROVIDER
+            elif curl -s -f http://169.254.169.254/latest/meta-data; then
+              echo "CLOUD_PROVIDER=AWS" > /configmap-volume/CLOUD_PROVIDER
             else
-              echo "Could not detect cloud provider, using UNKNOWN"
-              echo "CLOUD_PROVIDER=UNKNOWN" > /cloud-config/cloud.env
+              echo "CLOUD_PROVIDER=UNKNOWN" > /configmap-volume/CLOUD_PROVIDER
             fi
-
-            # Copy to ConfigMap location
-            source /cloud-config/cloud.env
-            echo $CLOUD_PROVIDER > /configmap-volume/CLOUD_PROVIDER
         volumeMounts:
-        - name: cloud-config
-          mountPath: /cloud-config
         - name: configmap-volume
           mountPath: /configmap-volume
 
@@ -78,169 +49,8 @@ spec:
             configMapKeyRef:
               name: cloud-provider-config
               key: ENVIRONMENT
-        - name: LOG_LEVEL
-          value: "INFO"
-        - name: MAX_BATCH_SIZE
-          value: "16"
-        - name: MODEL_CACHE_DIR
-          value: "/app/models"
-
-        # Health checks
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: http
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: http
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 3
-
-        # Security context
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 1000
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-              - ALL
-
-        volumeMounts:
-        - name: cloud-config
-          mountPath: /cloud-config
-        - name: model-cache
-          mountPath: /app/models
-
-        resources:
-          requests:
-            memory: "2Gi"
-            cpu: "1"
-          limits:
-            memory: "8Gi"
-            cpu: "4"
 
       volumes:
-      - name: cloud-config
-        emptyDir: {}
       - name: configmap-volume
         configMap:
           name: cloud-provider-config
-      - name: model-cache
-        persistentVolumeClaim:
-          claimName: model-cache-pvc
-
----
-# --- SERVICE (Exposes the App) ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: llm-rag-service
-  labels:
-    app: llm-rag
-spec:
-  selector:
-    app: llm-rag
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 8000
-      name: http
-  type: LoadBalancer  # Change to ClusterIP if internal-only
-
----
-# --- INGRESS (External Routing) ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: llm-rag-ingress
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-spec:
-  tls:
-  - hosts:
-    - llm-rag.example.com
-    secretName: llm-rag-tls
-  rules:
-  - host: llm-rag.example.com  # Replace with your domain
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: llm-rag-service
-            port:
-              number: 80
-
----
-# --- PERSISTENT STORAGE (Model Caching) ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: model-cache-pvc
-  labels:
-    app: llm-rag
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
-  storageClassName: standard
-
----
-# --- AUTO-SCALING ---
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: llm-rag-hpa
-  labels:
-    app: llm-rag
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: llm-rag
-  minReplicas: 2
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
-
----
-# --- NETWORK POLICY (Optional Security) ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: llm-rag-network-policy
-  labels:
-    app: llm-rag
-spec:
-  podSelector:
-    matchLabels:
-      app: llm-rag
-  ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: ingress-nginx
-    ports:
-    - protocol: TCP
-      port: 8000
