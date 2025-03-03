@@ -1,11 +1,32 @@
 """Integration tests for ChromaDB functionality."""
 
+import os
 import tempfile
 from typing import Dict, Generator, List, Union
 
+import numpy as np
 import pytest
 
 from llm_rag.vectorstore.chroma import ChromaVectorStore, EmbeddingFunctionWrapper
+
+
+class MockEmbeddingFunction:
+    """Mock embedding function for CI testing.
+
+    This avoids downloading the actual model in CI environments.
+    """
+
+    def __call__(self, texts: List[str]) -> List[List[float]]:
+        """Return fixed embeddings with the correct dimensions (384).
+
+        Args:
+            texts: List of texts to embed
+
+        Returns:
+            List of mock embeddings with fixed values but correct dimensions
+        """
+        # Return a fixed embedding for each text (384 dimensions)
+        return [list(np.zeros(384) + 0.1) for _ in texts]
 
 
 @pytest.fixture
@@ -31,7 +52,13 @@ def chroma_store(temp_persist_dir: str) -> Generator[ChromaVectorStore, None, No
         Generator yielding a configured ChromaVectorStore instance.
         Collection is automatically cleaned up after tests.
     """
-    store = ChromaVectorStore(persist_directory=temp_persist_dir)
+    # Check if running in CI environment (GitHub Actions)
+    in_ci = os.environ.get("GITHUB_ACTIONS") == "true"
+
+    # Use mock embedding function in CI, real one otherwise
+    embedding_function = MockEmbeddingFunction() if in_ci else None
+
+    store = ChromaVectorStore(persist_directory=temp_persist_dir, embedding_function=embedding_function)
     yield store
     store.delete_collection()
 

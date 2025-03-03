@@ -1,5 +1,7 @@
 # LLM RAG System
 
+[![codecov](https://codecov.io/gh/sm4rtm4art/llm-rag/branch/main/graph/badge.svg)](https://codecov.io/gh/sm4rtm4art/llm-rag)
+
 A Retrieval-Augmented Generation (RAG) system that uses LLMs to answer questions based on your documents.
 
 ## Features
