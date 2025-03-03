@@ -8,11 +8,16 @@ from typing import Dict, List, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from llm_rag.api.health import router as health_router
+
 app = FastAPI(
     title="LLM RAG API",
     description=("API for interacting with the Retrieval-Augmented Generation system"),
     version="0.1.0",
 )
+
+# Include routers
+app.include_router(health_router)
 
 
 class QueryRequest(BaseModel):

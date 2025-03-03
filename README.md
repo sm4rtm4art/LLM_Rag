@@ -11,6 +11,7 @@ A Retrieval-Augmented Generation (RAG) system that uses LLMs to answer questions
 - Conversational RAG pipeline
 - Command-line interface
 - Support for various LLM backends (HuggingFace, LLaMA)
+- Docker support for easy deployment
 
 ## Installation
 
@@ -43,6 +44,32 @@ pip install -e .
    ```
 
 See [README_DEMO.md](README_DEMO.md) for more detailed instructions and options.
+
+## Using Docker
+
+### Building the Docker Image
+
+```bash
+# Build the Docker image
+docker build -t llm-rag:latest .
+```
+
+### Running with Docker
+
+```bash
+# Run the application with Docker
+docker run -v ./data:/app/data -v ./models:/app/models -p 8000:8000 llm-rag:latest
+```
+
+### Using Docker Compose
+
+```bash
+# Start the application
+docker-compose up
+
+# Run tests
+docker-compose --profile test up llm-rag-test
+```
 
 ## Usage
 
@@ -84,6 +111,14 @@ If you encounter issues with model loading:
    ```bash
    pip install llama-cpp-python
    ```
+
+### Docker Issues
+
+If you encounter issues with Docker:
+
+1. Make sure your Docker environment has enough resources allocated (memory, CPU)
+2. For issues with llama-cpp-python in Docker, the image is built with specific flags to disable native optimizations
+3. Ensure the data and models directories exist and have the correct permissions
 
 ## License
 

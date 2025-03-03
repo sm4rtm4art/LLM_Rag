@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  llm-rag:
+    image: llm-rag:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./demo_llm_rag.py:/app/demo_llm_rag.py
+      - ./simple_llama_test.py:/app/simple_llama_test.py
+      - ./test_llama_cpp.py:/app/test_llama_cpp.py
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: python /app/test_llama_cpp.py
+    restart: unless-stopped
+
+  # Add a service for testing if needed
+  llm-rag-test:
+    image: llm-rag:latest
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    command: pytest -xvs tests/
+    profiles:
+      - test

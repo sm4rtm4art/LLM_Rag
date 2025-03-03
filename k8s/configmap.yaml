@@ -1,28 +1,18 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: llm-rag
-  labels:
-    app: llm-rag
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: llm-rag
-  template:
-    metadata:
-      labels:
-        app: llm-rag
-    spec:
-      containers:
-      - name: llm-rag
-        image: ${DOCKERHUB_USERNAME}/llm-rag:latest
-        ports:
-        - containerPort: 8000
-          name: http
-        env:
-        - name: CLOUD_PROVIDER
-          valueFrom:
-            configMapKeyRef:
-              name: cloud-provider-config
-              key: CLOUD_PROVIDER
+  name: llm-rag-config
+data:
+  config.yaml: |
+    model:
+      path: /app/models/llama-2-7b-chat.Q4_0.gguf
+      type: llama
+      context_window: 4096
+    embedding:
+      model_name: all-MiniLM-L6-v2
+    rag:
+      chunk_size: 512
+      chunk_overlap: 50
+    app:
+      host: "0.0.0.0"
+      port: 8000

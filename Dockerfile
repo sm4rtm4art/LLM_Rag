@@ -9,22 +9,23 @@ ENV FORCE_CMAKE=1
 
 WORKDIR /app
 
-# Change 1: Combine system dependency installation with cache mount
+# System dependencies
 RUN --mount=type=cache,target=/var/cache/apt \
     apt-get update && \
     apt-get install -y curl build-essential git && \
     rm -rf /var/lib/apt/lists/*
 
-# Change 2: Add cache mount for UV installation
+# Install UV
 RUN --mount=type=cache,target=/root/.cache \
     curl -LsSf https://astral.sh/uv/install.sh | sh && \
     mv /root/.local/bin/uv /usr/local/bin/
 
-# Change 3: Copy only dependency files first
+# Copy only necessary dependency files
 COPY pyproject.toml .
 
-# Install core dependencies without llama-cpp-python
-RUN pip install --no-cache-dir \
+# Install all dependencies at once with llama-cpp-python
+RUN --mount=type=cache,target=/root/.cache \
+    uv pip install --system --no-cache-dir \
     chromadb>=0.6.3 \
     pydantic>=2.0 \
     duckdb>=0.8.0 \
@@ -41,13 +42,18 @@ RUN pip install --no-cache-dir \
     tiktoken>=0.9.0 \
     torch>=2.1.0 \
     transformers>=4.49.0 \
-    uvicorn>=0.34.0
+    uvicorn>=0.34.0 \
+    llama-cpp-python==0.2.56
 
-# Install llama-cpp-python separately
-RUN pip install --no-cache-dir llama-cpp-python==0.2.56
+# Copy project files
+COPY src/ /app/src/
+COPY tests/ /app/tests/
 
-# Copy only necessary directories instead of everything
-COPY src/ src/
-COPY tests/ tests/
+# Create symbolic link for package to be importable as llm_rag
+RUN ln -s /app/src/llm_rag /usr/local/lib/python3.12/site-packages/llm_rag
+
+# Install the package in development mode
+RUN --mount=type=cache,target=/root/.cache \
+    uv pip install --system -e .
 
 CMD ["python", "-m", "llm_rag"]

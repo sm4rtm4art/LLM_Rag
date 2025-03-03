@@ -1,0 +1,110 @@
+name: Kubernetes Test with kind
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test-kubernetes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: llm-rag:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.8.0
+        with:
+          config: ./k8s/kind-config.yaml
+          cluster_name: llm-rag-test
+          wait: 120s
+
+      - name: Load Docker image into kind
+        run: |
+          kind load docker-image llm-rag:latest --name llm-rag-test
+
+      - name: Verify Kubernetes cluster
+        run: |
+          kubectl cluster-info
+          kubectl get nodes -o wide
+
+      - name: Create namespace
+        run: |
+          kubectl create namespace llm-rag-test
+
+      - name: Deploy Kubernetes resources
+        run: |
+          # Update image reference in deployment if needed
+          sed -i 's|image: llm-rag:latest|image: llm-rag:latest|' k8s/deployment.yaml
+
+          # Deploy config map
+          kubectl apply -f k8s/configmap.yaml -n llm-rag-test
+
+          # Deploy PVC
+          kubectl apply -f k8s/pvc.yaml -n llm-rag-test
+
+          # Deploy application
+          kubectl apply -f k8s/deployment.yaml -n llm-rag-test
+
+          # Deploy service
+          kubectl apply -f k8s/service.yaml -n llm-rag-test
+
+          # Install NGINX Ingress Controller
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+
+          # Wait for ingress controller to be ready
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=90s
+
+          # Deploy ingress
+          kubectl apply -f k8s/ingress.yaml -n llm-rag-test
+
+      - name: Wait for pods to be ready
+        run: |
+          kubectl wait --for=condition=ready pod --selector=app=llm-rag -n llm-rag-test --timeout=180s
+
+      - name: Run test
+        run: |
+          # Create a testing pod to simulate an LLM query
+          kubectl run test-client --image=curlimages/curl:8.1.2 -n llm-rag-test -- sleep 3600
+          kubectl wait --for=condition=ready pod/test-client -n llm-rag-test --timeout=60s
+
+          # Copy test script to pod
+          kubectl cp k8s/test-script.sh test-client:/tmp/test-script.sh -n llm-rag-test
+          kubectl exec test-client -n llm-rag-test -- chmod +x /tmp/test-script.sh
+
+          # Run test script
+          kubectl exec test-client -n llm-rag-test -- /tmp/test-script.sh
+
+      - name: Get logs for debugging
+        if: ${{ failure() }}
+        run: |
+          echo "=== Deployment logs ==="
+          kubectl get all -n llm-rag-test
+          kubectl describe pods -n llm-rag-test
+          kubectl logs -l app=llm-rag -n llm-rag-test --tail=100
+          echo "=== Events ==="
+          kubectl get events -n llm-rag-test --sort-by=.metadata.creationTimestamp
+
+      - name: Clean up
+        if: ${{ always() }}
+        run: |
+          kubectl delete namespace llm-rag-test
+          kind delete cluster --name llm-rag-test

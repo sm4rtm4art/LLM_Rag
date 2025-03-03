@@ -6,4 +6,4 @@ It's imported by the package's __init__.py and used in setup.py.
 
 # Follow Semantic Versioning (https://semver.org/)
 # MAJOR.MINOR.PATCH
-__version__ = "0.1.0"
+__version__ = "0.1.1"

@@ -3,21 +3,15 @@ kind: Ingress
 metadata:
   name: llm-rag-ingress
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
-  tls:
-  - hosts:
-    - llm-rag.example.com
-    secretName: llm-rag-tls
   rules:
-  - host: llm-rag.example.com  # Replace with your domain
-    http:
+  - http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: llm-rag-service
+            name: llm-rag
             port:
               number: 80

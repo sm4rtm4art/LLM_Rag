@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2025-03-03
+
 ### Added
 
 - Initial project setup
@@ -19,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Type annotations in pipeline.py and embeddings.py
+- Docker build issues with llama-cpp-python by disabling CPU-specific optimizations
+- CI integration with mock embedding function for ChromaDB
 
 ## [0.1.0] - 2025-03-03
 

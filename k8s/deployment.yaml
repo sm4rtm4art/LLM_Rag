@@ -5,7 +5,7 @@ metadata:
   labels:
     app: llm-rag
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: llm-rag
@@ -14,43 +14,44 @@ spec:
       labels:
         app: llm-rag
     spec:
-      initContainers:
-      - name: detect-cloud-provider
-        image: busybox:stable
-        command:
-          - "/bin/sh"
-          - "-c"
-          - |
-            if curl -s -f http://metadata.google.internal; then
-              echo "CLOUD_PROVIDER=GCP" > /configmap-volume/CLOUD_PROVIDER
-            elif curl -s -f http://169.254.169.254/latest/meta-data; then
-              echo "CLOUD_PROVIDER=AWS" > /configmap-volume/CLOUD_PROVIDER
-            else
-              echo "CLOUD_PROVIDER=UNKNOWN" > /configmap-volume/CLOUD_PROVIDER
-            fi
-        volumeMounts:
-        - name: configmap-volume
-          mountPath: /configmap-volume
-
       containers:
       - name: llm-rag
-        image: ${DOCKERHUB_USERNAME}/llm-rag:latest
+        image: llm-rag:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
-          name: http
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: models
+          mountPath: /app/models
+        - name: config
+          mountPath: /app/config
         env:
-        - name: CLOUD_PROVIDER
-          valueFrom:
-            configMapKeyRef:
-              name: cloud-provider-config
-              key: CLOUD_PROVIDER
-        - name: ENVIRONMENT
-          valueFrom:
-            configMapKeyRef:
-              name: cloud-provider-config
-              key: ENVIRONMENT
-
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        command: ["python", "-m", "uvicorn", "llm_rag.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
       volumes:
-      - name: configmap-volume
+      - name: models
+        persistentVolumeClaim:
+          claimName: models-pvc
+      - name: config
         configMap:
-          name: cloud-provider-config
+          name: llm-rag-config
