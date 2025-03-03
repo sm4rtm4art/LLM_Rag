@@ -1,19 +1,11 @@
-"""LLM RAG System.
+"""LLM RAG project package initialization.
 
-This package implements a Retrieval Augmented Generation (RAG) system using:
-- Vector stores for efficient document retrieval
-- Embedding models for semantic search
-- FastAPI for serving endpoints
-
-Main Components:
-- vectorstore: Document storage and retrieval
-- api: REST API endpoints
+This package provides a Retrieval-Augmented Generation (RAG) pipeline
+for enhancing LLM responses with external knowledge.
 """
 
 from .version import __version__
 
-# Re-export version
-__version__ = __version__
 __author__ = "Martin"
 __email__ = "your.email@example.com"
 

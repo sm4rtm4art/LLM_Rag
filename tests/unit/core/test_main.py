@@ -3,8 +3,11 @@
 import sys
 from unittest.mock import MagicMock, patch
 
+# Mock llama_cpp module in case it's not installed
+sys.modules["llama_cpp"] = MagicMock()
+
 # Import main directly from the module
-from src.llm_rag.main import main
+from src.llm_rag.main import main  # noqa: E402
 
 
 def test_main_output(capsys):
