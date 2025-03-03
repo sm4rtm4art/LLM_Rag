@@ -139,6 +139,10 @@ def test_search_with_filters(chroma_store):
 
 def test_custom_embedding_function(temp_persist_dir):
     """Test using a custom embedding function."""
+    # Skip this test in CI environment since it requires downloading models
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        pytest.skip("Skipping custom embedding function test in CI environment")
+
     custom_embedder = EmbeddingFunctionWrapper("paraphrase-MiniLM-L6-v2")
     store = ChromaVectorStore(persist_directory=temp_persist_dir, embedding_function=custom_embedder)
     documents = ["Test document"]
