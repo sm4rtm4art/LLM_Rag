@@ -238,6 +238,15 @@ data/documents/
 data/vector_db/
 .chroma/
 models/
+# Model files - specific patterns
+models/*.gguf
+models/*.bin
+models/*.ggml
+models/*.pt
+models/*.pth
+models/*.safetensors
+# Any large binary files in the models directory
+models/*.bin
 
 # Logs
 *.log
