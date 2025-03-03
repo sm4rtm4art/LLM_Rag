@@ -19,13 +19,30 @@ A Retrieval-Augmented Generation (RAG) system that uses LLMs to answer questions
 git clone https://github.com/yourusername/llm-rag.git
 cd llm-rag
 
-# Create a virtual environment
-python -m venv .llm_rag
-source .llm_rag/bin/activate  # On Windows: .llm_rag\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
+# Install the package
+pip install -e .
 ```
+
+## Quick Start with Local LLM Demo
+
+1. **Download a model** using our convenient script:
+
+   ```bash
+   python download_model.py
+   ```
+
+2. **Ingest your documents**:
+
+   ```bash
+   python -m src.llm_rag.main --data-dir data/documents
+   ```
+
+3. **Run the demo in interactive mode**:
+   ```bash
+   python demo_llm_rag.py
+   ```
+
+See [README_DEMO.md](README_DEMO.md) for more detailed instructions and options.
 
 ## Usage
 
