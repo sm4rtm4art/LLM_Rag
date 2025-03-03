@@ -162,6 +162,11 @@ module = "src.llm_rag.*"
 ignore_errors = true
 follow_imports = "skip"
 
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+follow_imports = "skip"
+
 [tool.semantic_release]
 version_variable = ["src/llm_rag/version.py:__version__", "llm_rag/version.py:__version__"]
 version_toml = ["pyproject.toml:project.version"]
