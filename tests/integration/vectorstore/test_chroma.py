@@ -16,17 +16,17 @@ class MockEmbeddingFunction:
     This avoids downloading the actual model in CI environments.
     """
 
-    def __call__(self, texts: List[str]) -> List[List[float]]:
+    def __call__(self, input: List[str]) -> List[List[float]]:
         """Return fixed embeddings with the correct dimensions (384).
 
         Args:
-            texts: List of texts to embed
+            input: List of texts to embed
 
         Returns:
             List of mock embeddings with fixed values but correct dimensions
         """
         # Return a fixed embedding for each text (384 dimensions)
-        return [list(np.zeros(384) + 0.1) for _ in texts]
+        return [list(np.zeros(384) + 0.1) for _ in input]
 
 
 @pytest.fixture
