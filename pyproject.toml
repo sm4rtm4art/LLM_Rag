@@ -121,7 +121,7 @@ warn_redundant_casts = true
 warn_unused_ignores = false
 warn_no_return = true
 warn_unreachable = false
-exclude = ["tests", "scripts"]
+exclude = ["scripts"]
 # Ignore all import errors
 ignore_missing_imports = true
 # Disable the error about duplicate modules

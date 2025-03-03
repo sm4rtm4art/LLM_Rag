@@ -18,7 +18,7 @@ from langchain_core.callbacks import (
 )
 from langchain_core.language_models.llms import LLM
 from langchain_core.vectorstores.base import VectorStore as LangchainVectorStore
-from llama_cpp import Llama
+from llama_cpp import Llama  # type: ignore
 
 # Use relative imports
 from .document_processing.chunking import RecursiveTextChunker
@@ -98,14 +98,16 @@ class CustomLlamaCpp(LLM):
 
 
 def setup_arg_parser() -> argparse.ArgumentParser:
-    """Set up command line argument parser.
+    """Set up the argument parser.
 
     Returns
     -------
-        argparse.ArgumentParser: The configured argument parser.
+    argparse.ArgumentParser
+        The configured argument parser.
 
     """
-    parser = argparse.ArgumentParser(description="LLM RAG System - Retrieval-Augmented Generation")
+    parser = argparse.ArgumentParser(description="RAG system for document retrieval and question answering.")
+
     parser.add_argument(
         "--data-dir",
         type=str,
@@ -114,44 +116,50 @@ def setup_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--query",
         type=str,
-        help="Query to process (if not provided, interactive mode is used)",
+        help="Query to run against the RAG system. If not provided, interactive mode is used.",
     )
     parser.add_argument(
         "--db-dir",
         type=str,
         default="./chroma_db",
-        help="Directory to store the vector database",
+        help="Directory for the vector database (default: ./chroma_db)",
     )
     parser.add_argument(
         "--model-path",
         type=str,
         default="./models/llama-2-7b-chat.gguf",
-        help="Path to the Llama model file",
+        help="Path to the LLM model (default: ./models/llama-2-7b-chat.gguf)",
     )
     parser.add_argument(
         "--embedding-model",
         type=str,
-        default="sentence-transformers/all-MiniLM-L6-v2",
-        help="Sentence transformer model to use for embeddings",
+        default="all-MiniLM-L6-v2",
+        help="Name of the embedding model (default: all-MiniLM-L6-v2)",
     )
     parser.add_argument(
         "--top-k",
         type=int,
-        default=3,
-        help="Number of documents to retrieve",
+        default=4,
+        help="Number of documents to retrieve (default: 4)",
     )
     parser.add_argument(
         "--n-gpu-layers",
         type=int,
-        default=1,
-        help="Number of layers to offload to GPU",
+        default=0,
+        help="Number of GPU layers to use (default: 0, CPU only)",
     )
     parser.add_argument(
         "--n-ctx",
         type=int,
-        default=2048,
-        help="Context window size",
+        default=4096,
+        help="Context size for the LLM (default: 4096)",
     )
+    parser.add_argument(
+        "--create-empty",
+        action="store_true",
+        help="Create an empty collection if one doesn't exist",
+    )
+
     return parser
 
 
@@ -178,8 +186,12 @@ def ingest_documents(
     # Create vector store directory if it doesn't exist
     os.makedirs(db_dir, exist_ok=True)
 
-    # Initialize the embedding model
-    embedding_model = EmbeddingModel(model_name=embedding_model_name)
+    # Initialize embedding model
+    model_name = embedding_model_name
+    if not model_name.startswith("sentence-transformers/") and "/" not in model_name:
+        model_name = f"sentence-transformers/{model_name}"
+
+    embedding_model = EmbeddingModel(model_name=model_name)
 
     # Create a Chroma client
     chroma_client = chromadb.PersistentClient(path=db_dir)
@@ -328,7 +340,11 @@ def main() -> None:
             sys.exit(1)
 
         # Initialize embedding model
-        embedding_model = EmbeddingModel(model_name=args.embedding_model)
+        model_name = args.embedding_model
+        if not model_name.startswith("sentence-transformers/") and "/" not in model_name:
+            model_name = f"sentence-transformers/{model_name}"
+
+        embedding_model = EmbeddingModel(model_name=model_name)
 
         # Create a Chroma client
         chroma_client = chromadb.PersistentClient(path=args.db_dir)
@@ -336,10 +352,16 @@ def main() -> None:
 
         try:
             chroma_client.get_collection(collection_name)
-        except ValueError:
-            print(f"Error: Collection {collection_name} does not exist")
-            print("Please provide a data directory to ingest documents first")
-            sys.exit(1)
+        except (ValueError, chromadb.errors.InvalidCollectionException):
+            if args.create_empty:
+                print(f"Creating empty collection: {collection_name}")
+                chroma_client.create_collection(collection_name)
+            else:
+                print(f"Error: Collection {collection_name} does not exist in {args.db_dir}")
+                print("Please provide a data directory to ingest documents using --data-dir")
+                print("Or use --create-empty to create an empty collection")
+                print("Example: python -m src.llm_rag.main --data-dir ./data/documents")
+                sys.exit(1)
 
         # Initialize vector store
         vector_store = ChromaVectorStore(
