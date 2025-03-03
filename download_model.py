@@ -98,7 +98,7 @@ def download_model(repo_id: str, filename: str, output_dir: str, force: bool = F
 
 
 def main() -> None:
-    """Main entry point for the download script."""
+    """Execute the download script."""
     # Parse command-line arguments
     parser = setup_arg_parser()
     args = parser.parse_args()

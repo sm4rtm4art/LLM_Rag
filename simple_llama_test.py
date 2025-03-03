@@ -46,7 +46,7 @@ def setup_arg_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    """Main function."""
+    """Run the main application logic."""
     parser = setup_arg_parser()
     args = parser.parse_args()
 
