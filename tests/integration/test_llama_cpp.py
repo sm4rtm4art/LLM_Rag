@@ -1,12 +1,23 @@
-"""Test script to verify llama-cpp-python installation.
+#!/usr/bin/env python
+"""Test script for the llama.cpp integration.
 
-This script checks if the llama-cpp package can be imported successfully
-and prints system information.
+This script tests the llama.cpp integration with the RAG system.
 """
 
+import logging
 import os
 import platform
 import sys
+
+# Add the project root to the path so we can import the llm_rag module
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 print(f"Python version: {sys.version}")
 print(f"Platform: {platform.platform()}")

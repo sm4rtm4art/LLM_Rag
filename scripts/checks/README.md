@@ -1,6 +1,20 @@
-# Check Scripts
+# Check Scripts for the RAG System
 
-This directory contains utility scripts for checking and validating various aspects of the LLM RAG system.
+This directory contains scripts for checking the RAG system.
+
+## Scripts
+
+- `check_vectorstore.py`: Check the vector store.
+
+## Usage
+
+### check_vectorstore.py
+
+Check the vector store:
+
+```bash
+python scripts/checks/check_vectorstore.py --db-path data/vectorstore --collection-name my_collection
+```
 
 ## Available Scripts
 
@@ -22,16 +36,6 @@ Usage:
 
 ```bash
 python scripts/checks/check_pdf_content.py
-```
-
-### `check_vectorstore.py`
-
-Inspects the contents of the vector store, retrieves documents, and performs similarity searches for specific terms. This is useful for verifying that documents are correctly indexed and can be retrieved.
-
-Usage:
-
-```bash
-python scripts/checks/check_vectorstore.py
 ```
 
 ## Running All Checks

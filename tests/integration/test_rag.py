@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-"""Simple test script for the RAG pipeline using a mock LLM.
+"""Test script for the RAG pipeline.
 
-This script demonstrates how to test the RAG pipeline without using a real LLM,
-which makes testing much faster and simpler.
+This script tests the RAG pipeline with a real LLM.
 """
 
 import logging
@@ -11,15 +10,8 @@ import sys
 import traceback
 from typing import Any, List, Optional
 
-# Add the current directory to the path so we can import the src module
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-
-# Import required components
-from langchain_core.callbacks.manager import CallbackManagerForLLMRun
-from langchain_core.language_models.llms import LLM
-
-from src.llm_rag.rag.pipeline import RAGPipeline
-from src.llm_rag.vectorstore.chroma import ChromaVectorStore
+# Add the project root to the path so we can import the llm_rag module
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 # Configure logging
 logging.basicConfig(
@@ -27,6 +19,13 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Import required components
+from langchain_core.callbacks.manager import CallbackManagerForLLMRun  # noqa: E402
+from langchain_core.language_models.llms import LLM  # noqa: E402
+
+from src.llm_rag.rag.pipeline import RAGPipeline  # noqa: E402
+from src.llm_rag.vectorstore.chroma import ChromaVectorStore  # noqa: E402
 
 
 class MockLLM(LLM):

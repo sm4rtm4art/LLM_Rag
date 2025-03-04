@@ -9,9 +9,9 @@ import argparse
 import logging
 import sys
 
-from src.llm_rag.models.factory import ModelBackend, ModelFactory
-from src.llm_rag.rag.pipeline import RAGPipeline
-from src.llm_rag.vectorstore.chroma import ChromaVectorStore
+from llm_rag.models.factory import ModelBackend, ModelFactory
+from llm_rag.rag.pipeline import RAGPipeline
+from llm_rag.vectorstore.chroma import ChromaVectorStore
 
 # Set up logging
 logging.basicConfig(

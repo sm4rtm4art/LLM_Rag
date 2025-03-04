@@ -1,22 +1,31 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+"""Create a test vector database.
 
-"""Script to create a small, synthetic test database for testing purposes.
-
-This creates a database with public domain text that can be safely committed
-to a repository.
+This script creates a test vector database with sample documents for testing
+the RAG system.
 """
 
 import logging
 import os
 import shutil
+import sys
 from typing import Any, Dict
+
+# Add the project root to the path so we can import the llm_rag module
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../..")))
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+# Import our custom modules
 
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
 
 # Sample public domain texts (from Project Gutenberg or similar sources)
 SAMPLE_TEXTS = [
@@ -38,27 +47,26 @@ SAMPLE_TEXTS = [
     "the way the human brain operates.",
     "Supervised learning is the machine learning task of learning a function "
     "that maps an input to an output based on example input-output pairs.",
-    "Unsupervised learning is a type of machine learning algorithm used to "
-    "draw inferences from datasets consisting of input data without labeled "
-    "responses.",
-    "Transfer learning is a research problem in machine learning that focuses "
-    "on storing knowledge gained while solving one problem and applying it to "
-    "a different but related problem.",
-    "RAG (Retrieval-Augmented Generation) is a technique that enhances large "
+    "Unsupervised learning is a type of machine learning algorithm used to draw "
+    "inferences from datasets consisting of input data without labeled responses.",
+    "Transfer learning is a research problem in machine learning that focuses on "
+    "storing knowledge gained while solving one problem and applying it to a "
+    "different but related problem.",
+    "Generative AI refers to artificial intelligence systems that can generate "
+    "new content, such as text, images, audio, or video, based on patterns "
+    "learned from existing data.",
+    "Large Language Models (LLMs) are deep learning models trained on vast "
+    "amounts of text data that can generate human-like text and perform a "
+    "variety of natural language tasks.",
+    "Retrieval-Augmented Generation (RAG) is an approach that enhances "
     "language models by retrieving relevant information from external sources "
     "to generate more accurate and contextual responses.",
     "Vector databases store embeddings, which are numerical representations of "
     "data that capture semantic meaning, allowing for similarity search and "
     "efficient retrieval of related information.",
     "Embeddings are dense vector representations of data (text, images, etc.) "
-    "that capture semantic relationships, allowing machines to understand "
-    "similarity between different pieces of content.",
-    "Prompt engineering is the process of designing and optimizing input "
-    "prompts for language models to elicit desired outputs, improving the "
-    "quality and relevance of generated content.",
-    "Fine-tuning is the process of taking a pre-trained model and further "
-    "training it on a specific dataset to adapt it for particular tasks or "
-    "domains, improving its performance for those specific applications.",
+    "that capture semantic meaning and enable machines to understand "
+    "relationships between different pieces of information.",
 ]
 
 
@@ -80,7 +88,10 @@ def generate_metadata(index: int) -> Dict[str, Any]:
     }
 
 
-def create_synthetic_db(persist_directory: str = "test_chroma_db", collection_name: str = "test_collection") -> None:
+def create_synthetic_db(
+    persist_directory: str = "test_chroma_db",
+    collection_name: str = "test_collection"
+) -> None:
     """Create a synthetic database with sample texts.
 
     Args:

@@ -23,12 +23,12 @@ import os
 import sys
 
 # Add the current directory to the path so we can import the src module
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Import RAG components
-from src.llm_rag.main import CustomLlamaCpp  # noqa: E402
-from src.llm_rag.rag.pipeline import ConversationalRAGPipeline, RAGPipeline  # noqa: E402
-from src.llm_rag.vectorstore.chroma import ChromaVectorStore  # noqa: E402
+from llm_rag.main import CustomLlamaCpp  # noqa: E402
+from llm_rag.rag.pipeline import ConversationalRAGPipeline, RAGPipeline  # noqa: E402
+from llm_rag.vectorstore.chroma import ChromaVectorStore  # noqa: E402
 
 # Configure logging
 logging.basicConfig(

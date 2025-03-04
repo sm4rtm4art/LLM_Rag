@@ -274,6 +274,22 @@ class ChromaVectorStore(VectorStore):
         """
         return ChromaRetriever(vectorstore=self, search_kwargs=search_kwargs or {})
 
+    def get_collection_size(self) -> int:
+        """Get the number of documents in the collection.
+
+        Returns:
+        -------
+            Number of documents in the collection
+
+        """
+        return self.collection.count()
+        
+    def persist(self) -> None:
+        """Persist the collection to disk."""
+        # ChromaDB PersistentClient automatically persists data
+        # This method is included for compatibility with the test
+        pass
+
 
 class ChromaRetriever:
     """Retriever for ChromaVectorStore."""

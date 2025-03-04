@@ -6,7 +6,12 @@ on the test files in data/documents/test_subset/.
 """
 
 import logging
+import os
+import sys
 from pathlib import Path
+
+# Add the project root to the path so we can import the llm_rag module
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 # Configure logging
 logging.basicConfig(
@@ -35,7 +40,7 @@ def load_documents():
         logger.info(f"Loaded {len(documents)} document chunks")
 
         # Count document types
-        doc_types = {}
+        doc_types: dict[str, int] = {}
         for doc in documents:
             filetype = doc.get("metadata", {}).get("filetype", "unknown")
             doc_types[filetype] = doc_types.get(filetype, 0) + 1

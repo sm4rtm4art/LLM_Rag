@@ -1,13 +1,25 @@
 #!/usr/bin/env python
-"""Download script for LLM models.
+"""Download a model for the RAG system.
 
-This script helps download LLM models from HuggingFace for use with the RAG demo.
-It supports downloading models from TheBloke's repository by default.
+This script downloads a model for the RAG system and saves it to the specified
+directory.
 """
 
 import argparse
+import logging
 import os
 import sys
+from pathlib import Path
+
+# Add the project root to the path so we can import the llm_rag module
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 from huggingface_hub import hf_hub_download
 

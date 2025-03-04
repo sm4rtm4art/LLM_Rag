@@ -1,0 +1,217 @@
+#!/usr/bin/env python
+"""Document Loader Script for RAG System.
+
+This script loads documents from specified sources into the RAG system,
+processes them, and creates vector embeddings for retrieval.
+
+Usage:
+    python -m scripts.load_documents --source <path> [--recursive]
+    python -m scripts.load_documents --source <path> [--format <format>]
+    python -m scripts.load_documents --help
+
+Examples
+--------
+    # Load all documents from a directory recursively
+    python -m scripts.load_documents --source data/documents --recursive
+
+    # Load specific file types from a directory
+    python -m scripts.load_documents --source data/documents --format pdf,txt
+
+    # Load a single file
+    python -m scripts.load_documents --source data/documents/sample.pdf
+
+"""
+
+import argparse
+import logging
+import os
+import sys
+from pathlib import Path
+from typing import List, Optional
+
+from langchain.schema import Document
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Chroma
+
+from llm_rag.document_processing.loaders import (
+    CSVLoader,
+    DirectoryLoader,
+    DocumentLoader,
+    PDFLoader,
+    TextFileLoader,
+)
+from llm_rag.document_processing.processors import (
+    DocumentProcessor,
+    TextSplitter,
+)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+logger = logging.getLogger("document_loader")
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Load documents into the RAG system")
+    parser.add_argument(
+        "--source",
+        type=str,
+        required=True,
+        help="Path to document or directory of documents",
+    )
+    parser.add_argument(
+        "--recursive",
+        action="store_true",
+        help="Recursively process directories",
+    )
+    parser.add_argument(
+        "--format",
+        type=str,
+        help="Comma-separated list of file formats to process (e.g., pdf,txt)",
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=1000,
+        help="Size of text chunks for processing",
+    )
+    parser.add_argument(
+        "--chunk-overlap",
+        type=int,
+        default=200,
+        help="Overlap between text chunks",
+    )
+    parser.add_argument(
+        "--embedding-model",
+        type=str,
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        help="HuggingFace embedding model to use",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="data/vector_db",
+        help="Directory to store vector database",
+    )
+    parser.add_argument(
+        "--collection-name",
+        type=str,
+        default="documents",
+        help="Name of the vector database collection",
+    )
+    return parser.parse_args()
+
+
+def get_loader(source_path: str, recursive: bool, formats: Optional[List[str]] = None) -> DocumentLoader:
+    """Get the appropriate document loader based on the source path."""
+    path = Path(source_path)
+
+    if path.is_dir():
+        glob_pattern = None
+        if formats:
+            # Create glob pattern from formats (e.g., "*.pdf,*.txt" -> "*.{pdf,txt}")
+            extensions = ",".join(formats)
+            glob_pattern = f"*.{{{extensions}}}"
+            logger.info(f"Using glob pattern: {glob_pattern}")
+
+        return DirectoryLoader(
+            directory_path=path,
+            recursive=recursive,
+            glob_pattern=glob_pattern,
+        )
+    elif path.is_file():
+        # Select loader based on file extension
+        extension = path.suffix.lower()
+        if extension == ".csv":
+            return CSVLoader(file_path=path)
+        elif extension == ".pdf":
+            return PDFLoader(file_path=path)
+        elif extension in [".txt", ".md", ".html", ".json"]:
+            return TextFileLoader(file_path=path)
+        else:
+            raise ValueError(f"Unsupported file type: {extension}")
+    else:
+        raise FileNotFoundError(f"Source path does not exist: {source_path}")
+
+
+def main() -> None:
+    """Load documents and create vector embeddings."""
+    args = parse_args()
+
+    # Validate source path
+    source_path = args.source
+    if not os.path.exists(source_path):
+        logger.error(f"Source path does not exist: {source_path}")
+        sys.exit(1)
+
+    # Parse formats if provided
+    formats = None
+    if args.format:
+        formats = [fmt.strip() for fmt in args.format.split(",")]
+        logger.info(f"Processing file formats: {formats}")
+
+    try:
+        # Get appropriate loader
+        loader = get_loader(source_path, args.recursive, formats)
+        logger.info(f"Using loader: {loader.__class__.__name__}")
+
+        # Load documents
+        logger.info("Loading documents...")
+        documents = loader.load()
+        logger.info(f"Loaded {len(documents)} documents")
+
+        if not documents:
+            logger.warning("No documents were loaded. Check your source path and formats.")
+            sys.exit(0)
+
+        # Process documents (chunk into smaller pieces)
+        logger.info("Processing documents...")
+        processor = DocumentProcessor(
+            text_splitter=TextSplitter(
+                chunk_size=args.chunk_size,
+                chunk_overlap=args.chunk_overlap,
+            )
+        )
+        processed_docs = processor.process(documents)
+        logger.info(f"Created {len(processed_docs)} chunks from {len(documents)} documents")
+
+        # Create vector embeddings
+        logger.info(f"Creating embeddings using model: {args.embedding_model}")
+        embeddings = HuggingFaceEmbeddings(model_name=args.embedding_model)
+
+        # Create output directory if it doesn't exist
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create or update vector store
+        logger.info(f"Creating vector store in {output_dir}")
+
+        # Convert our document format to LangChain format
+        langchain_docs = [Document(page_content=doc["content"], metadata=doc["metadata"]) for doc in processed_docs]
+
+        vectorstore = Chroma.from_documents(
+            documents=langchain_docs,
+            embedding=embeddings,
+            persist_directory=str(output_dir),
+            collection_name=args.collection_name,
+        )
+
+        # Persist the vector store
+        vectorstore.persist()
+        logger.info(f"Vector store created with {len(processed_docs)} document chunks")
+        logger.info(f"Vector store saved to {output_dir}")
+
+    except Exception as e:
+        logger.error(f"Error processing documents: {str(e)}")
+        import traceback
+
+        logger.debug(traceback.format_exc())
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -27,6 +27,9 @@ The system is designed to extract, process, and retrieve information from DIN st
 ├── k8s/                    # Kubernetes deployment files
 ├── notebooks/              # Jupyter notebooks for exploration
 ├── scripts/                # Utility scripts
+│   ├── checks/             # Scripts for checking the RAG system
+│   ├── utils/              # Utility scripts for the RAG system
+│   └── run_tests.py        # Script for running tests
 ├── src/                    # Source code
 │   └── llm_rag/            # Main package
 │       ├── api/            # API endpoints
@@ -130,13 +133,16 @@ The project includes a comprehensive test suite. To run the tests:
 
 ```bash
 # Run all tests
-pytest
-
-# Run specific test modules
-pytest tests/test_rag_evaluation.py
+python scripts/run_tests.py --all
 
 # Run unit tests only
-pytest tests/unit
+python scripts/run_tests.py --unit
+
+# Run integration tests only
+python scripts/run_tests.py --integration
+
+# Run a specific test file
+python scripts/run_tests.py --test tests/integration/test_retrieval.py
 ```
 
 Note: The test suite is configured to work both in CI environments (using mocks) and locally (using real test data).
@@ -167,6 +173,16 @@ The RAG pipeline integrates the multi-modal vector store with a language model:
 1. **Query Analysis**: Determine the relevant content types for the query
 2. **Multi-Modal Retrieval**: Retrieve relevant documents of each content type
 3. **Response Generation**: Generate comprehensive answers based on retrieved documents
+
+## Utility Scripts
+
+The repository includes various utility scripts in the `scripts/` directory:
+
+- **Utils**: Scripts for loading documents, checking database content, creating test databases, etc.
+- **Checks**: Scripts for checking the RAG system components
+- **run_tests.py**: Script for running tests with various options
+
+For more details, see the README files in the respective directories.
 
 ## Quarantine Backup
 

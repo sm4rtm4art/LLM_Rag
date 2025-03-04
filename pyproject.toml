@@ -107,7 +107,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D"]  # Ignore docstring issues in tests
+"tests/*" = ["D", "E402"]  # Ignore docstring issues and import order in tests
+"scripts/*" = ["E402"]  # Ignore import order in scripts
 ".llm_rag/bin/*" = ["D", "E", "W"]  # Ignore issues in virtual environment scripts
 
 [tool.ruff.lint.isort]

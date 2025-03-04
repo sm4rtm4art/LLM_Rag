@@ -11,13 +11,8 @@ import os
 import sys
 from typing import Any, Dict, List
 
-# Add the current directory to the path so we can import the src module
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-
-# Import our custom document loaders
-from src.llm_rag.document_processing.chunking import RecursiveTextChunker
-from src.llm_rag.document_processing.loaders import DirectoryLoader
-from src.llm_rag.vectorstore.chroma import ChromaVectorStore
+# Add the project root to the path so we can import the llm_rag module
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 # Configure logging
 logging.basicConfig(
@@ -25,6 +20,11 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Import our custom document loaders
+from llm_rag.document_processing.chunking import RecursiveTextChunker  # noqa: E402
+from llm_rag.document_processing.loaders import DirectoryLoader  # noqa: E402
+from llm_rag.vectorstore.chroma import ChromaVectorStore  # noqa: E402
 
 
 def setup_arg_parser() -> argparse.ArgumentParser:

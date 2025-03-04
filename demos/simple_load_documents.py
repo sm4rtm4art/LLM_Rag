@@ -10,11 +10,11 @@ import os
 import sys
 
 # Add the current directory to the path so we can import the src module
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.llm_rag.document_processing.chunking import RecursiveTextChunker
-from src.llm_rag.document_processing.loaders import DirectoryLoader
-from src.llm_rag.vectorstore.chroma import ChromaVectorStore
+from llm_rag.document_processing.chunking import RecursiveTextChunker
+from llm_rag.document_processing.loaders import DirectoryLoader
+from llm_rag.vectorstore.chroma import ChromaVectorStore
 
 # Configure logging
 logging.basicConfig(

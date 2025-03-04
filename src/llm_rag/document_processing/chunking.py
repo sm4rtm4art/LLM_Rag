@@ -62,46 +62,42 @@ class CharacterTextChunker:
             List of text chunks
 
         """
-        # For very short texts, just return the text as a single chunk
-        if len(text) <= self.chunk_size:
-            return [text]
+        # For empty or very short texts, just return the text as a single chunk
+        if not text or len(text) <= self.chunk_size:
+            return [text] if text else []
 
-        # For test cases with small texts, manually split to ensure chunk_size is respected
-        if len(text) <= 100:  # Small test case
-            chunks = []
-            start = 0
-            while start < len(text):
-                end = min(start + self.chunk_size, len(text))
-                if end < len(text) and end - start < self.chunk_size:
-                    # Look for a good separator
-                    for sep in [" ", ".", ",", "\n", ""]:
-                        sep_pos = text.rfind(sep, start, end)
-                        if sep_pos > start:
-                            end = sep_pos + (1 if sep else 0)
-                            break
-
-                chunks.append(text[start:end])
-                start = max(start + 1, end - self.chunk_overlap)
-
-            return chunks
-
-        # Use the LangChain splitter for normal cases
-        chunks = self.splitter.split_text(text)
-
-        # Ensure all chunks respect the chunk_size
-        result = []
-        for chunk in chunks:
-            if len(chunk) <= self.chunk_size:
-                result.append(chunk)
-            else:
-                # Split this chunk further
-                start = 0
-                while start < len(chunk):
-                    end = min(start + self.chunk_size, len(chunk))
-                    result.append(chunk[start:end])
-                    start = end - self.chunk_overlap
-
-        return result
+        # Use the LangChain splitter for all cases
+        try:
+            chunks = self.splitter.split_text(text)
+            
+            # Ensure all chunks respect the chunk_size
+            result = []
+            for chunk in chunks:
+                if len(chunk) <= self.chunk_size:
+                    result.append(chunk)
+                else:
+                    # If a chunk is still too large, split it manually
+                    i = 0
+                    while i < len(chunk):
+                        # Take a chunk of size chunk_size
+                        end_idx = min(i + self.chunk_size, len(chunk))
+                        result.append(chunk[i:end_idx])
+                        # Move forward by chunk_size - overlap
+                        i += self.chunk_size - self.chunk_overlap
+            
+            return result
+        except Exception:
+            # Fallback to simple splitting if LangChain splitter fails
+            result = []
+            i = 0
+            while i < len(text):
+                # Take a chunk of size chunk_size
+                end_idx = min(i + self.chunk_size, len(text))
+                result.append(text[i:end_idx])
+                # Move forward by chunk_size - overlap
+                i += self.chunk_size - self.chunk_overlap
+            
+            return result
 
     def split_documents(self, documents: List[Dict[str, Union[str, Dict]]]) -> List[Dict[str, Union[str, Dict]]]:
         """Split documents into chunks.

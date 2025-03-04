@@ -13,7 +13,12 @@ import sys
 from pathlib import Path
 
 import torch
-from langchain_community.llms import HuggingFacePipeline
+
+try:
+    from langchain_community.llms import HuggingFacePipeline
+except ImportError:
+    # Fallback import path for older versions
+    from langchain.llms import HuggingFacePipeline
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -113,7 +118,7 @@ def load_documents(doc_path, extract_tables=True, extract_images=True):
     logger.info(f"Loaded {len(documents)} document chunks")
 
     # Count document types
-    doc_types = {}
+    doc_types: dict[str, int] = {}
     for doc in documents:
         filetype = doc.get("metadata", {}).get("filetype", "unknown")
         doc_types[filetype] = doc_types.get(filetype, 0) + 1
@@ -164,7 +169,7 @@ def create_vectorstore(
 
     try:
         # Try to use MultiModalVectorStore if available
-        from src.llm_rag.vectorstore.multimodal import MultiModalVectorStore
+        from llm_rag.vectorstore.multimodal import MultiModalVectorStore
 
         vectorstore = MultiModalVectorStore(
             collection_name=collection_name,
@@ -172,7 +177,7 @@ def create_vectorstore(
         )
     except (ImportError, AttributeError):
         # Fall back to ChromaVectorStore
-        from src.llm_rag.vectorstore.chroma import ChromaVectorStore
+        from llm_rag.vectorstore.chroma import ChromaVectorStore
 
         vectorstore = ChromaVectorStore(
             collection_name=collection_name,
@@ -210,9 +215,10 @@ def create_rag_pipeline(vectorstore, llm, top_k=3):
         # Fall back to ConversationalRAGPipeline
         from llm_rag.rag import ConversationalRAGPipeline
 
+        # Create the pipeline with appropriate parameters
         pipeline = ConversationalRAGPipeline(
-            vectorstore=vectorstore,
-            llm=llm,
+            retriever=vectorstore.as_retriever(search_kwargs={"k": top_k}),
+            llm_chain=llm,
             top_k=top_k,
         )
 
@@ -255,7 +261,8 @@ def interactive_query(rag_pipeline):
             if retrieved_docs:
                 print("\n=== Sources ===")
                 for i, doc in enumerate(retrieved_docs[:3]):
-                    filetype = doc.get("metadata", {}).get("filetype", "unknown")
+                    filetype = doc.get("metadata", {}).get(
+                        "filetype", "unknown")
                     source = doc.get("metadata", {}).get("source", "unknown")
                     print(f"[{i + 1}] {filetype.upper()} - {source}")
 

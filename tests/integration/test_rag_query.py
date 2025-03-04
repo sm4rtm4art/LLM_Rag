@@ -1,8 +1,16 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+"""Test script for the RAG query functionality.
+
+This script tests the RAG query functionality with a real LLM.
+"""
 
 import logging
+import os
 import pprint
+import sys
+
+# Add the project root to the path so we can import the llm_rag module
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 # Third-party imports
 from src.llm_rag.models.factory import ModelBackend, ModelFactory
