@@ -42,7 +42,7 @@ dev = [
     "httpx>=0.24.0",  # Required for FastAPI TestClient
     "pre-commit>=4.1.0",  # Added for pre-commit hooks
     "pandas-stubs>=2.2.3",  # Added for mypy pandas type checking
-    "promptfoo>=0.23.0",  # For LLM prompt testing and evaluation
+    "promptfoo>=0.1.0",  # For LLM prompt testing and evaluation
 ]
 
 [tool.bandit]
