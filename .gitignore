@@ -249,6 +249,10 @@ models/*.safetensors
 # Any large binary files in the models directory
 models/*.bin
 
+# Database files
+*.sqlite3
+*.db
+
 # Test data and databases
 test_data/
 test_chroma_db/
@@ -269,3 +273,7 @@ Thumbs.db
 **/synthetic_test_db/
 **/synthetic_test_db/**/*.bin
 **/synthetic_test_db/**/*.sqlite3
+
+# Ignore PDF files that might contain sensitive information
+data/documents/**/*.pdf
+data/documents/DIN/
