@@ -94,12 +94,6 @@ ipython_config.py
 #   install all needed dependencies.
 #Pipfile.lock
 
-# UV
-#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#uv.lock
-
 # poetry
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
@@ -112,10 +106,8 @@ ipython_config.py
 #pdm.lock
 #   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
 #   in version control.
-#   https://pdm.fming.dev/latest/usage/project/#working-with-version-control
+#   https://pdm.fming.dev/#use-with-ide
 .pdm.toml
-.pdm-python
-.pdm-build/
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
 __pypackages__/
@@ -135,6 +127,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.llm_rag/
 
 # Spyder project settings
 .spyderproject
@@ -167,99 +160,36 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# PyPI configuration file
-.pypirc
-
-# Add these lines to your existing .gitignore
-ruff.toml
-mypy.ini
-.pre-commit-config.yaml
-!.config/**
-
-# Pre-commit
-.pre-commit-config.yaml.cache
-
-# Debug files
-debug_*.py
-
-# ignore venv
-.llm_rag/
-
-# Vector database
+# Project specific
+uv.lock
 chroma_db/
-
-# Ruff cache
-.ruff_cache/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
-.env
-.venv
-env/
-venv/
-ENV/
-.llm_rag/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Testing
-.coverage
-htmlcov/
-.pytest_cache/
-coverage.xml
-
-# RAG specific
+# Ignore llm_rag directory at the root level but not in src/
+/llm_rag/
+*.bin
+*.sqlite3
+*.db
 data/documents/
 data/vector_db/
 data/vectorstore/
 .chroma/
-models/
-# Model files - specific patterns
-models/*.gguf
-models/*.bin
-models/*.ggml
-models/*.pt
-models/*.pth
-models/*.safetensors
-# Any large binary files in the models directory
-models/*.bin
-
-# Database files
-*.sqlite3
-*.db
-
-# Test data and databases
-test_data/
-test_chroma_db/
 synthetic_test_db/
-
-# Quarantine directory (old code)
 quarantine/
+
+# Model files
+models/
+*.gguf
+*.ggml
+*.pt
+*.pth
+*.safetensors
+
+# Allow test_data directory but ignore large files within it
+!test_data/
+!test_data/README.md
+!test_data/test.txt
+test_data/*.bin
+test_data/*.sqlite3
+test_data/*.db
 
 # Logs
 *.log

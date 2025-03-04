@@ -38,17 +38,33 @@ The system consists of several key components:
 
 ## Installation
 
+This project uses [UV](https://github.com/astral-sh/uv) for package management instead of pip. UV is a fast, reliable Python package installer and resolver.
+
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/din-multimodal-rag.git
 cd din-multimodal-rag
 
-# Create a virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Install UV if you don't have it already
+curl -sSf https://astral.sh/uv/install.sh | bash
 
-# Install dependencies
-pip install -r requirements.txt
+# Create a virtual environment
+python -m venv .llm_rag
+source .llm_rag/bin/activate  # On Windows: .llm_rag\Scripts\activate
+
+# Install dependencies using UV
+uv pip install -e .
+```
+
+### Development Setup
+
+For development, install the project with development dependencies:
+
+```bash
+uv pip install -e ".[dev]"
+
+# Install pre-commit hooks
+pre-commit install
 ```
 
 ## Usage
@@ -91,6 +107,20 @@ Enter your query: What are the safety requirements for machine tools?
 [2] TABLE - DIN EN ISO 16090-1:2018-12
 [3] IMAGE - DIN EN ISO 16090-1:2018-12
 ```
+
+## Testing
+
+The project includes a comprehensive test suite. To run the tests:
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test modules
+pytest tests/test_rag_evaluation.py
+```
+
+Note: The test suite is configured to work both in CI environments (using mocks) and locally (using real test data).
 
 ## Implementation Details
 

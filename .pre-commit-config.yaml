@@ -48,12 +48,28 @@ repos:
         ]
         files: ^(src|tests)/.*\.py$
 
+      - id: create-test-directories
+        name: Create Test Directories
+        entry: python -c "from pathlib import Path; test_dir = Path('./test_data'); test_file = test_dir / 'test.txt'; test_dir.mkdir(exist_ok=True); test_file.write_text('This is a sample test document for RAG testing.\\n') if not test_file.exists() else None;"
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit, pre-push]
+
       - id: pytest-rag-evaluation
         name: RAG Evaluation Tests
         entry: pytest tests/test_rag_evaluation.py -v
         language: system
         pass_filenames: false
         always_run: true
-        stages: [commit]
+        stages: [pre-commit]
+
+      - id: run-all-tests
+        name: Run All Tests
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: false  # Only run when explicitly called or on push
+        stages: [pre-push]  # Run on push, not on every commit to avoid slowing down workflow
 
 exclude: '^\.llm_rag/.*'  # Exclude virtual environment files
