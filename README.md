@@ -18,23 +18,32 @@ The system is designed to extract, process, and retrieve information from DIN st
 - **Content-aware retrieval**: Retrieve the most relevant content based on the query type
 - **Conversational interface**: Interactive query system with memory for follow-up questions
 
-## Components
+## Repository Structure
 
-The system consists of several key components:
-
-1. **Document Processing**
-
-   - `DINStandardLoader`: Specialized loader for DIN standard PDFs
-   - `MultiModalChunker`: Content-aware chunker for text, tables, and images
-
-2. **Vector Store**
-
-   - `MultiModalVectorStore`: Vector store with specialized embedding models for different content types
-   - `MultiModalEmbeddingFunction`: Custom embedding function for multi-modal content
-
-3. **RAG Pipeline**
-   - `MultiModalRAGPipeline`: Specialized RAG pipeline for multi-modal content
-   - Custom prompt templates for comprehensive answers
+```
+.
+├── demos/                  # Demo scripts and examples
+├── docs/                   # Documentation
+├── k8s/                    # Kubernetes deployment files
+├── notebooks/              # Jupyter notebooks for exploration
+├── scripts/                # Utility scripts
+├── src/                    # Source code
+│   └── llm_rag/            # Main package
+│       ├── api/            # API endpoints
+│       ├── document_processing/ # Document processing modules
+│       ├── evaluation/     # Evaluation utilities
+│       ├── models/         # Model implementations
+│       ├── rag/            # RAG pipeline components
+│       ├── utils/          # Utility functions
+│       └── vectorstore/    # Vector store implementations
+├── tests/                  # Test suite
+│   ├── unit/               # Unit tests
+│   ├── integration/        # Integration tests
+│   └── evaluation/         # Evaluation tests
+├── quarantine_backup/      # Backup of removed files (not tracked in git)
+├── synthetic_test_db/      # Synthetic test database
+└── test_chroma_db/         # Test Chroma database
+```
 
 ## Installation
 
@@ -69,12 +78,19 @@ pre-commit install
 
 ## Usage
 
-### Demo Script
+### Demo Scripts
 
-The project includes a demo script (`demo_din_multimodal_rag.py`) that showcases the multi-modal RAG system:
+The project includes several demo scripts in the `demos/` directory:
 
 ```bash
-python demo_din_multimodal_rag.py --din_path /path/to/din/standards
+# Run the multi-modal RAG demo
+python demos/demo_din_multimodal_rag.py --din_path /path/to/din/standards
+
+# Run the Hugging Face model demo
+python demos/demo_huggingface.py
+
+# Run the Llama model demo
+python demos/demo_llama_rag.py
 ```
 
 ### Command-line Options
@@ -118,6 +134,9 @@ pytest
 
 # Run specific test modules
 pytest tests/test_rag_evaluation.py
+
+# Run unit tests only
+pytest tests/unit
 ```
 
 Note: The test suite is configured to work both in CI environments (using mocks) and locally (using real test data).
@@ -148,6 +167,14 @@ The RAG pipeline integrates the multi-modal vector store with a language model:
 1. **Query Analysis**: Determine the relevant content types for the query
 2. **Multi-Modal Retrieval**: Retrieve relevant documents of each content type
 3. **Response Generation**: Generate comprehensive answers based on retrieved documents
+
+## Quarantine Backup
+
+The repository includes a `quarantine_backup` directory that contains files that were moved from the main repository structure. These files are not tracked in git and are kept for reference purposes only. They include:
+
+- Test data files
+- Quarantined code
+- Vector store data
 
 ## Contributing
 
