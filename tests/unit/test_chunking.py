@@ -67,7 +67,7 @@ class TestRecursiveTextChunker:
             # Check if there's overlap between consecutive chunks
             first_chunk_end = chunks[0][-20:]
             second_chunk_start = chunks[1][:20]
-            
+
             # Check for partial overlap - at least some characters should match
             overlap_chars = set(first_chunk_end) & set(second_chunk_start)
             assert len(overlap_chars) > 0, "Chunks should have some overlap"
@@ -105,9 +105,7 @@ class TestSentenceSplitting:
 
         # Assert
         assert len(chunks) > 0
-        
+
         # Check for sentence-ending punctuation
         endings = [chunk.strip()[-1] for chunk in chunks if chunk.strip()]
-        assert any(end in [".", "!", "?"] for end in endings), (
-            "Some chunks should end with sentence punctuation"
-        ) 
+        assert any(end in [".", "!", "?"] for end in endings), "Some chunks should end with sentence punctuation"

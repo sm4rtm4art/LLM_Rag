@@ -277,13 +277,13 @@ class ChromaVectorStore(VectorStore):
     def get_collection_size(self) -> int:
         """Get the number of documents in the collection.
 
-        Returns:
+        Returns
         -------
             Number of documents in the collection
 
         """
         return self.collection.count()
-        
+
     def persist(self) -> None:
         """Persist the collection to disk."""
         # ChromaDB PersistentClient automatically persists data

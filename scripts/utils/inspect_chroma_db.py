@@ -5,14 +5,12 @@ This script inspects a Chroma database and prints information about the
 collections and documents stored in it.
 """
 
-import argparse
 import logging
 import os
 import sys
-from pathlib import Path
 
 # Add the project root to the path so we can import the llm_rag module
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 # Configure logging
 logging.basicConfig(
@@ -22,7 +20,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Import our custom modules
-from llm_rag.vectorstore.chroma import ChromaVectorStore  # noqa: E402
 
 from langchain_community.vectorstores import Chroma
 

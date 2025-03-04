@@ -25,8 +25,7 @@ import sys
 import traceback
 
 # Add the parent directory to the path so we can import the llm_rag module
-sys.path.insert(0, os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Import RAG components
 from llm_rag.models.factory import ModelBackend, ModelFactory  # noqa: E402
@@ -46,9 +45,7 @@ logger = logging.getLogger(__name__)
 
 def setup_arg_parser() -> argparse.ArgumentParser:
     """Set up the argument parser for the demo script."""
-    parser = argparse.ArgumentParser(
-        description="Demo script for the LLM RAG system using Hugging Face "
-                    "models.")
+    parser = argparse.ArgumentParser(description="Demo script for the LLM RAG system using Hugging Face models.")
     parser.add_argument(
         "--model",
         type=str,
@@ -95,8 +92,7 @@ def setup_arg_parser() -> argparse.ArgumentParser:
 def setup_llm(args: argparse.Namespace):
     """Set up the language model."""
     try:
-        logger.debug(
-            f"Creating model with: model={args.model}, device={args.device}")
+        logger.debug(f"Creating model with: model={args.model}, device={args.device}")
         # Create the model using the factory
         model_name = args.model
         llm = ModelFactory.create_model(
@@ -118,9 +114,7 @@ def setup_llm(args: argparse.Namespace):
 def setup_vector_store(args: argparse.Namespace) -> ChromaVectorStore:
     """Set up the vector store."""
     try:
-        logger.debug(
-            f"Creating vector store with: db_path={args.db_path}, "
-            f"collection_name={args.collection_name}")
+        logger.debug(f"Creating vector store with: db_path={args.db_path}, collection_name={args.collection_name}")
         # Create a ChromaDB vector store
         vector_store = ChromaVectorStore(
             collection_name=args.collection_name,
@@ -130,9 +124,7 @@ def setup_vector_store(args: argparse.Namespace) -> ChromaVectorStore:
         doc_count = len(vector_store.get_all_documents())
         logger.info(f"Vector store initialized with {doc_count} documents")
         if doc_count == 0:
-            logger.warning(
-                "No documents found in vector store. "
-                "Load documents first using load_documents.py script.")
+            logger.warning("No documents found in vector store. Load documents first using load_documents.py script.")
         return vector_store
     except Exception as e:
         logger.error(f"Error setting up vector store: {e}")

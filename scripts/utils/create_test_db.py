@@ -12,8 +12,7 @@ import sys
 from typing import Any, Dict
 
 # Add the project root to the path so we can import the llm_rag module
-sys.path.insert(0, os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 # Configure logging
 logging.basicConfig(
@@ -88,10 +87,7 @@ def generate_metadata(index: int) -> Dict[str, Any]:
     }
 
 
-def create_synthetic_db(
-    persist_directory: str = "test_chroma_db",
-    collection_name: str = "test_collection"
-) -> None:
+def create_synthetic_db(persist_directory: str = "test_chroma_db", collection_name: str = "test_collection") -> None:
     """Create a synthetic database with sample texts.
 
     Args:

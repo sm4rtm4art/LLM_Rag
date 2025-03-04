@@ -69,7 +69,7 @@ class CharacterTextChunker:
         # Use the LangChain splitter for all cases
         try:
             chunks = self.splitter.split_text(text)
-            
+
             # Ensure all chunks respect the chunk_size
             result = []
             for chunk in chunks:
@@ -84,7 +84,7 @@ class CharacterTextChunker:
                         result.append(chunk[i:end_idx])
                         # Move forward by chunk_size - overlap
                         i += self.chunk_size - self.chunk_overlap
-            
+
             return result
         except Exception:
             # Fallback to simple splitting if LangChain splitter fails
@@ -96,7 +96,7 @@ class CharacterTextChunker:
                 result.append(text[i:end_idx])
                 # Move forward by chunk_size - overlap
                 i += self.chunk_size - self.chunk_overlap
-            
+
             return result
 
     def split_documents(self, documents: List[Dict[str, Union[str, Dict]]]) -> List[Dict[str, Union[str, Dict]]]:

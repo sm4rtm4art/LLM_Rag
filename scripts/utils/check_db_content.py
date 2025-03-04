@@ -11,8 +11,7 @@ import sys
 from pathlib import Path
 
 # Add the project root to the path so we can import the llm_rag module
-sys.path.insert(0, os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 # Configure logging
 logging.basicConfig(
@@ -64,9 +63,7 @@ def check_db_content(db_path, collection_name="test_collection", limit=5):
 
             # Print sample documents
             print("\nSample documents:")
-            for i, (doc, metadata) in enumerate(
-                zip(results["documents"], results["metadatas"], strict=False)
-            ):
+            for i, (doc, metadata) in enumerate(zip(results["documents"], results["metadatas"], strict=False)):
                 print(f"\nDocument {i + 1}:")
                 print(f"Metadata: {metadata}")
                 print(f"Content preview: {doc[:300]}...")

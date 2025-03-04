@@ -9,8 +9,6 @@ import argparse
 import logging
 import os
 import subprocess
-import sys
-from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -22,9 +20,7 @@ logger = logging.getLogger(__name__)
 
 def setup_arg_parser() -> argparse.ArgumentParser:
     """Set up the argument parser for the script."""
-    parser = argparse.ArgumentParser(
-        description="Run tests for the RAG system."
-    )
+    parser = argparse.ArgumentParser(description="Run tests for the RAG system.")
     parser.add_argument(
         "--unit",
         action="store_true",
@@ -85,12 +81,12 @@ def run_integration_tests():
 def run_specific_test(test_file: str):
     """Run a specific test file."""
     logger.info(f"Running test file: {test_file}")
-    
+
     # Check if the file exists
     if not os.path.exists(test_file):
         logger.error(f"Test file not found: {test_file}")
         return False
-    
+
     # Run the test
     result = subprocess.run(
         ["python", test_file],
@@ -129,4 +125,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

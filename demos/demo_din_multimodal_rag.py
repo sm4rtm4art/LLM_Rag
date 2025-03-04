@@ -261,8 +261,7 @@ def interactive_query(rag_pipeline):
             if retrieved_docs:
                 print("\n=== Sources ===")
                 for i, doc in enumerate(retrieved_docs[:3]):
-                    filetype = doc.get("metadata", {}).get(
-                        "filetype", "unknown")
+                    filetype = doc.get("metadata", {}).get("filetype", "unknown")
                     source = doc.get("metadata", {}).get("source", "unknown")
                     print(f"[{i + 1}] {filetype.upper()} - {source}")
 
