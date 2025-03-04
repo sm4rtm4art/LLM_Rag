@@ -277,3 +277,13 @@ Thumbs.db
 # Ignore PDF files that might contain sensitive information
 data/documents/**/*.pdf
 data/documents/DIN/
+
+# Ignore image files in data/documents
+data/documents/**/*.png
+data/documents/**/*.jpg
+data/documents/**/*.jpeg
+data/documents/**/*.gif
+data/documents/**/*.bmp
+
+# Ignore test_subset directory which might contain sensitive content
+data/documents/test_subset/
