@@ -236,6 +236,7 @@ coverage.xml
 # RAG specific
 data/documents/
 data/vector_db/
+data/vectorstore/
 .chroma/
 models/
 # Model files - specific patterns
@@ -248,6 +249,14 @@ models/*.safetensors
 # Any large binary files in the models directory
 models/*.bin
 
+# Test data and databases
+test_data/
+test_chroma_db/
+synthetic_test_db/
+
+# Quarantine directory (old code)
+quarantine/
+
 # Logs
 *.log
 logs/
@@ -257,7 +266,6 @@ logs/
 Thumbs.db
 
 # Keep synthetic_test_db in gitignore as it's not needed
-synthetic_test_db/
 **/synthetic_test_db/
 **/synthetic_test_db/**/*.bin
 **/synthetic_test_db/**/*.sqlite3
