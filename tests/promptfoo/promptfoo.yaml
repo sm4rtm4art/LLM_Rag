@@ -1,0 +1,82 @@
+description: LLM RAG System Evaluation
+
+prompts:
+  - name: rag-query
+    prompt: |
+      Answer the following question based on the provided context:
+
+      Question: {{query}}
+
+providers:
+  - name: rag-pipeline
+    type: exec
+    command: python run_rag_pipeline.py "{{query}}"
+
+vars:
+  query:
+    - What is DIN VDE 0636-3?
+    - What are the requirements for fuses according to DIN VDE 0636-3?
+    - What is the scope of DIN VDE 0636-3?
+    - When was DIN VDE 0636-3 A2 published?
+    - What is the difference between DIN VDE 0636-3 and IEC 60269-3?
+
+tests:
+  - description: Test RAG pipeline with DIN VDE 0636-3 queries
+    prompt: rag-query
+    provider: rag-pipeline
+    vars:
+      query: $query
+    assert:
+      - type: javascript
+        value: |
+          response.includes("DIN VDE 0636-3") || response.includes("DIN VDE 0636")
+        description: Response mentions DIN VDE 0636-3
+      - type: javascript
+        value: |
+          !response.includes("I don't know") && !response.includes("I don't have enough information")
+        description: Response does not contain uncertainty phrases
+      - type: javascript
+        value: |
+          response.length > 50
+        description: Response has sufficient length
+      - type: javascript
+        value: |
+          sources && sources.length > 0
+        description: Response includes sources
+
+  - description: Test RAG pipeline with expected answers
+    prompt: rag-query
+    provider: rag-pipeline
+    vars:
+      query: $test_data.test_queries.json[*].query
+    assert:
+      - type: javascript
+        value: |
+          const expectedAnswer = testCase.expected_answer;
+          const similarity = (a, b) => {
+            const aWords = a.toLowerCase().split(/\W+/);
+            const bWords = b.toLowerCase().split(/\W+/);
+            const intersection = aWords.filter(word => bWords.includes(word)).length;
+            const union = new Set([...aWords, ...bWords]).size;
+            return intersection / union;
+          };
+          const sim = similarity(response, expectedAnswer);
+          return sim > 0.3; // Threshold for similarity
+        description: Response is similar to expected answer
+      - type: javascript
+        value: |
+          const expectedSources = testCase.expected_sources || [];
+          if (!sources || expectedSources.length === 0) return true;
+          return expectedSources.some(expected =>
+            sources.some(source =>
+              source.metadata && source.metadata.source &&
+              source.metadata.source.includes(expected)
+            )
+          );
+        description: Response includes expected sources
+
+outputs:
+  - type: json
+    path: tests/promptfoo/results.json
+  - type: html
+    path: tests/promptfoo/results.html

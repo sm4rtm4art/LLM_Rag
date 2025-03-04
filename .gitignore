@@ -255,3 +255,9 @@ logs/
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Keep synthetic_test_db in gitignore as it's not needed
+synthetic_test_db/
+**/synthetic_test_db/
+**/synthetic_test_db/**/*.bin
+**/synthetic_test_db/**/*.sqlite3

@@ -1,0 +1,54 @@
+# Core dependencies
+langchain>=0.1.0
+langchain-community>=0.0.13
+langchain-core>=0.1.10
+pydantic>=2.5.2
+numpy>=1.24.0
+pandas>=2.0.0
+tqdm>=4.66.1
+
+# Document processing
+pypdf>=4.0.0
+pdf2image>=1.16.3
+pytesseract>=0.3.10
+pillow>=10.0.0
+unstructured>=0.10.30
+unstructured-inference>=0.7.21
+tabula-py>=2.8.2
+camelot-py>=0.11.0
+opencv-python>=4.8.0
+matplotlib>=3.7.3
+
+# Vector database
+chromadb>=0.4.18
+hnswlib>=0.7.0
+
+# Embedding models
+sentence-transformers>=2.2.2
+transformers>=4.36.2
+torch>=2.1.0
+torchvision>=0.16.0
+accelerate>=0.25.0
+bitsandbytes>=0.41.1  # For quantization support
+safetensors>=0.4.1
+
+# LLM support
+huggingface-hub>=0.19.4
+einops>=0.7.0  # Required by some vision-language models
+
+# Multimodal support
+clip-interrogator>=0.6.0
+open-clip-torch>=2.23.0
+timm>=0.9.8  # Vision models
+
+# Utilities
+python-dotenv>=1.0.0
+rich>=13.6.0
+typer>=0.9.0
+pyyaml>=6.0.1
+jsonschema>=4.20.0
+
+# Testing and evaluation
+pytest>=7.4.0
+pytest-cov>=4.1.0
+promptfoo>=0.23.0  # For LLM prompt testing and evaluation

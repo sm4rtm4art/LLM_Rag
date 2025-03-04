@@ -82,7 +82,7 @@ class PDFLoader(DocumentLoader):
         try:
             import PyPDF2  # noqa: F401
         except ImportError as err:
-            raise ImportError("PyPDF2 is required for PDF loading. " "Install it with 'pip install PyPDF2'") from err
+            raise ImportError("PyPDF2 is required for PDF loading. Install it with 'pip install PyPDF2'") from err
 
     def load(self) -> List[Dict[str, Union[str, Dict]]]:
         """Load the PDF file.

@@ -198,3 +198,131 @@ class RecursiveTextChunker(BaseTextChunker):
         # Fallback to character chunking if no separator worked
         chunker = CharacterTextChunker(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
         return chunker.split_text(text)
+
+
+class MultiModalChunker:
+    """Chunker for multi-modal content that handles text, tables, and images appropriately."""
+
+    def __init__(
+        self,
+        text_chunk_size: int = 1000,
+        text_chunk_overlap: int = 200,
+        table_chunk_size: int = 1500,
+        table_chunk_overlap: int = 0,
+        preserve_images: bool = True,
+        preserve_tables: bool = True,
+    ):
+        """Initialize the multi-modal chunker.
+
+        Args:
+        ----
+            text_chunk_size: Maximum size of each text chunk
+            text_chunk_overlap: Number of characters to overlap between text chunks
+            table_chunk_size: Maximum size of each table chunk
+            table_chunk_overlap: Number of characters to overlap between table chunks
+            preserve_images: Whether to preserve images as separate chunks
+            preserve_tables: Whether to preserve tables as separate chunks
+
+        """
+        self.text_chunker = RecursiveTextChunker(
+            chunk_size=text_chunk_size,
+            chunk_overlap=text_chunk_overlap,
+        )
+        self.table_chunker = CharacterTextChunker(
+            chunk_size=table_chunk_size,
+            chunk_overlap=table_chunk_overlap,
+        )
+        self.preserve_images = preserve_images
+        self.preserve_tables = preserve_tables
+
+    def split_documents(self, documents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Split documents into chunks based on their content type.
+
+        Args:
+        ----
+            documents: List of documents with 'content' and 'metadata' keys
+
+        Returns:
+        -------
+            List of chunked documents with updated metadata
+
+        """
+        chunked_documents = []
+
+        for doc in documents:
+            content = doc.get("content", "")
+            metadata = doc.get("metadata", {})
+            filetype = metadata.get("filetype", "")
+
+            # Handle different content types
+            if filetype in ["image", "technical_drawing"] and self.preserve_images:
+                # Don't chunk images, preserve them as is
+                chunked_documents.append(doc)
+
+            elif filetype == "table" and self.preserve_tables:
+                # Don't chunk tables, preserve them as is
+                chunked_documents.append(doc)
+
+            elif filetype == "csv":
+                # Use table chunker for CSV content
+                chunks = self.table_chunker.split_text(content)
+
+                for i, chunk in enumerate(chunks):
+                    chunk_metadata = metadata.copy()
+                    chunk_metadata["chunk_index"] = i
+                    chunk_metadata["chunk_count"] = len(chunks)
+
+                    chunked_documents.append({"content": chunk, "metadata": chunk_metadata})
+
+            else:
+                # Use text chunker for all other content types
+                chunks = self.text_chunker.split_text(content)
+
+                for i, chunk in enumerate(chunks):
+                    chunk_metadata = metadata.copy()
+                    chunk_metadata["chunk_index"] = i
+                    chunk_metadata["chunk_count"] = len(chunks)
+
+                    chunked_documents.append({"content": chunk, "metadata": chunk_metadata})
+
+        return chunked_documents
+
+    def split_by_content_type(self, documents: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+        """Split documents and organize them by content type.
+
+        Args:
+        ----
+            documents: List of documents with 'content' and 'metadata' keys
+
+        Returns:
+        -------
+            Dictionary with content types as keys and lists of chunked documents as values
+
+        """
+        chunked_docs = self.split_documents(documents)
+
+        # Organize by content type
+        content_types: Dict[str, List[Dict[str, Any]]] = {
+            "text": [],
+            "table": [],
+            "image": [],
+            "technical_drawing": [],
+            "other": [],
+        }
+
+        for doc in chunked_docs:
+            metadata = doc.get("metadata", {})
+            filetype = metadata.get("filetype", "")
+
+            if filetype in ["pdf_text", "din_section", "text"]:
+                content_types["text"].append(doc)
+            elif filetype == "table":
+                content_types["table"].append(doc)
+            elif filetype == "image":
+                content_types["image"].append(doc)
+            elif filetype == "technical_drawing":
+                content_types["technical_drawing"].append(doc)
+            else:
+                content_types["other"].append(doc)
+
+        return content_types

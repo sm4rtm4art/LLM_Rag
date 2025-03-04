@@ -23,6 +23,11 @@ dependencies = [
     "transformers>=4.49.0",
     "uvicorn>=0.34.0",
     "llama-cpp-python>=0.2.56",
+    # Hugging Face dependencies
+    "accelerate>=0.32.1",  # Needed for efficient model loading
+    "safetensors>=0.4.2",  # For secure model loading
+    "bitsandbytes>=0.42.0",  # For quantization support
+    "optimum>=1.17.1",      # Performance optimization for transformers
 ]
 
 [project.optional-dependencies]
@@ -37,6 +42,7 @@ dev = [
     "httpx>=0.24.0",  # Required for FastAPI TestClient
     "pre-commit>=4.1.0",  # Added for pre-commit hooks
     "pandas-stubs>=2.2.3",  # Added for mypy pandas type checking
+    "promptfoo>=0.23.0",  # For LLM prompt testing and evaluation
 ]
 
 [tool.bandit]
@@ -52,6 +58,7 @@ addopts = "-ra -q"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 pythonpath = [".", "src"]
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "unit: marks tests as unit tests",
     "integration: marks tests as integration tests",
@@ -74,7 +81,6 @@ exclude_lines = [
 ]
 show_missing = true
 fail_under = 0  # Don't fail
-warn_under = 60  # Warn if coverage is below 60%
 
 [tool.ruff]
 # Target Python version

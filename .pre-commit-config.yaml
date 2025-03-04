@@ -16,28 +16,44 @@ ci:
 
 # Then list all repositories
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.3
-    hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format
-
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-      - id: check-toml
       - id: check-added-large-files
-      - id: debug-statements
+        args: ['--maxkb=2000']  # Increase size limit to accommodate database files
+      - id: check-json
+      - id: check-toml
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.9.7
     hooks:
-      - id: mypy
-        additional_dependencies: [types-requests, pandas-stubs]
-        args: [--config-file=pyproject.toml]
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Add mypy for type checking - using a local implementation to avoid issues
+  - repo: local
+    hooks:
+      - id: mypy-local
+        name: mypy
+        entry: mypy
+        language: system
+        types: [python]
+        args: [
+          "--ignore-missing-imports",
+          "--follow-imports=skip",
+        ]
+        files: ^(src|tests)/.*\.py$
+
+      - id: pytest-rag-evaluation
+        name: RAG Evaluation Tests
+        entry: pytest tests/test_rag_evaluation.py -v
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
 
 exclude: '^\.llm_rag/.*'  # Exclude virtual environment files

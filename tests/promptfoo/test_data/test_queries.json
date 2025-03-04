@@ -1,0 +1,27 @@
+[
+  {
+    "query": "What is DIN VDE 0636-3?",
+    "expected_answer": "DIN VDE 0636-3 is a German standard for low-voltage fuses, specifically detailing supplementary requirements for fuses used by unskilled persons in household applications.",
+    "expected_sources": ["VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf"]
+  },
+  {
+    "query": "What are the requirements for fuses according to DIN VDE 0636-3?",
+    "expected_answer": "DIN VDE 0636-3 specifies requirements for fuses used by unskilled persons, including safety aspects, standardized fuse systems, and national committee responsibilities for implementation.",
+    "expected_sources": ["VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf"]
+  },
+  {
+    "query": "What is the scope of DIN VDE 0636-3?",
+    "expected_answer": "DIN VDE 0636-3 covers standardized fuse systems with respect to their safety aspects, with national committees responsible for selecting fuse systems from the standard for their national standards.",
+    "expected_sources": ["VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf"]
+  },
+  {
+    "query": "When was DIN VDE 0636-3 A2 published?",
+    "expected_answer": "DIN VDE 0636-3 A2 was published in April 2010.",
+    "expected_sources": ["VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf"]
+  },
+  {
+    "query": "What is the difference between DIN VDE 0636-3 and IEC 60269-3?",
+    "expected_answer": "DIN VDE 0636-3 is the German implementation of IEC 60269-3, with specific national adaptations and requirements for the German market.",
+    "expected_sources": ["VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf"]
+  }
+]

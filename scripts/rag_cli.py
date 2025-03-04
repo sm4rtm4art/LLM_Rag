@@ -152,7 +152,7 @@ def setup_llm(
                 verbose=False,
             )
         except ImportError as err:
-            msg = "llama-cpp-python not installed. " "Install with: pip install llama-cpp-python"
+            msg = "llama-cpp-python not installed. Install with: pip install llama-cpp-python"
             logger.error(msg)
             raise ImportError(msg) from err
 
@@ -185,7 +185,7 @@ def setup_llm(
 
     except Exception as e:
         # If loading fails, try a smaller model
-        logger.warning(f"Failed to load {model_name}: {str(e)}. " f"Falling back to google/flan-t5-small.")
+        logger.warning(f"Failed to load {model_name}: {str(e)}. Falling back to google/flan-t5-small.")
 
         try:
             # Fallback to a smaller model
@@ -221,7 +221,7 @@ def load_vectorstore(vector_db_path, embedding_model, collection_name):
         # Check if vector store exists
         if not os.path.exists(vector_db_path):
             logger.error(f"Vector store not found at: {vector_db_path}")
-            logger.info("Please load documents first using the " "load_documents.py script.")
+            logger.info("Please load documents first using the load_documents.py script.")
             sys.exit(1)
 
         # Load embeddings

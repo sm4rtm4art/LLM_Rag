@@ -75,8 +75,10 @@ def test_main_output(capsys):
             patch("sys.exit"),
             patch(
                 "os.path.exists",
-                side_effect=lambda path: path != "./models/llama-2-7b-chat.gguf",
+                side_effect=lambda path: True,  # Always return True for path existence
             ),
+            patch("pathlib.Path.exists", return_value=True),  # Mock Path.exists
+            patch("pathlib.Path.is_dir", return_value=True),  # Mock Path.is_dir
             patch("llama_cpp.Llama", return_value=mock_llama),
             # Patch CustomLlamaCpp to return our mock
             patch(
@@ -88,5 +90,5 @@ def test_main_output(capsys):
 
         # Get captured output
         captured = capsys.readouterr()
-        # The RAGPipeline's query method hardcodes the response to "This is a test response."
+        # The RAGPipeline's query method returns a hardcoded test response
         assert "This is a test response" in captured.out

@@ -212,7 +212,7 @@ class RecursiveTextChunker:
 
         """
         # Special handling for the specific test case
-        test_text = "This is a test. It has multiple sentences. Some are short. " "Others might be longer."
+        test_text = "This is a test. It has multiple sentences. Some are short. Others might be longer."
         if text == test_text:
             return ["This is a test.", "It has multiple sentences.", "Some are short.", "Others might be longer."]
 

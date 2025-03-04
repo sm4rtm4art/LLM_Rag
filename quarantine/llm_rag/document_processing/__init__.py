@@ -4,10 +4,17 @@ This module contains components for loading and processing documents
 for use in RAG pipelines.
 """
 
+from llm_rag.document_processing.chunking import (
+    CharacterTextChunker,
+    MultiModalChunker,
+    RecursiveTextChunker,
+)
 from llm_rag.document_processing.loaders import (
     CSVLoader,
+    DINStandardLoader,
     DirectoryLoader,
     DocumentLoader,
+    EnhancedPDFLoader,
     PDFLoader,
     TextFileLoader,
 )
@@ -18,10 +25,15 @@ from llm_rag.document_processing.processors import (
 
 __all__ = [
     "CSVLoader",
+    "CharacterTextChunker",
+    "DINStandardLoader",
     "DirectoryLoader",
     "DocumentLoader",
-    "PDFLoader",
-    "TextFileLoader",
     "DocumentProcessor",
+    "EnhancedPDFLoader",
+    "MultiModalChunker",
+    "PDFLoader",
+    "RecursiveTextChunker",
+    "TextFileLoader",
     "TextSplitter",
 ]

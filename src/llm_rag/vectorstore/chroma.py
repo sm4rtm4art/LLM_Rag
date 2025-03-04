@@ -103,7 +103,7 @@ class ChromaVectorStore(VectorStore):
 
     def add_documents(
         self,
-        documents: List[str],
+        documents: Union[List[str], List[Document]],
         metadatas: Optional[List[Dict[str, Union[str, int, float, bool]]]] = None,
         ids: Optional[List[str]] = None,
     ) -> None:
@@ -111,16 +111,27 @@ class ChromaVectorStore(VectorStore):
 
         Args:
         ----
-            documents: List of document texts
+            documents: List of document texts or Document objects
             metadatas: Optional list of metadata dicts for each document
             ids: Optional list of IDs for each document
 
         """
+        # Handle LangChain Document objects
+        if documents and isinstance(documents[0], Document):
+            doc_strings = [doc.page_content for doc in documents]
+
+            # If metadatas is not provided, use the metadata from Document objects
+            if metadatas is None:
+                metadatas = [doc.metadata for doc in documents]
+        else:
+            # Handle string documents
+            doc_strings = cast(List[str], documents)
+
         if ids is None:
-            ids = [str(i) for i in range(len(documents))]
+            ids = [str(i) for i in range(len(doc_strings))]
 
         self.collection.add(
-            documents=documents,
+            documents=doc_strings,
             metadatas=cast(Optional[List[Metadata]], metadatas),
             ids=ids,
         )
@@ -131,6 +142,7 @@ class ChromaVectorStore(VectorStore):
         n_results: int = 5,
         where: Optional[Dict] = None,
         where_document: Optional[Dict] = None,
+        search_type: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Search for similar documents.
 
@@ -140,12 +152,14 @@ class ChromaVectorStore(VectorStore):
             n_results: Number of results to return
             where: Optional filter conditions on metadata
             where_document: Optional filter conditions on document content
+            search_type: Optional search type (similarity, mmr, etc.) - not used in this implementation
 
         Returns:
         -------
             List of dictionaries containing matched documents and metadata
 
         """
+        # Ignoring search_type as our implementation doesn't need it
         results = self.collection.query(
             query_texts=[query],
             n_results=n_results,
@@ -179,6 +193,31 @@ class ChromaVectorStore(VectorStore):
         except ValueError as e:
             if "does not exist" not in str(e):
                 raise
+
+    def get_all_documents(self) -> List[Document]:
+        """Get all documents from the collection.
+
+        Returns
+        -------
+            List of all documents as LangChain Document objects
+
+        """
+        # Get all documents from the collection
+        results = self.collection.get()
+
+        # Convert to LangChain Document format
+        documents = []
+        if results["documents"]:
+            for i in range(len(results["documents"])):
+                metadata = results["metadatas"][i] if results["metadatas"] else {}
+                documents.append(
+                    Document(
+                        page_content=results["documents"][i],
+                        metadata=metadata,
+                    )
+                )
+
+        return documents
 
     def similarity_search(
         self,

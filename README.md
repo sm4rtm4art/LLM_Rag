@@ -1,125 +1,128 @@
-# LLM RAG System
+# Multi-Modal RAG System for DIN Standards
 
-[![codecov](https://codecov.io/gh/sm4rtm4art/llm-rag/branch/main/graph/badge.svg)](https://codecov.io/gh/sm4rtm4art/llm-rag)
+This project implements a Retrieval-Augmented Generation (RAG) system specialized for processing DIN standards with multi-modal content, including text, tables, and images/technical drawings.
 
-A Retrieval-Augmented Generation (RAG) system that uses LLMs to answer questions based on your documents.
+## Overview
+
+The system is designed to extract, process, and retrieve information from DIN standards documents, providing comprehensive answers to user queries by leveraging different types of content:
+
+- **Text content**: Standard paragraphs, sections, and textual information
+- **Table content**: Structured data presented in tables
+- **Image content**: Figures, diagrams, and technical drawings
 
 ## Features
 
-- Document loading and processing
-- Vector database storage
-- Conversational RAG pipeline
-- Command-line interface
-- Support for various LLM backends (HuggingFace, LLaMA)
-- Docker support for easy deployment
+- **Multi-modal document processing**: Extract and process text, tables, and images from DIN standards
+- **Specialized chunking**: Content-aware chunking that preserves the integrity of tables and images
+- **Multi-modal vector store**: Separate embedding spaces for different content types
+- **Content-aware retrieval**: Retrieve the most relevant content based on the query type
+- **Conversational interface**: Interactive query system with memory for follow-up questions
+
+## Components
+
+The system consists of several key components:
+
+1. **Document Processing**
+
+   - `DINStandardLoader`: Specialized loader for DIN standard PDFs
+   - `MultiModalChunker`: Content-aware chunker for text, tables, and images
+
+2. **Vector Store**
+
+   - `MultiModalVectorStore`: Vector store with specialized embedding models for different content types
+   - `MultiModalEmbeddingFunction`: Custom embedding function for multi-modal content
+
+3. **RAG Pipeline**
+   - `MultiModalRAGPipeline`: Specialized RAG pipeline for multi-modal content
+   - Custom prompt templates for comprehensive answers
 
 ## Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/llm-rag.git
-cd llm-rag
+git clone https://github.com/yourusername/din-multimodal-rag.git
+cd din-multimodal-rag
 
-# Install the package
-pip install -e .
-```
+# Create a virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-## Quick Start with Local LLM Demo
-
-1. **Download a model** using our convenient script:
-
-   ```bash
-   python download_model.py
-   ```
-
-2. **Ingest your documents**:
-
-   ```bash
-   python -m src.llm_rag.main --data-dir data/documents
-   ```
-
-3. **Run the demo in interactive mode**:
-   ```bash
-   python demo_llm_rag.py
-   ```
-
-See [README_DEMO.md](README_DEMO.md) for more detailed instructions and options.
-
-## Using Docker
-
-### Building the Docker Image
-
-```bash
-# Build the Docker image
-docker build -t llm-rag:latest .
-```
-
-### Running with Docker
-
-```bash
-# Run the application with Docker
-docker run -v ./data:/app/data -v ./models:/app/models -p 8000:8000 llm-rag:latest
-```
-
-### Using Docker Compose
-
-```bash
-# Start the application
-docker-compose up
-
-# Run tests
-docker-compose --profile test up llm-rag-test
+# Install dependencies
+pip install -r requirements.txt
 ```
 
 ## Usage
 
-### Loading Documents
+### Demo Script
+
+The project includes a demo script (`demo_din_multimodal_rag.py`) that showcases the multi-modal RAG system:
 
 ```bash
-python -m scripts.load_documents --input-dir data/documents --output-dir data/vector_db --collection-name my_docs
+python demo_din_multimodal_rag.py --din_path /path/to/din/standards
 ```
 
-### RAG CLI
+### Command-line Options
 
-```bash
-# Basic usage
-python -m scripts.rag_cli --vector-db data/vector_db --collection-name my_docs
+- `--din_path`: Path to DIN standard PDF or directory containing DIN standards (required)
+- `--model`: Name or path of the model to use (default: "microsoft/phi-2")
+- `--device`: Device to use for model inference ("cpu", "cuda", "auto") (default: "auto")
+- `--persist_dir`: Directory to persist the vector store (default: "chroma_din_multimodal")
+- `--top_k`: Number of documents to retrieve per content type (default: 3)
+- `--no_tables`: Disable table extraction
+- `--no_images`: Disable image extraction
+- `--no_drawings`: Disable technical drawing identification
 
-# Use a different model
-python -m scripts.rag_cli --vector-db data/vector_db --collection-name my_docs --model google/flan-t5-large
+### Interactive Query Session
 
-# Use without device_map (if you have issues with accelerate)
-python -m scripts.rag_cli --vector-db data/vector_db --collection-name my_docs --no-device-map
+The demo script provides an interactive query session where you can ask questions about the DIN standards:
 
-# Use LLaMA model
-python -m scripts.rag_cli --vector-db data/vector_db --collection-name my_docs --use-llama --llama-model-path path/to/model.gguf
+```
+=== DIN Standards Multi-Modal RAG Demo ===
+Type 'exit' or 'quit' to end the session
+Type 'reset' to reset the conversation history
+
+Enter your query: What are the safety requirements for machine tools?
+
+=== Response ===
+[Detailed response about safety requirements in DIN standards]
+
+=== Sources ===
+[1] TEXT - DIN EN ISO 16090-1:2018-12
+[2] TABLE - DIN EN ISO 16090-1:2018-12
+[3] IMAGE - DIN EN ISO 16090-1:2018-12
 ```
 
-## Troubleshooting
+## Implementation Details
 
-### Model Loading Issues
+### Document Processing
 
-If you encounter issues with model loading:
+The system uses specialized document processing techniques to handle multi-modal content:
 
-1. Try using the `--no-device-map` option, which doesn't require the `accelerate` package:
+1. **Text Extraction**: Standard text extraction from PDF documents
+2. **Table Extraction**: Identification and extraction of tables using heuristics and OCR
+3. **Image Extraction**: Extraction of images and identification of technical drawings
+4. **Content-Aware Chunking**: Chunking that preserves the integrity of tables and images
 
-   ```bash
-   python -m scripts.rag_cli --vector-db data/vector_db --collection-name my_docs --no-device-map
-   ```
+### Vector Store
 
-2. For LLaMA models, ensure you have the `llama-cpp-python` package installed:
-   ```bash
-   pip install llama-cpp-python
-   ```
+The multi-modal vector store uses specialized embedding models for different content types:
 
-### Docker Issues
+1. **Text Embeddings**: General-purpose text embedding model (e.g., all-MiniLM-L6-v2)
+2. **Table Embeddings**: Specialized model for tabular data
+3. **Image Embeddings**: Vision-language model for image content
 
-If you encounter issues with Docker:
+### RAG Pipeline
 
-1. Make sure your Docker environment has enough resources allocated (memory, CPU)
-2. For issues with llama-cpp-python in Docker, the image is built with specific flags to disable native optimizations
-3. Ensure the data and models directories exist and have the correct permissions
+The RAG pipeline integrates the multi-modal vector store with a language model:
+
+1. **Query Analysis**: Determine the relevant content types for the query
+2. **Multi-Modal Retrieval**: Retrieve relevant documents of each content type
+3. **Response Generation**: Generate comprehensive answers based on retrieved documents
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the LICENSE file for details.

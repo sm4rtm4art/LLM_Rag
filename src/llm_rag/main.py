@@ -59,7 +59,7 @@ class CustomLlamaCpp(LLM):
         if os.path.exists(model_path):
             self.model = Llama(model_path=model_path, **kwargs)
         else:
-            print(f"Warning: Model file {model_path} does not exist. " "Running in test mode.")
+            print(f"Warning: Model file {model_path} does not exist. Running in test mode.")
             self.model = None
 
     @property
@@ -302,7 +302,7 @@ def run_interactive_mode(rag_pipeline: RAGPipeline) -> None:
         print(f"Retrieved {len(result['source_documents'])} documents:")
 
         for i, doc in enumerate(result["source_documents"]):
-            print(f"\nDocument {i+1}:")
+            print(f"\nDocument {i + 1}:")
             print(f"  Source: {doc.get('metadata', {}).get('source', 'Unknown')}")
             print(f"  Content: {doc.get('content', '')[:100]}...")
 
@@ -335,7 +335,7 @@ def main() -> None:
     else:
         # Load existing vector store
         if not os.path.exists(args.db_dir):
-            print(f"Error: Vector database directory {args.db_dir} " "does not exist")
+            print(f"Error: Vector database directory {args.db_dir} does not exist")
             print("Please provide a data directory to ingest documents first")
             sys.exit(1)
 
@@ -407,7 +407,7 @@ def main() -> None:
         print(f"Retrieved {len(result['source_documents'])} documents:")
 
         for i, doc in enumerate(result["source_documents"]):
-            print(f"\nDocument {i+1}:")
+            print(f"\nDocument {i + 1}:")
             print(f"  Source: {doc.get('metadata', {}).get('source', 'Unknown')}")
             print(f"  Content: {doc.get('content', '')[:100]}...")
 

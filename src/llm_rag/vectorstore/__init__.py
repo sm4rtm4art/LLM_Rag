@@ -1,17 +1,23 @@
-"""Vector store implementations for document storage and retrieval.
+"""Vector store module.
 
-This module provides:
-- Base VectorStore interface
-- ChromaDB implementation
-- Embedding function wrappers
-
-The vector store is responsible for:
-1. Storing document embeddings
-2. Performing semantic similarity search
-3. Managing document metadata
+This module provides vector store implementations for storing and retrieving
+document embeddings.
 """
 
-from .base import VectorStore
-from .chroma import ChromaVectorStore, EmbeddingFunctionWrapper
+from src.llm_rag.vectorstore.base import VectorStore
+from src.llm_rag.vectorstore.chroma import ChromaRetriever, ChromaVectorStore, EmbeddingFunctionWrapper
+from src.llm_rag.vectorstore.multimodal import (
+    MultiModalEmbeddingFunction,
+    MultiModalRetriever,
+    MultiModalVectorStore,
+)
 
-__all__ = ["VectorStore", "ChromaVectorStore", "EmbeddingFunctionWrapper"]
+__all__ = [
+    "ChromaRetriever",
+    "ChromaVectorStore",
+    "EmbeddingFunctionWrapper",
+    "MultiModalEmbeddingFunction",
+    "MultiModalRetriever",
+    "MultiModalVectorStore",
+    "VectorStore",
+]
