@@ -308,7 +308,7 @@ jobs:
 
       - name: Set up kubectl
         if: steps.check-config.outputs.has_config == 'true'
-        uses: azure/setup-kubectl@v3
+        uses: azure/setup-kubectl@v4
 
       - name: Configure kubectl
         if: steps.check-config.outputs.has_config == 'true'
@@ -341,7 +341,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
+        uses: azure/setup-kubectl@v4
 
       - name: Configure kubectl
         run: |
