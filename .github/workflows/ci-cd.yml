@@ -296,16 +296,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check if Kubernetes config exists
+        id: check-config
+        run: |
+          if [ -n "${{ secrets.KUBE_CONFIG_DEV }}" ]; then
+            echo "has_config=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_config=false" >> $GITHUB_OUTPUT
+            echo "Skipping deployment as KUBE_CONFIG_DEV is not set"
+          fi
+
       - name: Set up kubectl
+        if: steps.check-config.outputs.has_config == 'true'
         uses: azure/setup-kubectl@v3
 
       - name: Configure kubectl
+        if: steps.check-config.outputs.has_config == 'true'
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG_DEV }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
       - name: Update deployment configuration
+        if: steps.check-config.outputs.has_config == 'true'
         run: |
           # Replace image tag and username in deployment file
           sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}|g" k8s/deployment.yaml
