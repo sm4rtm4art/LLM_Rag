@@ -125,7 +125,7 @@ class EnhancedPDFProcessor:
                             "page": table["page"],
                             "start_line": table["start_line"],
                             "end_line": table["end_line"],
-                            "table_path": table_path if os.path.exists(table_path) else None,
+                            "table_path": (table_path if os.path.exists(table_path) else None),
                         },
                     }
                 )

@@ -93,7 +93,7 @@ def extract_key_entities(text: str) -> Set[str]:
         "don",
         "should",
         "now",
-        # German stopwords
+        # German stopwords - split into logical groups to avoid long lines
         "der",
         "die",
         "das",

@@ -43,7 +43,7 @@ def main():
                 logger.info("Successfully imported scripts.analytics.analyze_pdf_enhanced")
                 if hasattr(analyze_pdf_enhanced, "EnhancedPDFProcessor"):
                     logger.info("EnhancedPDFProcessor class found in module")
-                    # Test creating an instance - using _ to indicate intentionally unused
+                    # Test creating an instance
                     _ = analyze_pdf_enhanced.EnhancedPDFProcessor()
                     logger.info("Successfully created EnhancedPDFProcessor instance")
                 else:
@@ -72,7 +72,7 @@ def main():
             from scripts.analytics.pdf_extractor import PDFStructureExtractor
 
             logger.info("Successfully imported PDFStructureExtractor")
-            # Test creating an instance - using _ to indicate intentionally unused
+            # Test creating an instance
             _ = PDFStructureExtractor()
             logger.info("Successfully created PDFStructureExtractor instance")
         except Exception as e:

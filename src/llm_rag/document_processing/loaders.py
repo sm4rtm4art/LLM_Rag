@@ -254,8 +254,8 @@ class PDFLoader(DocumentLoader):
             import tabula
 
             logger.info(
-                f"Successfully imported tabula-py: "
-                f"{tabula.__version__ if hasattr(tabula, '__version__') else 'unknown version'}"
+                "Successfully imported tabula-py: "
+                f"{tabula.__version__ if hasattr(tabula, '__version__') else 'unknown'}"
             )
         except ImportError as e:
             logger.warning(f"tabula-py import error: {e}")
@@ -303,7 +303,7 @@ class PDFLoader(DocumentLoader):
 
             logger.info("Successfully imported pdf2image and pytesseract")
             logger.info(
-                f"pdf2image version: "
+                "pdf2image version: "
                 f"{convert_from_path.__module__ if hasattr(convert_from_path, '__module__') else 'unknown'}"
             )
             logger.info(
