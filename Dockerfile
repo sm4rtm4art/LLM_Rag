@@ -2,11 +2,10 @@
 FROM python:3.12-slim AS builder
 
 # Set environment variables for building
-ENV UV_LINK_MODE=copy
-ENV CMAKE_ARGS="-DLLAMA_NATIVE=OFF -DLLAMA_AVX=OFF -DLLAMA_AVX2=OFF -DLLAMA_AVX512=OFF -DLLAMA_F16C=OFF -DLLAMA_FMA=OFF"
-ENV FORCE_CMAKE=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Set working directory
 WORKDIR /build
@@ -17,18 +16,25 @@ RUN apt-get update && apt-get install -y \
     cmake \
     git \
     curl \
+    pkg-config \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install UV
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    mv /root/.local/bin/uv /usr/local/bin/
+# Install pip and upgrade it
+RUN pip install --upgrade pip
 
 # Copy only the files needed for dependency installation
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml ./
+
+# Create a requirements.txt file from pyproject.toml
+RUN pip install tomli && \
+    python -c "import tomli; import json; f = open('pyproject.toml', 'rb'); data = tomli.load(f); deps = data.get('project', {}).get('dependencies', []); print('\n'.join(deps))" > requirements.txt
+
+# Remove llama-cpp-python from requirements if it exists
+RUN grep -v "llama-cpp-python" requirements.txt > requirements_no_llama.txt || true
 
 # Install Python dependencies
-RUN --mount=type=cache,target=/root/.cache \
-    uv pip install --system --no-cache-dir .
+RUN pip install -r requirements_no_llama.txt
 
 # Copy the source code
 COPY src/ /build/src/
@@ -49,7 +55,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages and application from builder stage
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/lib/python3.12 /usr/local/lib/python3.12
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /build/src /app/src
 
