@@ -1,6 +1,6 @@
 # Multi-Modal RAG System for DIN Standards
 
-This repository contains a multi-modal Retrieval-Augmented Generation (RAG) system designed for processing and querying DIN standards documents. The system leverages both text and image content from PDF documents to provide comprehensive responses to user queries.
+This repository contains a multi-modal Retrieval-Augmented Generation (RAG) system designed for processing and querying Normed standards documents. The system leverages both text and image content from PDF documents to provide comprehensive responses to user queries.
 
 ## Features
 
