@@ -8,21 +8,17 @@ on:
 
 jobs:
   test-kubernetes:
-    runs-on: windows-latest
+    # Ubuntu is more reliable for container/K8s workloads
+    runs-on: ubuntu-latest
 
     steps:
       - name: Check disk space
         run: |
           echo "Checking disk space..."
-          Get-PSDrive C | Format-Table -AutoSize
+          df -h
 
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up Docker
-        uses: crazy-max/ghaction-setup-docker@v2
-        with:
-          version: latest
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -37,15 +33,21 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Install Kubernetes tools
+      - name: Install KIND
         run: |
-          # Install kubectl
-          choco install kubernetes-cli -y
-          # Install kind
-          choco install kind -y
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+          kind version
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "latest"
 
       - name: Create kind cluster
         run: |
+          # Create the cluster with a 2-minute timeout
           kind create cluster --name llm-rag-test --config ./k8s/kind-config.yaml --wait 120s
 
       - name: Load Docker image into kind
@@ -64,7 +66,7 @@ jobs:
       - name: Deploy Kubernetes resources
         run: |
           # Update image reference in deployment if needed
-          (Get-Content k8s/deployment.yaml) -replace 'image: llm-rag:latest', 'image: llm-rag:latest' | Set-Content k8s/deployment.yaml
+          sed -i 's|image: .*llm-rag:.*|image: llm-rag:latest|g' k8s/deployment.yaml
 
           # Deploy config map
           kubectl apply -f k8s/configmap.yaml -n llm-rag-test
@@ -82,9 +84,9 @@ jobs:
           kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 
           # Wait for ingress controller to be ready
-          kubectl wait --namespace ingress-nginx `
-            --for=condition=ready pod `
-            --selector=app.kubernetes.io/component=controller `
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
             --timeout=90s
 
           # Deploy ingress
@@ -113,12 +115,12 @@ jobs:
           echo "=== Deployment logs ==="
           kubectl get all -n llm-rag-test
           kubectl describe pods -n llm-rag-test
-          kubectl logs -l app=llm-rag -n llm-rag-test --tail=100
+          kubectl logs -l app=llm-rag -n llm-rag-test --tail=100 || true
           echo "=== Events ==="
           kubectl get events -n llm-rag-test --sort-by=.metadata.creationTimestamp
 
       - name: Clean up
         if: ${{ always() }}
         run: |
-          kubectl delete namespace llm-rag-test
-          kind delete cluster --name llm-rag-test
+          kubectl delete namespace llm-rag-test || true
+          kind delete cluster --name llm-rag-test || true

@@ -45,9 +45,27 @@ kubectl create namespace llm-rag-test || true
 echo -e "${YELLOW}Creating ConfigMap...${NC}"
 kubectl apply -f k8s/configmap.yaml -n llm-rag-test
 
-# Create PVC
+# Create PVC - using local-pvc.yaml for KIND
 echo -e "${YELLOW}Creating PVC...${NC}"
-kubectl apply -f k8s/pvc.yaml -n llm-rag-test
+kubectl apply -f k8s/local-pvc.yaml -n llm-rag-test
+
+# Create a local hostPath PV for the PVC to bind to
+echo -e "${YELLOW}Creating local PV...${NC}"
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: models-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /tmp/models-data
+    type: DirectoryOrCreate
+EOF
 
 # Build and load the Docker image into KIND
 echo -e "${YELLOW}Building Docker image...${NC}"
@@ -56,13 +74,13 @@ docker build -t llm-rag:local .
 echo -e "${YELLOW}Loading Docker image into KIND...${NC}"
 kind load docker-image llm-rag:local --name llm-rag-local
 
-# Update the deployment to use the local image
+# Deploy using the local deployment configuration
 echo -e "${YELLOW}Deploying to Kubernetes...${NC}"
-sed "s|image: .*|image: llm-rag:local|g" k8s/deployment.yaml | kubectl apply -f - -n llm-rag-test
+kubectl apply -f k8s/local-deployment.yaml -n llm-rag-test
 
-# Create service
+# Create service using the local service configuration
 echo -e "${YELLOW}Creating service...${NC}"
-kubectl apply -f k8s/service.yaml -n llm-rag-test
+kubectl apply -f k8s/local-service.yaml -n llm-rag-test
 
 # Wait for deployment to be ready
 echo -e "${YELLOW}Waiting for deployment to be ready...${NC}"
