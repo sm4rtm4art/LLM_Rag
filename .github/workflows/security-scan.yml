@@ -50,14 +50,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+      # Add cache for Trivy
+      - name: Cache Trivy vulnerability database
+        uses: actions/cache@v4
         with:
-          scan-type: "fs"
-          scan-ref: "."
-          format: "sarif"
-          output: "trivy-results.sarif"
-          severity: "CRITICAL,HIGH"
+          path: ~/.cache/trivy
+          key: cache-trivy-${{ github.run_id }}
+          restore-keys: |
+            cache-trivy-
+
+      # Install Trivy directly instead of using the action
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
+          trivy --version
+
+      # Run Trivy with direct command and alternative DB repository
+      - name: Run Trivy vulnerability scanner
+        env:
+          TRIVY_NO_PROGRESS: true
+          TRIVY_CACHE_DIR: ~/.cache/trivy
+          # Use GitHub as the download source instead of GCR
+          TRIVY_DB_REPOSITORY: github.com/aquasecurity/trivy-db
+        run: |
+          trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH .
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
