@@ -16,7 +16,7 @@ usage() {
 }
 
 # Show usage if help flag is provided
-if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+if [[ $1 == "-h" || $1 == "--help" ]]; then
     usage
 fi
 
@@ -25,14 +25,14 @@ set -e
 echo "=== Testing Kubernetes Configurations ==="
 
 # Check if kubectl is installed
-if ! command -v kubectl &> /dev/null; then
+if ! command -v kubectl &>/dev/null; then
     echo "kubectl is not installed. Please install it first."
     exit 1
 fi
 
 # Check if kubeval is installed (optional)
 KUBEVAL_AVAILABLE=false
-if command -v kubeval &> /dev/null; then
+if command -v kubeval &>/dev/null; then
     KUBEVAL_AVAILABLE=true
     echo "kubeval is available, will use it for validation"
 else
@@ -48,7 +48,7 @@ K8S_DIR="k8s"
 # Validate using kubectl dry-run
 echo -e "\n=== Validating with kubectl dry-run ==="
 for file in "${K8S_DIR}"/*.yaml; do
-    if [[ -f "$file" && "$file" != *"kind-config.yaml"* && "$file" != *"test-script.sh"* ]]; then
+    if [[ -f $file && $file != *"kind-config.yaml"* && $file != *"test-script.sh"* ]]; then
         echo "Validating $file..."
         kubectl apply --dry-run=client -f "$file"
     fi
@@ -58,7 +58,7 @@ done
 if [ "$KUBEVAL_AVAILABLE" = true ]; then
     echo -e "\n=== Validating with kubeval ==="
     for file in "${K8S_DIR}"/*.yaml; do
-        if [[ -f "$file" && "$file" != *"kind-config.yaml"* && "$file" != *"test-script.sh"* ]]; then
+        if [[ -f $file && $file != *"kind-config.yaml"* && $file != *"test-script.sh"* ]]; then
             echo "Validating $file with kubeval..."
             kubeval "$file"
         fi
@@ -66,11 +66,11 @@ if [ "$KUBEVAL_AVAILABLE" = true ]; then
 fi
 
 # Test kind cluster creation (if kind is installed)
-if command -v kind &> /dev/null; then
+if command -v kind &>/dev/null; then
     echo -e "\n=== Testing kind cluster configuration ==="
     echo "Validating kind-config.yaml..."
     kind get kubeconfig --name temp-test 2>/dev/null || kind create cluster --name temp-test --config "${K8S_DIR}/kind-config.yaml" --wait 30s
-    
+
     echo "Cleaning up test cluster..."
     kind delete cluster --name temp-test
 else
@@ -80,4 +80,4 @@ else
     echo "  or visit https://kind.sigs.k8s.io/docs/user/quick-start/#installation"
 fi
 
-echo -e "\n=== Kubernetes validation completed ===" 
+echo -e "\n=== Kubernetes validation completed ==="

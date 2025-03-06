@@ -41,40 +41,123 @@ DEFAULT_TOP_K: Final[int] = 5
 # ===== RAG Parameters =====
 # Parameters for the RAG pipeline
 DEFAULT_MEMORY_KEY: Final[str] = "chat_history"
-# Template for RAG prompts
-DEFAULT_PROMPT_TEMPLATE: Final[
-    str
-] = """You are a helpful assistant that provides accurate information based only on the given context.
-If the context doesn't contain enough information to answer the question fully, acknowledge the 
-limitations of the available information.
-Never make up facts or hallucinate information that is not in the context.
 
-Context:
-{context}
+# System prompts
+SYSTEM_PROMPT = (
+    "You are a helpful assistant that provides accurate information based on the "
+    "context provided. If you don't know the answer, say so."
+)
 
-Question: {query}
+SYSTEM_PROMPT_WITH_REASONING = (
+    "You are a helpful assistant that provides accurate information based on the "
+    "context provided. First reason step-by-step about the question, then provide "
+    "your final answer. If you don't know the answer, say so."
+)
 
-Answer based strictly on the information in the context above. If the context doesn't contain 
-relevant information, say "I don't have enough information to answer this question accurately."
-"""
-
-SYSTEM_PROMPT = """You are an AI assistant for DIN standards. 
-Answer the question based only on the given context.
-If you cannot answer the question fully, acknowledge the limitations of the 
-available information.
-Do not use prior knowledge that is not provided in the context.
-"""
-
-SYSTEM_PROMPT_WITH_REASONING = """You are an AI assistant for DIN standards.
-First, analyze the question and the provided context.
-Then, reason step by step about how to answer the question using only the provided context.
-Finally, provide a concise answer based on your reasoning.
-If you cannot find sufficient information in the context, say 
-"I don't have enough information to answer this question accurately."
-"""
+# Default prompt template for the RAG system
+DEFAULT_PROMPT_TEMPLATE = (
+    "\n"
+    "You are a helpful assistant that provides accurate information based on "
+    "the context provided. If the answer cannot be determined from the context, "
+    "acknowledge this limitation.\n"
+    "\n"
+    "Context:\n"
+    "{context}\n"
+    "\n"
+    "Question: {question}\n"
+    "\n"
+    "Answer:\n"
+)
 
 # ===== System Parameters =====
 # Logging and system configuration
 LOG_LEVELS: Final[Dict[str, int]] = {"DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
 
 DEFAULT_LOG_LEVEL: Final[str] = "INFO"
+
+# Default embedding model
+DEFAULT_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
+
+# Default LLM model
+DEFAULT_LLM_MODEL = "TheBloke/Llama-2-7B-Chat-GGUF"
+
+# Default LLM model file
+DEFAULT_LLM_MODEL_FILE = "llama-2-7b-chat.Q4_K_M.gguf"
+
+# Default chunk size
+DEFAULT_CHUNK_SIZE = 1000
+
+# Default chunk overlap
+DEFAULT_CHUNK_OVERLAP = 200
+
+# Default number of chunks to retrieve
+DEFAULT_NUM_CHUNKS = 5
+
+# Default temperature
+DEFAULT_TEMPERATURE = 0.7
+
+# Default max tokens
+DEFAULT_MAX_TOKENS = 512
+
+# Default vector store path
+DEFAULT_VECTOR_STORE_PATH = "data/vectorstore"
+
+# Default collection name
+DEFAULT_COLLECTION_NAME = "documents"
+
+# Default document directory
+DEFAULT_DOCUMENT_DIR = "data/documents"
+
+# Default document glob pattern
+DEFAULT_DOCUMENT_GLOB = "*.pdf"
+
+# Default model directory
+DEFAULT_MODEL_DIR = "models"
+
+# Default log level
+DEFAULT_LOG_LEVEL = "INFO"
+
+# Default log format
+DEFAULT_LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Default log file
+DEFAULT_LOG_FILE = "logs/llm_rag.log"
+
+# Default log file max bytes
+DEFAULT_LOG_FILE_MAX_BYTES = 10485760  # 10MB
+
+# Default log file backup count
+DEFAULT_LOG_FILE_BACKUP_COUNT = 5
+
+# Default log file encoding
+DEFAULT_LOG_FILE_ENCODING = "utf-8"
+
+# Default log file mode
+DEFAULT_LOG_FILE_MODE = "a"
+
+# Default log file permissions
+DEFAULT_LOG_FILE_PERMISSIONS = 0o644
+
+# Default log file directory
+DEFAULT_LOG_FILE_DIR = "logs"
+
+# Default log file name
+DEFAULT_LOG_FILE_NAME = "llm_rag.log"
+
+# Default log file extension
+DEFAULT_LOG_FILE_EXTENSION = ".log"
+
+# Default log file date format
+DEFAULT_LOG_FILE_DATE_FORMAT = "%Y-%m-%d_%H-%M-%S"
+
+# Default log file name format
+DEFAULT_LOG_FILE_NAME_FORMAT = "{name}_{date}{extension}"
+
+# Default log file rotation when
+DEFAULT_LOG_FILE_ROTATION_WHEN = "midnight"
+
+# Default log file rotation interval
+DEFAULT_LOG_FILE_ROTATION_INTERVAL = 1
+
+# Default log file rotation backup count
+DEFAULT_LOG_FILE_ROTATION_BACKUP_COUNT = 5

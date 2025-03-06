@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 """Script to check document metadata in the Chroma database."""
 
-import chromadb
 import argparse
+
+import chromadb
 
 
 def main():
-    """Main function to check document metadata."""
+    """Check document metadata in the Chroma DB."""
     parser = argparse.ArgumentParser(description="Check document metadata in Chroma DB")
     parser.add_argument(
         "--collection",
@@ -30,21 +31,21 @@ def main():
 
     # Connect to the database
     client = chromadb.PersistentClient(args.db_path)
-    
+
     # Get the collection
     collection = client.get_collection(args.collection)
-    
+
     # Get document count
     doc_count = collection.count()
     print(f"Number of documents in collection '{args.collection}': {doc_count}")
-    
+
     # Get sample documents
     sample = collection.get(limit=args.limit)
-    
+
     # Print document metadata
     print("\nSample document metadata:")
     for i, (doc_id, metadata, document) in enumerate(
-        zip(sample["ids"], sample["metadatas"], sample["documents"])
+        zip(sample["ids"], sample["metadatas"], sample["documents"], strict=False)
     ):
         print(f"\nDocument {i} (ID: {doc_id}):")
         print(f"Metadata: {metadata}")
@@ -52,4 +53,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

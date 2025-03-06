@@ -20,7 +20,7 @@ print_error() {
 }
 
 # Check if shellcheck is installed
-if ! command -v shellcheck &> /dev/null; then
+if ! command -v shellcheck &>/dev/null; then
     print_error "shellcheck is not installed. Please install it first."
     echo "  brew install shellcheck (macOS)"
     echo "  apt-get install shellcheck (Ubuntu/Debian)"
@@ -30,7 +30,7 @@ fi
 
 # Check if bats is installed (optional)
 BATS_AVAILABLE=false
-if command -v bats &> /dev/null; then
+if command -v bats &>/dev/null; then
     BATS_AVAILABLE=true
     print_header "bats is available, will use it for testing"
 else
@@ -61,18 +61,18 @@ done
 print_header "Running basic tests on bash scripts"
 for script in ${BASH_SCRIPTS}; do
     echo "Testing ${script}..."
-    
+
     # Check if script is executable
     if [ ! -x "${script}" ]; then
         print_warning "${script} is not executable. Setting executable permission."
         chmod +x "${script}"
     fi
-    
+
     # Check if script has a shebang
     if ! head -n 1 "${script}" | grep -q "^#!/bin/.*sh"; then
         print_error "${script} does not have a proper shebang. It should start with #!/bin/bash or #!/bin/sh"
     fi
-    
+
     # Check if script has help/usage information
     if ! grep -q "\-\-help" "${script}" && ! grep -q "Usage:" "${script}"; then
         print_warning "${script} does not appear to have help/usage information. Consider adding it."
@@ -90,4 +90,4 @@ else
     fi
 fi
 
-print_header "All bash script tests completed" 
+print_header "All bash script tests completed"

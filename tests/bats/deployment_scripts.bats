@@ -7,7 +7,7 @@ load test_helper
 setup() {
     # Create a temporary directory for test artifacts
     TEST_TEMP_DIR="$(mktemp -d)"
-    
+
     # Export variables for use in tests
     export TEST_TEMP_DIR
 }
@@ -68,4 +68,4 @@ teardown() {
 # Helper functions
 assert_file_executable() {
     [ -x "$1" ]
-} 
+}

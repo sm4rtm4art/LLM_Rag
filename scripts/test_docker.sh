@@ -20,4 +20,4 @@ curl -s http://localhost:8000/health || echo "API health check failed"
 echo "Stopping API container..."
 docker stop llm-rag-api-test
 
-echo -e "\n=== Docker tests completed ===" 
+echo -e "\n=== Docker tests completed ==="

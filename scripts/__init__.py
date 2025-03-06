@@ -1,3 +1,1 @@
-"""
-Scripts package for the LLM RAG system.
-""" 
+"""Scripts package for the LLM RAG system."""

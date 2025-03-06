@@ -9,16 +9,14 @@ anti-hallucination features.
 import argparse
 import logging
 import sys
-from typing import Dict, Any
+from typing import Any, Dict
 
 from src.llm_rag.models.factory import ModelBackend, ModelFactory
-from src.llm_rag.rag.pipeline import RAGPipeline
-from src.llm_rag.vectorstore.chroma import ChromaVectorStore
 from src.llm_rag.rag.anti_hallucination import (
     extract_key_entities,
-    verify_entities_in_context,
-    post_process_response,
 )
+from src.llm_rag.rag.pipeline import RAGPipeline
+from src.llm_rag.vectorstore.chroma import ChromaVectorStore
 
 # Set up logging
 logging.basicConfig(
@@ -31,9 +29,7 @@ logger = logging.getLogger(__name__)
 
 def setup_argument_parser() -> argparse.ArgumentParser:
     """Set up the argument parser for the script."""
-    parser = argparse.ArgumentParser(
-        description="Test anti-hallucination improvements in the RAG system."
-    )
+    parser = argparse.ArgumentParser(description="Test anti-hallucination improvements in the RAG system.")
     parser.add_argument(
         "--model_name",
         type=str,
@@ -81,11 +77,11 @@ def run_rag_query(
         max_tokens=512,
         temperature=0.7,
     )
-    
+
     # Load the vector store
     logger.info(f"Loading vector store from {db_path}")
     vector_store = ChromaVectorStore(db_path, collection_name)
-    
+
     # Create the RAG pipeline
     logger.info("Creating RAG pipeline")
     pipeline = RAGPipeline(
@@ -93,27 +89,27 @@ def run_rag_query(
         llm=llm,
         top_k=3,
     )
-    
+
     # Run the query
     logger.info(f"Running query: {query}")
     response = pipeline.query(query)
-    
+
     # Log detailed information about the response for debugging
     logger.info(f"Response type: {type(response)}")
     logger.info(f"Response content: {response}")
-    
-    if 'response' in response:
+
+    if "response" in response:
         logger.info(f"Response['response'] type: {type(response['response'])}")
         logger.info(f"Response['response'] content: {response['response']}")
-    
+
     # Log retrieved documents for debugging
-    if 'documents' in response:
+    if "documents" in response:
         logger.info(f"Number of retrieved documents: {len(response['documents'])}")
-        for i, doc in enumerate(response['documents']):
-            logger.info(f"Document {i+1}:")
+        for i, doc in enumerate(response["documents"]):
+            logger.info(f"Document {i + 1}:")
             logger.info(f"  Content (first 100 chars): {doc.page_content[:100]}...")
             logger.info(f"  Metadata: {doc.metadata}")
-    
+
     return response
 
 
@@ -122,24 +118,23 @@ def analyze_response(response: str, context: str) -> None:
     # Extract entities
     response_entities = extract_key_entities(response)
     context_entities = extract_key_entities(context)
-    
+
     # Find missing entities
-    missing_entities = [entity for entity in response_entities 
-                       if entity not in context_entities]
-    
+    missing_entities = [entity for entity in response_entities if entity not in context_entities]
+
     # Calculate coverage ratio
     if response_entities:
         coverage_ratio = 1.0 - (len(missing_entities) / len(response_entities))
     else:
         coverage_ratio = 1.0
-    
+
     # Print analysis
     print("\nEntity Analysis:")
     print(f"  Response entities: {len(response_entities)}")
     print(f"  Context entities: {len(context_entities)}")
     print(f"  Missing entities: {len(missing_entities)}")
     print(f"  Coverage ratio: {coverage_ratio:.2f}")
-    
+
     if missing_entities:
         print("\nPotentially hallucinated entities:")
         for entity in missing_entities[:10]:
@@ -157,35 +152,35 @@ def run_test_queries(model_name: str, db_path: str, collection_name: str) -> Non
         "What is the relationship between DIN_SPEC_31009 and polyurethane foam insulation?",
         "What does DIN_SPEC_31009 say about protective devices?",
     ]
-    
+
     for query in test_queries:
         print("\n" + "=" * 80)
         print(f"QUERY: {query}")
         print("=" * 80)
-        
+
         result = run_rag_query(
             query=query,
             model_name=model_name,
             db_path=db_path,
             collection_name=collection_name,
         )
-        
+
         response = result["response"]
         confidence = result.get("confidence", 0.0)
         documents = result.get("documents", [])
-        
+
         # Format context for analysis
         context = "\n\n".join([doc.get("content", "") for doc in documents])
-        
+
         print("\nRAG System Response:")
         print("-------------------")
         print(response)
         print("-------------------")
-        
+
         # Display confidence score
         confidence_level = "High" if confidence >= 0.8 else "Medium" if confidence >= 0.5 else "Low"
         print(f"\nRetrieval Confidence: {confidence:.2f} ({confidence_level})")
-        
+
         # Analyze the response
         analyze_response(response, context)
 
@@ -219,7 +214,7 @@ def main() -> None:
         response = result["response"]
         confidence = result.get("confidence", 0.0)
         documents = result.get("documents", [])
-        
+
         # Format context for analysis
         context = "\n\n".join([doc.get("content", "") for doc in documents])
 
@@ -227,11 +222,11 @@ def main() -> None:
         print("-------------------")
         print(response)
         print("-------------------")
-        
+
         # Display confidence score
         confidence_level = "High" if confidence >= 0.8 else "Medium" if confidence >= 0.5 else "Low"
         print(f"\nRetrieval Confidence: {confidence:.2f} ({confidence_level})")
-        
+
         # Display document sources
         if documents:
             print("\nRetrieved from:")
@@ -240,7 +235,7 @@ def main() -> None:
                 source = metadata.get("source", "Unknown")
                 filename = metadata.get("filename", "")
                 page = metadata.get("page", "")
-                
+
                 source_info = []
                 if source and source != "Unknown":
                     source_info.append(f"Source: {source}")
@@ -248,10 +243,10 @@ def main() -> None:
                     source_info.append(f"File: {filename}")
                 if page:
                     source_info.append(f"Page: {page}")
-                
+
                 source_display = ", ".join(source_info) if source_info else "Unknown source"
-                print(f"  {i+1}. {source_display}")
-        
+                print(f"  {i + 1}. {source_display}")
+
         # Analyze the response
         analyze_response(response, context)
 
@@ -261,4 +256,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main() 
+    main()

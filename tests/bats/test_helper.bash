@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Set the project root directory
-PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 # Load bats-support and bats-assert if available
 if [ -d "${PROJECT_ROOT}/tests/bats/libs/bats-support" ]; then
@@ -38,7 +38,7 @@ assert_output() {
 # Assert that the output contains a partial string
 assert_output_contains() {
     local expected="$1"
-    [[ "$output" == *"$expected"* ]]
+    [[ $output == *"$expected"* ]]
 }
 
 # Assert that a file exists
@@ -54,4 +54,4 @@ assert_dir_exists() {
 # Assert that a file is executable
 assert_file_executable() {
     [ -x "$1" ]
-} 
+}

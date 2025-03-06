@@ -1,13 +1,11 @@
 #!/usr/bin/env python
-"""
-Direct search script to test ChromaDB retrieval.
-"""
+"""Direct search script to test ChromaDB retrieval."""
 
-import sys
-import logging
 import argparse
+import logging
+import sys
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 # Configure logging
 logging.basicConfig(
@@ -36,7 +34,7 @@ def direct_search(
         persist_directory=db_path,
         collection_name=collection_name,
     )
-    
+
     # Search for documents
     logger.info(f"Searching for: {query}")
     results = vector_store.search(
@@ -44,12 +42,12 @@ def direct_search(
         n_results=n_results,
         where=where,
     )
-    
+
     return results
 
 
 def main():
-    """Main function."""
+    """Run the direct search in ChromaDB."""
     parser = argparse.ArgumentParser(description="Direct search in ChromaDB")
     parser.add_argument(
         "--query",
@@ -80,14 +78,14 @@ def main():
         type=str,
         help="Filter by filename",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Prepare where clause if filename is provided
     where = None
     if args.filename:
         where = {"filename": args.filename}
-    
+
     # Search for documents
     results = direct_search(
         query=args.query,
@@ -96,11 +94,11 @@ def main():
         n_results=args.limit,
         where=where,
     )
-    
+
     # Print results
     logger.info(f"Found {len(results)} results")
     for i, result in enumerate(results):
-        print(f"\nResult {i+1}:")
+        print(f"\nResult {i + 1}:")
         print(f"ID: {result['id']}")
         print(f"Metadata: {result['metadata']}")
         print(f"Distance: {result['distance']}")
@@ -108,4 +106,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

@@ -60,12 +60,12 @@ if [ "$TEST_ALL" = true ]; then
 fi
 
 # Check script dependencies
-if [ "$TEST_DOCKER" = true ] && ! command -v docker &> /dev/null; then
+if [ "$TEST_DOCKER" = true ] && ! command -v docker &>/dev/null; then
     print_error "Docker is not installed. Please install it first."
     exit 1
 fi
 
-if [ "$TEST_K8S" = true ] && ! command -v kubectl &> /dev/null; then
+if [ "$TEST_K8S" = true ] && ! command -v kubectl &>/dev/null; then
     print_error "kubectl is not installed. Please install it first."
     exit 1
 fi
@@ -82,4 +82,4 @@ if [ "$TEST_K8S" = true ]; then
     ./scripts/test_kubernetes.sh
 fi
 
-print_header "All tests completed" 
+print_header "All tests completed"

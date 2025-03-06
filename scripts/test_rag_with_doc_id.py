@@ -1,13 +1,11 @@
 #!/usr/bin/env python
-"""
-Test RAG with specific document IDs.
-"""
+"""Test RAG with specific document IDs."""
 
-import sys
-import logging
 import argparse
+import logging
+import sys
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict
 
 # Configure logging
 logging.basicConfig(
@@ -19,9 +17,10 @@ logger = logging.getLogger(__name__)
 # Add the project root to the Python path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from src.llm_rag.models.factory import ModelFactory, ModelBackend
-from src.llm_rag.rag.pipeline import RAGPipeline
 from langchain_community.vectorstores import Chroma
+
+from src.llm_rag.models.factory import ModelBackend, ModelFactory
+from src.llm_rag.rag.pipeline import RAGPipeline
 
 
 def run_rag_with_doc_id(
@@ -41,12 +40,12 @@ def run_rag_with_doc_id(
         max_tokens=512,
         temperature=0.1,  # Lower temperature for more deterministic output
     )
-    
+
     # Load the document directly from ChromaDB
     logger.info(f"Loading document with ID: {doc_id} from {db_path}")
     db = Chroma(collection_name=collection_name, persist_directory=db_path)
     results = db.get(ids=[doc_id])
-    
+
     if not results["documents"]:
         logger.error(f"Document with ID {doc_id} not found")
         return {
@@ -54,20 +53,20 @@ def run_rag_with_doc_id(
             "documents": [],
             "confidence": 0.0,
         }
-    
+
     # Extract document content and metadata
     document_content = results["documents"][0]
     document_metadata = results["metadatas"][0]
-    
+
     logger.info(f"Found document: {document_metadata}")
     logger.info(f"Document content preview: {document_content[:200]}...")
-    
+
     # Create a document in the format expected by the RAG pipeline
     document = {
         "content": document_content,
         "metadata": document_metadata,
     }
-    
+
     # Create the RAG pipeline with a custom prompt template
     logger.info("Creating RAG pipeline")
     custom_prompt = """
@@ -89,21 +88,21 @@ IMPORTANT INSTRUCTIONS:
 
 Answer:
 """
-    
+
     pipeline = RAGPipeline(
         vectorstore=None,  # We're not using the vectorstore for retrieval
         llm=llm,
         top_k=1,  # We're only using one document
         prompt_template=custom_prompt,
     )
-    
+
     # Format the context manually
     context = pipeline.format_context([document])
-    
+
     # Generate response
     logger.info(f"Generating response for query: {query}")
     response = pipeline.generate(query=query, context=context)
-    
+
     return {
         "response": response,
         "documents": [document],
@@ -112,7 +111,7 @@ Answer:
 
 
 def main():
-    """Main function."""
+    """Execute the RAG test with specific document IDs."""
     parser = argparse.ArgumentParser(description="Test RAG with specific document ID")
     parser.add_argument(
         "--query",
@@ -144,9 +143,9 @@ def main():
         default="chroma_db",
         help="Path to ChromaDB database",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Run RAG with the specified document ID
     result = run_rag_with_doc_id(
         query=args.query,
@@ -155,13 +154,13 @@ def main():
         db_path=args.db_path,
         collection_name=args.collection,
     )
-    
+
     # Print the response
     print("\nRAG System Response:")
     print("-------------------")
     print(result["response"])
     print("-------------------")
-    
+
     # Print document information
     if result["documents"]:
         print("\nDocument Used:")
@@ -169,12 +168,12 @@ def main():
         metadata = result["documents"][0]["metadata"]
         print(f"Filename: {metadata.get('filename', 'Unknown')}")
         print(f"Source: {metadata.get('source', 'Unknown')}")
-        
+
         # Print content preview
         content = result["documents"][0]["content"]
-        print(f"\nContent Preview:")
+        print("\nContent Preview:")
         print(content[:500] + "..." if len(content) > 500 else content)
 
 
 if __name__ == "__main__":
-    main() 
+    main()

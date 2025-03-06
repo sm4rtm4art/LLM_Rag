@@ -1,89 +1,88 @@
 #!/usr/bin/env python3
-"""
-Test script to diagnose import issues with EnhancedPDFProcessor
-"""
+"""Test script to diagnose import issues with EnhancedPDFProcessor."""
 
+import logging
 import os
 import sys
-import logging
 import traceback
+from importlib import import_module
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+
 def main():
-    """Main function to test imports."""
+    """Execute import tests to diagnose module issues."""
     try:
         # Print Python path and environment
-        logger.info(f"Python executable: {sys.executable}")
-        logger.info(f"Current directory: {os.getcwd()}")
-        logger.info(f"Python path: {sys.path}")
-        
-        # Add project root to path if not already there
-        project_root = os.path.abspath(os.path.dirname(__file__))
-        if project_root not in sys.path:
-            sys.path.insert(0, project_root)
-            logger.info(f"Added {project_root} to Python path")
-        
-        # Try to import directly
-        logger.info("Attempting direct import...")
+        logger.info("Python executable: %s", sys.executable)
+        logger.info("Python version: %s", sys.version)
+        logger.info("PYTHONPATH: %s", os.environ.get("PYTHONPATH", "Not set"))
+        logger.info("Current directory: %s", os.getcwd())
+        logger.info("sys.path: %s", sys.path)
+
+        # Try direct import
+        logger.info("Trying direct import...")
         try:
-            from scripts.analytics.rag_integration import EnhancedPDFProcessor
-            logger.info("Direct import successful!")
-            
-            # Test creating an instance
-            processor = EnhancedPDFProcessor()
+            from scripts.analytics.analyze_pdf_enhanced import EnhancedPDFProcessor
+
+            logger.info("Successfully imported EnhancedPDFProcessor")
+            # Test creating an instance - using _ to indicate intentionally unused
+            _ = EnhancedPDFProcessor()
             logger.info("Successfully created EnhancedPDFProcessor instance")
-            
         except ImportError as e:
-            logger.error(f"Direct import failed: {e}")
-            
-            # Try with importlib
-            logger.info("Attempting import with importlib...")
-            import importlib.util
-            
-            module_path = os.path.join(project_root, 'scripts', 'analytics', 'rag_integration.py')
-            if os.path.exists(module_path):
-                logger.info(f"Module path exists: {module_path}")
+            logger.error("Failed to import EnhancedPDFProcessor: %s", e)
+            logger.error("Traceback: %s", traceback.format_exc())
+
+            # Try importing the module
+            logger.info("Trying to import the module...")
+            try:
+                from scripts.analytics import analyze_pdf_enhanced
+
+                logger.info("Successfully imported scripts.analytics.analyze_pdf_enhanced")
+                if hasattr(analyze_pdf_enhanced, "EnhancedPDFProcessor"):
+                    logger.info("EnhancedPDFProcessor class found in module")
+                    # Test creating an instance - using _ to indicate intentionally unused
+                    _ = analyze_pdf_enhanced.EnhancedPDFProcessor()
+                    logger.info("Successfully created EnhancedPDFProcessor instance")
+                else:
+                    logger.error("EnhancedPDFProcessor class not found in module")
+            except ImportError as e:
+                logger.error("Failed to import scripts.analytics.analyze_pdf_enhanced: %s", e)
+                logger.error("Traceback: %s", traceback.format_exc())
+
+                # Try alternative import approach
+                logger.info("Trying alternative import approach...")
                 try:
-                    spec = importlib.util.spec_from_file_location("rag_integration", module_path)
-                    if spec and spec.loader:
-                        module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(module)
-                        EnhancedPDFProcessor = module.EnhancedPDFProcessor
-                        logger.info("Importlib import successful!")
-                        
-                        # Test creating an instance
-                        processor = EnhancedPDFProcessor()
-                        logger.info("Successfully created EnhancedPDFProcessor instance")
+                    module = import_module("scripts.analytics.analyze_pdf_enhanced")
+                    logger.info("Successfully imported module via import_module")
+
+                    # Check if EnhancedPDFProcessor is available
+                    if hasattr(module, "EnhancedPDFProcessor"):
+                        logger.info("EnhancedPDFProcessor class found in module")
                     else:
-                        logger.error("Failed to load module spec")
+                        logger.error("EnhancedPDFProcessor class not found in module")
                 except Exception as e:
-                    logger.error(f"Importlib import failed: {e}")
-                    logger.error(traceback.format_exc())
-            else:
-                logger.error(f"Module path does not exist: {module_path}")
-        
-        # Try to import PDFStructureExtractor directly
-        logger.info("Attempting to import PDFStructureExtractor...")
+                    logger.error("Alternative import approach failed: %s", e)
+
+        # Try importing PDFStructureExtractor
+        logger.info("Trying to import PDFStructureExtractor...")
         try:
             from scripts.analytics.pdf_extractor import PDFStructureExtractor
+
             logger.info("Successfully imported PDFStructureExtractor")
-            
-            # Test creating an instance
-            extractor = PDFStructureExtractor()
+            # Test creating an instance - using _ to indicate intentionally unused
+            _ = PDFStructureExtractor()
             logger.info("Successfully created PDFStructureExtractor instance")
         except Exception as e:
-            logger.error(f"Failed to import PDFStructureExtractor: {e}")
-            logger.error(traceback.format_exc())
-    
+            logger.error("Failed to import PDFStructureExtractor: %s", e)
+            logger.error("Traceback: %s", traceback.format_exc())
+
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        logger.error(traceback.format_exc())
+        logger.error("Unexpected error: %s", e)
+        logger.error("Traceback: %s", traceback.format_exc())
+
 
 if __name__ == "__main__":
-    main() 
+    main()

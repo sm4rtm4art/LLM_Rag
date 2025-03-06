@@ -621,18 +621,10 @@ def main():
     parser = argparse.ArgumentParser(description="Extract tables and images from PDF documents for RAG systems.")
     parser.add_argument("input_path", help="Path to a PDF file or directory containing PDF files.")
     parser.add_argument("output_dir", help="Directory to save extracted content.")
-    parser.add_argument(
-        "--extract-tables", action="store_true", help="Extract tables from PDFs"
-    )
-    parser.add_argument(
-        "--extract-images", action="store_true", help="Extract images from PDFs"
-    )
-    parser.add_argument(
-        "--extract-text", action="store_true", help="Extract text from PDFs"
-    )
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose output"
-    )
+    parser.add_argument("--extract-tables", action="store_true", help="Extract tables from PDFs")
+    parser.add_argument("--extract-images", action="store_true", help="Extract images from PDFs")
+    parser.add_argument("--extract-text", action="store_true", help="Extract text from PDFs")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output")
     args = parser.parse_args()
 
     input_path = os.path.abspath(args.input_path)
@@ -644,7 +636,7 @@ def main():
             output_dir=args.output_dir,
             save_tables=args.extract_tables,
             save_images=args.extract_images,
-            verbose=args.verbose
+            verbose=args.verbose,
         )
         extractor.extract_from_pdf(input_path, args.output_dir)
     else:
