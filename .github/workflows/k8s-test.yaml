@@ -1,15 +1,20 @@
 name: Kubernetes Test with kind
 
 on:
-  pull_request:
-    branches: [main]
-  push:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types:
+      - completed
     branches: [main, KIND_cluster_running]
   workflow_dispatch:
 
 jobs:
   test-kubernetes:
     runs-on: ubuntu-latest
+    # Allow this job to fail without affecting the workflow result
+    continue-on-error: true
+    # Only run if the CI/CD workflow was successful
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Free disk space
@@ -27,12 +32,43 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # When triggered by workflow_run, we need to check out the same commit
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
-      - name: Set up Docker Buildx
+      # Instead of building the image, pull it from Docker Hub
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Determine Docker image tag
+        id: determine-tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            # For manual runs, use the current SHA
+            echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
+          else
+            # For workflow_run triggers, use the SHA from the triggering workflow
+            echo "IMAGE_TAG=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Pull Docker image
+        if: github.event_name != 'pull_request'
+        run: |
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ steps.determine-tag.outputs.IMAGE_TAG }}
+          # Tag it as llm-rag:latest for KIND
+          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ steps.determine-tag.outputs.IMAGE_TAG }} llm-rag:latest
+
+      # Fallback to building the image for PRs or if pull fails
+      - name: Set up Docker Buildx (fallback)
+        if: github.event_name == 'pull_request' || failure()
         uses: docker/setup-buildx-action@v3
 
-      # Use a smaller base image or pre-built image if possible
-      - name: Build Docker image
+      - name: Build Docker image (fallback)
+        if: github.event_name == 'pull_request' || failure()
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -41,7 +77,6 @@ jobs:
           tags: llm-rag:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          # Add build args to reduce image size if possible
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 
