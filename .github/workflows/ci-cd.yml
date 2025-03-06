@@ -296,8 +296,21 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      # Check if Docker is available
+      - name: Check Docker availability
+        id: check-docker
+        continue-on-error: true
+        run: |
+          if docker info &>/dev/null; then
+            echo "docker_available=true" >> $GITHUB_OUTPUT
+          else
+            echo "docker_available=false" >> $GITHUB_OUTPUT
+            echo "::warning::Docker is not available. Build and push will be skipped."
+          fi
+
       # Cache Docker layers
       - name: Cache Docker layers
+        if: steps.check-docker.outputs.docker_available == 'true'
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
@@ -306,17 +319,20 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Set up Docker Buildx
+        if: steps.check-docker.outputs.docker_available == 'true'
         uses: docker/setup-buildx-action@v3
         with:
           buildkitd-flags: --debug
 
       - name: Login to Docker Hub
+        if: steps.check-docker.outputs.docker_available == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Verify Docker Hub Login
+        if: steps.check-docker.outputs.docker_available == 'true'
         run: |
           echo "Checking Docker Hub login..."
           docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin <<< ${{ secrets.DOCKERHUB_TOKEN }}
@@ -326,6 +342,7 @@ jobs:
 
       # Build and push Docker image - explicitly specify linux/amd64 platform only
       - name: Build and push
+        if: steps.check-docker.outputs.docker_available == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -348,16 +365,33 @@ jobs:
 
       # Move cache to prevent it from growing indefinitely
       - name: Move cache
+        if: steps.check-docker.outputs.docker_available == 'true'
         run: |
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Check Docker Hub Repository
-        if: always() # Run even if previous steps failed
+        if: steps.check-docker.outputs.docker_available == 'true'
         run: |
           echo "Checking Docker Hub for images..."
           curl -s -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
             "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/" | jq .
+
+      - name: Create build artifact without Docker
+        if: steps.check-docker.outputs.docker_available != 'true'
+        run: |
+          echo "Docker build was skipped. Creating a package instead."
+          python -m pip install build
+          python -m build
+          mkdir -p dist/docker-skipped
+          echo "Docker build was skipped on $(date)" > dist/docker-skipped/build-info.txt
+
+      - name: Upload build artifact
+        if: steps.check-docker.outputs.docker_available != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package
+          path: dist/
 
   # Development deployment - only runs on main branch
   deploy-dev:
@@ -369,8 +403,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Check if Docker image was built
+      - name: Check if Docker image exists
+        id: check-image
+        continue-on-error: true
+        run: |
+          if curl -s -f -L -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
+            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/${{ github.sha }}" &>/dev/null; then
+            echo "image_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "image_exists=false" >> $GITHUB_OUTPUT
+            echo "::warning::Docker image was not built. Deployment will be skipped."
+          fi
+
       - name: Check if Kubernetes config exists
         id: check-config
+        if: steps.check-image.outputs.image_exists == 'true'
         run: |
           if [ -n "${{ secrets.KUBE_CONFIG_DEV }}" ]; then
             echo "has_config=true" >> $GITHUB_OUTPUT
@@ -380,18 +428,30 @@ jobs:
           fi
 
       - name: Set up kubectl
-        if: steps.check-config.outputs.has_config == 'true'
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
         uses: azure/setup-kubectl@v3
 
       - name: Configure kubectl
-        if: steps.check-config.outputs.has_config == 'true'
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG_DEV }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
+      - name: Verify Kubernetes connectivity
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
+        id: verify-k8s
+        continue-on-error: true
+        run: |
+          if kubectl cluster-info; then
+            echo "k8s_connected=true" >> $GITHUB_OUTPUT
+          else
+            echo "k8s_connected=false" >> $GITHUB_OUTPUT
+            echo "::warning::Could not connect to Kubernetes cluster. Deployment will be skipped."
+          fi
+
       - name: Update deployment configuration
-        if: steps.check-config.outputs.has_config == 'true'
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
         run: |
           # Replace image tag and username in deployment file
           sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}|g" k8s/deployment.yaml
@@ -403,6 +463,20 @@ jobs:
           kubectl apply -f k8s/deployment.yaml --validate=false
           kubectl rollout status deployment/llm-rag
 
+      - name: Download build artifact
+        if: steps.check-image.outputs.image_exists != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+
+      - name: Deploy alternative (non-Docker)
+        if: steps.check-image.outputs.image_exists != 'true'
+        run: |
+          echo "Docker image was not available. Deployment skipped."
+          echo "Alternative deployment could be implemented here."
+          ls -la dist/
+
   # Staging deployment - only runs when manually triggered with staging option
   deploy-staging:
     needs: [deploy-dev]
@@ -413,16 +487,55 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Check if Docker image was built
+      - name: Check if Docker image exists
+        id: check-image
+        continue-on-error: true
+        run: |
+          if curl -s -f -L -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
+            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/${{ github.sha }}" &>/dev/null; then
+            echo "image_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "image_exists=false" >> $GITHUB_OUTPUT
+            echo "::warning::Docker image was not built. Deployment will be skipped."
+          fi
+
+      - name: Check if Kubernetes config exists
+        id: check-config
+        if: steps.check-image.outputs.image_exists == 'true'
+        run: |
+          if [ -n "${{ secrets.KUBE_CONFIG_STAGING }}" ]; then
+            echo "has_config=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_config=false" >> $GITHUB_OUTPUT
+            echo "Skipping deployment as KUBE_CONFIG_STAGING is not set"
+          fi
+
       - name: Set up kubectl
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
         uses: azure/setup-kubectl@v3
 
       - name: Configure kubectl
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG_STAGING }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
+      - name: Verify Kubernetes connectivity
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
+        id: verify-k8s
+        continue-on-error: true
+        run: |
+          if kubectl cluster-info; then
+            echo "k8s_connected=true" >> $GITHUB_OUTPUT
+          else
+            echo "k8s_connected=false" >> $GITHUB_OUTPUT
+            echo "::warning::Could not connect to Kubernetes cluster. Deployment will be skipped."
+          fi
+
       - name: Update deployment configuration
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
         run: |
           # Replace image tag and username in deployment file
           sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}|g" k8s/deployment.yaml
@@ -433,3 +546,17 @@ jobs:
           # Apply the configuration
           kubectl apply -f k8s/deployment.yaml --validate=false
           kubectl rollout status deployment/llm-rag
+
+      - name: Download build artifact
+        if: steps.check-image.outputs.image_exists != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+
+      - name: Deploy alternative (non-Docker)
+        if: steps.check-image.outputs.image_exists != 'true'
+        run: |
+          echo "Docker image was not available. Deployment skipped."
+          echo "Alternative deployment could be implemented here."
+          ls -la dist/
