@@ -1,10 +1,9 @@
 name: CI/CD Pipeline
 
-# Add permissions at the workflow level
 permissions:
   actions: read
   contents: read
-  security-events: write # Required for uploading SARIF results
+  security-events: write
 
 on:
   push:
@@ -22,12 +21,54 @@ on:
           - dev
           - staging
 
+env:
+  PYTHON_VERSION: "3.12"
+  UV_LINK_MODE: copy
+
+defaults:
+  run:
+    shell: bash
+
+##############################
+# Gemeinsame Schritte (Anker)
+##############################
+x-steps:
+  - &checkout
+    name: Checkout Repository
+    uses: actions/checkout@v4
+
+  - &setup-python
+    name: Set up Python
+    uses: actions/setup-python@v4
+    with:
+      python-version: "${{ env.PYTHON_VERSION }}"
+
+  - &install-uv
+    name: Install UV
+    run: |
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+  - &cache-uv
+    name: Cache UV & pip packages
+    uses: actions/cache@v4
+    with:
+      path: |
+        ~/.cache/uv
+        ~/.cache/pip
+      key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+      restore-keys: |
+        ${{ runner.os }}-uv-
+
+#########################
+# Jobs
+#########################
+
 jobs:
-  # Bash script linting and testing
   bash-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - *checkout
 
       - name: Install shellcheck
         run: |
@@ -37,57 +78,34 @@ jobs:
       - name: Install shfmt
         run: |
           curl -sS https://webinstall.dev/shfmt | bash
-          export PATH="$HOME/.local/bin:$PATH"
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Run shellcheck
-        run: |
-          find scripts -name "*.sh" -type f -exec shellcheck {} \;
+        run: find scripts -name "*.sh" -type f -exec shellcheck {} \;
 
-      - name: Run shfmt
-        run: |
-          find scripts -name "*.sh" -type f -exec shfmt -d {} \;
+      - name: Run shfmt (format diff)
+        run: find scripts -name "*.sh" -type f -exec shfmt -d {} \;
 
       - name: Run bash script tests
         run: |
           chmod +x scripts/test_bash_scripts.sh
           scripts/test_bash_scripts.sh
 
-  # Security scanning job
   security:
     runs-on: ubuntu-latest
     env:
       UV_LINK_MODE: copy
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
-
-      # Add cache before installing UV
-      - name: Cache UV packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.cache/pip
-          key: ${{ runner.os }}-uv-security-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-security-
-
-      - name: Install UV
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - *checkout
+      - *setup-python
+      - *cache-uv
+      - *install-uv
 
       - name: Install security tools
         run: uv pip install --system bandit safety
 
-      - name: Run Bandit
-        run: |
-          bandit -r src/ -c pyproject.toml -f json -o bandit-results.json
+      - name: Run Bandit scan
+        run: bandit -r src/ -c pyproject.toml -f json -o bandit-results.json
         continue-on-error: true
 
       - name: Upload Bandit results
@@ -99,8 +117,7 @@ jobs:
       - name: Run Safety Check
         run: safety check
 
-      # Add cache for Trivy
-      - name: Cache Trivy vulnerability database
+      - name: Cache Trivy DB
         uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
@@ -108,44 +125,32 @@ jobs:
           restore-keys: |
             cache-trivy-
 
-      # Install Trivy directly instead of using the action
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
           trivy --version
 
-      # Run Trivy with direct command
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scan
         env:
           TRIVY_NO_PROGRESS: true
           TRIVY_CACHE_DIR: ~/.cache/trivy
-          # Don't specify a custom DB repository - use the default
         run: |
-          # First update the database explicitly
           trivy --cache-dir ~/.cache/trivy image --download-db-only
-          # Then run the scan
           trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH .
 
-      - name: Upload Trivy scan results
+      - name: Upload Trivy SARIF results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: "trivy-results.sarif"
+          sarif_file: trivy-results.sarif
 
-  # Linting job
   lint:
     runs-on: ubuntu-latest
     env:
       UV_LINK_MODE: copy
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
-
-      # Add cache before installing UV
-      - name: Cache UV packages
+      - *checkout
+      - *setup-python
+      - name: Cache lint dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -155,13 +160,8 @@ jobs:
           key: ${{ runner.os }}-uv-lint-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-uv-lint-
-
-      - name: Install UV
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
+      - *install-uv
+      - name: Install lint tools
         run: |
           uv pip install --system ruff mypy
           uv pip install --system ".[dev]"
@@ -172,24 +172,17 @@ jobs:
       - name: Run Ruff linting
         run: ruff check "src/" "tests/"
 
-      - name: Run mypy
+      - name: Run mypy type checks
         run: mypy src tests
 
-  # Testing job
   test:
     runs-on: ubuntu-latest
     env:
       UV_LINK_MODE: copy
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
-
-      # Add cache before installing UV
-      - name: Cache UV packages
+      - *checkout
+      - *setup-python
+      - name: Cache test dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -199,13 +192,8 @@ jobs:
           key: ${{ runner.os }}-uv-test-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-uv-test-
-
-      - name: Install UV
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
+      - *install-uv
+      - name: Install test dependencies
         run: |
           uv pip install --system pytest pytest-cov pytest-asyncio
           uv pip install --system sentence-transformers chromadb
@@ -213,21 +201,17 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          python -m pytest tests/ \
-            --cov=src/llm_rag \
-            --cov-report=xml \
-            -v
+          python -m pytest tests/ --cov=src/llm_rag --cov-report=xml -v
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
+          file: coverage.xml
           slug: sm4rtm4art/llm-rag
           fail_ci_if_error: false
           verbose: true
 
-  # Semantic release job - only runs on main branch pushes
   semantic-release:
     needs: [lint, test]
     runs-on: ubuntu-latest
@@ -237,35 +221,25 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - name: Checkout
+      - name: Checkout full history
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Python Setup
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
+      - *setup-python
+      - name: Install semantic-release
         run: |
           python -m pip install --upgrade pip
           pip install python-semantic-release
-
       - name: Configure Git
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-
-      - name: Semantic Release
+      - name: Semantic Release Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          semantic-release publish
+        run: semantic-release publish
 
-  # Build job - only runs on main branch after all checks pass
   build:
     needs: [security, lint, test, semantic-release, bash-lint]
     runs-on: ubuntu-latest
@@ -273,30 +247,11 @@ jobs:
     env:
       UV_LINK_MODE: copy
     steps:
-      - uses: actions/checkout@v4
+      - *checkout
+      - *setup-python
+      - *cache-uv
+      - *install-uv
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
-
-      # Add cache before installing UV
-      - name: Cache UV packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.cache/pip
-          key: ${{ runner.os }}-uv-build-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-build-
-
-      - name: Install UV
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      # Check if Docker is available
       - name: Check Docker availability
         id: check-docker
         continue-on-error: true
@@ -308,7 +263,6 @@ jobs:
             echo "::warning::Docker is not available. Build and push will be skipped."
           fi
 
-      # Cache Docker layers
       - name: Cache Docker layers
         if: steps.check-docker.outputs.docker_available == 'true'
         uses: actions/cache@v4
@@ -334,14 +288,11 @@ jobs:
       - name: Verify Docker Hub Login
         if: steps.check-docker.outputs.docker_available == 'true'
         run: |
-          echo "Checking Docker Hub login..."
+          echo "Verifying Docker Hub login..."
           docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin <<< ${{ secrets.DOCKERHUB_TOKEN }}
-          echo "Checking if repository exists..."
-          curl -s -f -L -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
-            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/"
+          curl -s -f -L -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/"
 
-      # Build and push Docker image - explicitly specify linux/amd64 platform only
-      - name: Build and push
+      - name: Build and push Docker image
         if: steps.check-docker.outputs.docker_available == 'true'
         uses: docker/build-push-action@v5
         with:
@@ -358,13 +309,10 @@ jobs:
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:buildcache,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-          # Explicitly specify only linux/amd64 platform to avoid Windows manifest issues
           platforms: linux/amd64
-          # Disable provenance attestation which can cause issues with some registries
           provenance: false
 
-      # Move cache to prevent it from growing indefinitely
-      - name: Move cache
+      - name: Move Docker cache
         if: steps.check-docker.outputs.docker_available == 'true'
         run: |
           rm -rf /tmp/.buildx-cache
@@ -373,14 +321,13 @@ jobs:
       - name: Check Docker Hub Repository
         if: steps.check-docker.outputs.docker_available == 'true'
         run: |
-          echo "Checking Docker Hub for images..."
-          curl -s -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
-            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/" | jq .
+          echo "Checking images on Docker Hub..."
+          curl -s -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/" | jq .
 
-      - name: Create build artifact without Docker
+      - name: Create build artifact (if Docker skipped)
         if: steps.check-docker.outputs.docker_available != 'true'
         run: |
-          echo "Docker build was skipped. Creating a package instead."
+          echo "Docker build skipped – creating Python package instead."
           python -m pip install build
           python -m build
           mkdir -p dist/docker-skipped
@@ -393,31 +340,28 @@ jobs:
           name: python-package
           path: dist/
 
-  # Development deployment - only runs on main branch
   deploy-dev:
     needs: [build]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'dev'))
-    # Note: Create 'development' environment in GitHub repository settings before uncommenting
-    # environment: development
+    if: >
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'dev'))
     steps:
-      - uses: actions/checkout@v4
+      - *checkout
 
-      # Check if Docker image was built
       - name: Check if Docker image exists
         id: check-image
         continue-on-error: true
         run: |
-          if curl -s -f -L -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
-            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/${{ github.sha }}" &>/dev/null; then
+          if curl -s -f -L -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/${{ github.sha }}" &>/dev/null; then
             echo "image_exists=true" >> $GITHUB_OUTPUT
           else
             echo "image_exists=false" >> $GITHUB_OUTPUT
-            echo "::warning::Docker image was not built. Deployment will be skipped."
+            echo "::warning::Docker image not built. Skipping deployment."
           fi
 
-      # Set up KIND cluster for testing if no Kubernetes config exists
-      - name: Check if Kubernetes config exists
+      - name: Check Kubernetes config for dev
         id: check-config
         if: steps.check-image.outputs.image_exists == 'true'
         run: |
@@ -427,11 +371,10 @@ jobs:
           else
             echo "has_config=false" >> $GITHUB_OUTPUT
             echo "use_kind=true" >> $GITHUB_OUTPUT
-            echo "Using KIND cluster for testing as KUBE_CONFIG_DEV is not set"
+            echo "No KUBE_CONFIG_DEV set – using KIND cluster."
           fi
 
-      # Set up KIND cluster if no external Kubernetes config exists
-      - name: Set up KIND Cluster
+      - name: Set up KIND Cluster for dev (if needed)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true'
         uses: engineerd/setup-kind@v0.5.0
         with:
@@ -441,44 +384,42 @@ jobs:
             kind: Cluster
             apiVersion: kind.x-k8s.io/v1alpha4
             nodes:
-            - role: control-plane
-              kubeadmConfigPatches:
-              - |
-                kind: InitConfiguration
-                nodeRegistration:
-                  kubeletExtraArgs:
-                    node-labels: "ingress-ready=true"
-              extraPortMappings:
-              - containerPort: 80
-                hostPort: 80
-                protocol: TCP
-              - containerPort: 443
-                hostPort: 443
-                protocol: TCP
+              - role: control-plane
+                kubeadmConfigPatches:
+                  - |
+                    kind: InitConfiguration
+                    nodeRegistration:
+                      kubeletExtraArgs:
+                        node-labels: "ingress-ready=true"
+                extraPortMappings:
+                  - containerPort: 80
+                    hostPort: 80
+                    protocol: TCP
+                  - containerPort: 443
+                    hostPort: 443
+                    protocol: TCP
 
-      # Verify KIND cluster
-      - name: Verify KIND Cluster
+      - name: Verify Kubernetes (dev)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true'
         run: |
           kubectl cluster-info
           kubectl get nodes
-          # Create namespace for deployment
           kubectl create namespace llm-rag-dev || true
 
-      # Set up kubectl with external config
-      - name: Set up kubectl
+      - name: Set up kubectl (external config)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
         uses: azure/setup-kubectl@v3
 
-      - name: Configure kubectl
+      - name: Configure kubectl for dev
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG_DEV }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
-      - name: Verify Kubernetes connectivity
-        if: steps.check-image.outputs.image_exists == 'true' && (steps.check-config.outputs.has_config == 'true' || steps.check-config.outputs.use_kind == 'true')
+      - name: Verify Kubernetes connectivity (dev)
+        if: steps.check-image.outputs.image_exists == 'true' &&
+          (steps.check-config.outputs.has_config == 'true' || steps.check-config.outputs.use_kind == 'true')
         id: verify-k8s
         continue-on-error: true
         run: |
@@ -486,41 +427,29 @@ jobs:
             echo "k8s_connected=true" >> $GITHUB_OUTPUT
           else
             echo "k8s_connected=false" >> $GITHUB_OUTPUT
-            echo "::warning::Could not connect to Kubernetes cluster. Deployment will be skipped."
+            echo "::warning::Kubernetes connection failed – skipping deployment."
           fi
 
-      # Load Docker image into KIND if using KIND
-      - name: Load Docker image into KIND
+      - name: Load Docker image into KIND (dev)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
         run: |
-          # Pull the image from Docker Hub
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
-          # Load the image into KIND
           kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} --name llm-rag-cluster
 
-      # Update deployment configuration
-      - name: Update deployment configuration
+      - name: Update deployment configuration for dev
         if: steps.check-image.outputs.image_exists == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
         run: |
-          # Replace image tag and username in deployment file
           sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}|g" k8s/deployment.yaml
-
-          # Set environment-specific variables
           sed -i "s|ENVIRONMENT: \".*\"|ENVIRONMENT: \"dev\"|g" k8s/deployment.yaml
-
-          # Apply the configuration
           if [ "${{ steps.check-config.outputs.use_kind }}" == "true" ]; then
-            # For KIND, apply to the llm-rag-dev namespace
             kubectl apply -f k8s/deployment.yaml -n llm-rag-dev
             kubectl rollout status deployment/llm-rag -n llm-rag-dev --timeout=120s
           else
-            # For external cluster, apply as configured
             kubectl apply -f k8s/deployment.yaml --validate=false
             kubectl rollout status deployment/llm-rag --timeout=120s
           fi
 
-      # Show deployment logs and status for KIND
-      - name: Show Deployment Logs
+      - name: Show Deployment Logs (dev)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
         run: |
           echo "=== Deployment logs ==="
@@ -528,13 +457,13 @@ jobs:
           kubectl describe pods -n llm-rag-dev
           kubectl logs -l app=llm-rag -n llm-rag-dev --tail=100 || true
 
-      - name: Show Events
+      - name: Show Events (dev)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
         run: |
           echo "=== Events ==="
           kubectl get events -n llm-rag-dev --sort-by=.metadata.creationTimestamp
 
-      - name: Download build artifact
+      - name: Download build artifact (fallback)
         if: steps.check-image.outputs.image_exists != 'true'
         uses: actions/download-artifact@v4
         with:
@@ -544,35 +473,31 @@ jobs:
       - name: Deploy alternative (non-Docker)
         if: steps.check-image.outputs.image_exists != 'true'
         run: |
-          echo "Docker image was not available. Deployment skipped."
-          echo "Alternative deployment could be implemented here."
+          echo "Docker image not available. Skipping deployment."
           ls -la dist/
 
-  # Staging deployment - only runs when manually triggered with staging option
   deploy-staging:
     needs: [deploy-dev]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'staging'
-    # Note: Create 'staging' environment in GitHub repository settings before uncommenting
-    # environment: staging
+    if: >
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.deploy_target == 'staging'
     steps:
-      - uses: actions/checkout@v4
+      - *checkout
 
-      # Check if Docker image was built
       - name: Check if Docker image exists
         id: check-image
         continue-on-error: true
         run: |
-          if curl -s -f -L -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
-            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/${{ github.sha }}" &>/dev/null; then
+          if curl -s -f -L -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/${{ github.sha }}" &>/dev/null; then
             echo "image_exists=true" >> $GITHUB_OUTPUT
           else
             echo "image_exists=false" >> $GITHUB_OUTPUT
-            echo "::warning::Docker image was not built. Deployment will be skipped."
+            echo "::warning::Docker image not built. Skipping deployment."
           fi
 
-      # Set up KIND cluster for testing if no Kubernetes config exists
-      - name: Check if Kubernetes config exists
+      - name: Check Kubernetes config for staging
         id: check-config
         if: steps.check-image.outputs.image_exists == 'true'
         run: |
@@ -582,11 +507,10 @@ jobs:
           else
             echo "has_config=false" >> $GITHUB_OUTPUT
             echo "use_kind=true" >> $GITHUB_OUTPUT
-            echo "Using KIND cluster for testing as KUBE_CONFIG_STAGING is not set"
+            echo "No KUBE_CONFIG_STAGING set – using KIND cluster."
           fi
 
-      # Set up KIND cluster if no external Kubernetes config exists
-      - name: Set up KIND Cluster
+      - name: Set up KIND Cluster for staging (if needed)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true'
         uses: engineerd/setup-kind@v0.5.0
         with:
@@ -596,44 +520,42 @@ jobs:
             kind: Cluster
             apiVersion: kind.x-k8s.io/v1alpha4
             nodes:
-            - role: control-plane
-              kubeadmConfigPatches:
-              - |
-                kind: InitConfiguration
-                nodeRegistration:
-                  kubeletExtraArgs:
-                    node-labels: "ingress-ready=true"
-              extraPortMappings:
-              - containerPort: 80
-                hostPort: 80
-                protocol: TCP
-              - containerPort: 443
-                hostPort: 443
-                protocol: TCP
+              - role: control-plane
+                kubeadmConfigPatches:
+                  - |
+                    kind: InitConfiguration
+                    nodeRegistration:
+                      kubeletExtraArgs:
+                        node-labels: "ingress-ready=true"
+                extraPortMappings:
+                  - containerPort: 80
+                    hostPort: 80
+                    protocol: TCP
+                  - containerPort: 443
+                    hostPort: 443
+                    protocol: TCP
 
-      # Verify KIND cluster
-      - name: Verify KIND Cluster
+      - name: Verify Kubernetes (staging)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true'
         run: |
           kubectl cluster-info
           kubectl get nodes
-          # Create namespace for deployment
           kubectl create namespace llm-rag-staging || true
 
-      # Set up kubectl with external config
-      - name: Set up kubectl
+      - name: Set up kubectl (external config)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
         uses: azure/setup-kubectl@v3
 
-      - name: Configure kubectl
+      - name: Configure kubectl for staging
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG_STAGING }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
-      - name: Verify Kubernetes connectivity
-        if: steps.check-image.outputs.image_exists == 'true' && (steps.check-config.outputs.has_config == 'true' || steps.check-config.outputs.use_kind == 'true')
+      - name: Verify Kubernetes connectivity (staging)
+        if: steps.check-image.outputs.image_exists == 'true' &&
+          (steps.check-config.outputs.has_config == 'true' || steps.check-config.outputs.use_kind == 'true')
         id: verify-k8s
         continue-on-error: true
         run: |
@@ -641,41 +563,29 @@ jobs:
             echo "k8s_connected=true" >> $GITHUB_OUTPUT
           else
             echo "k8s_connected=false" >> $GITHUB_OUTPUT
-            echo "::warning::Could not connect to Kubernetes cluster. Deployment will be skipped."
+            echo "::warning::Kubernetes connection failed – skipping deployment."
           fi
 
-      # Load Docker image into KIND if using KIND
-      - name: Load Docker image into KIND
+      - name: Load Docker image into KIND (staging)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
         run: |
-          # Pull the image from Docker Hub
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
-          # Load the image into KIND
           kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} --name llm-rag-cluster
 
-      # Update deployment configuration
-      - name: Update deployment configuration
+      - name: Update deployment configuration for staging
         if: steps.check-image.outputs.image_exists == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
         run: |
-          # Replace image tag and username in deployment file
           sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}|g" k8s/deployment.yaml
-
-          # Set environment-specific variables
           sed -i "s|ENVIRONMENT: \".*\"|ENVIRONMENT: \"staging\"|g" k8s/deployment.yaml
-
-          # Apply the configuration
           if [ "${{ steps.check-config.outputs.use_kind }}" == "true" ]; then
-            # For KIND, apply to the llm-rag-staging namespace
             kubectl apply -f k8s/deployment.yaml -n llm-rag-staging
             kubectl rollout status deployment/llm-rag -n llm-rag-staging --timeout=120s
           else
-            # For external cluster, apply as configured
             kubectl apply -f k8s/deployment.yaml --validate=false
             kubectl rollout status deployment/llm-rag --timeout=120s
           fi
 
-      # Show deployment logs and status for KIND
-      - name: Show Deployment Logs
+      - name: Show Deployment Logs (staging)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
         run: |
           echo "=== Deployment logs ==="
@@ -683,13 +593,13 @@ jobs:
           kubectl describe pods -n llm-rag-staging
           kubectl logs -l app=llm-rag -n llm-rag-staging --tail=100 || true
 
-      - name: Show Events
+      - name: Show Events (staging)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
         run: |
           echo "=== Events ==="
           kubectl get events -n llm-rag-staging --sort-by=.metadata.creationTimestamp
 
-      - name: Download build artifact
+      - name: Download build artifact (fallback)
         if: steps.check-image.outputs.image_exists != 'true'
         uses: actions/download-artifact@v4
         with:
@@ -699,6 +609,5 @@ jobs:
       - name: Deploy alternative (non-Docker)
         if: steps.check-image.outputs.image_exists != 'true'
         run: |
-          echo "Docker image was not available. Deployment skipped."
-          echo "Alternative deployment could be implemented here."
+          echo "Docker image not available. Skipping deployment."
           ls -la dist/
