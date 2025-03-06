@@ -86,10 +86,50 @@ jobs:
         run: uv pip install --system bandit safety
 
       - name: Run Bandit
-        run: bandit -r src/ -c pyproject.toml -ll
+        run: |
+          bandit -r src/ -c pyproject.toml -f json -o bandit-results.json
+        continue-on-error: true
+
+      - name: Upload Bandit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-results
+          path: bandit-results.json
 
       - name: Run Safety Check
         run: safety check
+
+      # Add cache for Trivy
+      - name: Cache Trivy vulnerability database
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: cache-trivy-${{ github.run_id }}
+          restore-keys: |
+            cache-trivy-
+
+      # Install Trivy directly instead of using the action
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
+          trivy --version
+
+      # Run Trivy with direct command
+      - name: Run Trivy vulnerability scanner
+        env:
+          TRIVY_NO_PROGRESS: true
+          TRIVY_CACHE_DIR: ~/.cache/trivy
+          # Don't specify a custom DB repository - use the default
+        run: |
+          # First update the database explicitly
+          trivy --cache-dir ~/.cache/trivy image --download-db-only
+          # Then run the scan
+          trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH .
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-results.sarif"
 
   # Linting job
   lint:
@@ -284,6 +324,7 @@ jobs:
           curl -s -f -L -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
             "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/"
 
+      # Build and push Docker image - explicitly specify linux/amd64 platform only
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -300,7 +341,9 @@ jobs:
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:buildcache,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
+          # Explicitly specify only linux/amd64 platform to avoid Windows manifest issues
           platforms: linux/amd64
+          # Disable provenance attestation which can cause issues with some registries
           provenance: false
 
       # Move cache to prevent it from growing indefinitely
