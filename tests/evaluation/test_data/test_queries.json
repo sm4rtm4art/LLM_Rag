@@ -1,1 +1,2 @@
 [{"query": "What is RAG?", "expected_answer": "RAG stands for Retrieval-Augmented Generation.", "relevant_docs": ["doc1.txt", "doc2.txt"]}, {"query": "How does RAG work?", "expected_answer": "RAG works by retrieving relevant documents and using them to generate answers.", "relevant_docs": ["doc3.txt"]}]
+
