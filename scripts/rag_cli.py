@@ -16,6 +16,8 @@ import logging
 import os
 import sys
 
+import torch
+
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -24,7 +26,7 @@ from langchain_chroma import Chroma
 from langchain_community.llms import LlamaCpp
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_huggingface.llms import HuggingFacePipeline
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
+from transformers import AutoModelForSeq2SeqLM
 
 from llm_rag.rag.pipeline import ConversationalRAGPipeline
 
@@ -130,16 +132,23 @@ def setup_llm(
         max_tokens: Maximum number of tokens to generate
         temperature: Temperature for generation
         use_llama: Whether to use LlamaCpp
-        llama_model_path: Path to the LlamaCpp model
-        llama_n_ctx: Context window size for LlamaCpp
-        llama_n_gpu_layers: Number of GPU layers for LlamaCpp
-        use_device_map: Whether to use device_map when loading models
+        llama_model_path: Path to the Llama model
+        llama_n_ctx: Context size for Llama
+        llama_n_gpu_layers: Number of GPU layers for Llama
+        use_device_map: Whether to use device map for model loading
 
     Returns:
     -------
-        Language model instance
+        Language model for the RAG pipeline
 
     """
+    logger.info(f"Loading model: {model_name}")
+
+    # Set device
+    device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+    print(f"Device set to use {device}")
+
+    # Handle Llama models
     if use_llama:
         if not llama_model_path:
             raise ValueError("llama_model_path must be provided when use_llama is True")
@@ -156,31 +165,61 @@ def setup_llm(
             logger.error(msg)
             raise ImportError(msg) from err
 
+    # Handle Phi models
+    if "phi" in model_name.lower():
+        try:
+            from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+
+            # Load tokenizer
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+            # Load model with or without device_map based on user preference
+            if use_device_map:
+                model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
+            else:
+                model = AutoModelForCausalLM.from_pretrained(model_name)
+                model = model.to(device)
+
+            # Create text generation pipeline
+            text_generation = pipeline(
+                "text-generation",
+                model=model,
+                tokenizer=tokenizer,
+                max_length=max_tokens,
+                temperature=temperature,
+                top_p=0.95,
+                repetition_penalty=1.2,
+            )
+
+            # Create HuggingFacePipeline
+            return HuggingFacePipeline(pipeline=text_generation)
+        except Exception as e:
+            logger.error(f"Failed to load Phi model {model_name}: {str(e)}")
+            raise
+
+    # Handle other HuggingFace models (default to seq2seq models like T5)
     try:
-        # Try to load the specified model
-        logger.info(f"Loading model: {model_name}")
+        # Load tokenizer
         tokenizer = AutoTokenizer.from_pretrained(model_name)
 
         # Load model with or without device_map based on user preference
         if use_device_map:
-            model = AutoModelForSeq2SeqLM.from_pretrained(
-                model_name,
-                device_map="auto",
-            )
+            model = AutoModelForSeq2SeqLM.from_pretrained(model_name, device_map="auto")
         else:
             model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+            model = model.to(device)
 
         # Create text generation pipeline
         text_generation = pipeline(
             "text2text-generation",
             model=model,
             tokenizer=tokenizer,
-            max_new_tokens=max_tokens,
+            max_length=max_tokens,
             temperature=temperature,
-            do_sample=True,
+            top_p=0.95,
         )
 
-        # Create LangChain LLM
+        # Create HuggingFacePipeline
         return HuggingFacePipeline(pipeline=text_generation)
 
     except Exception as e:
@@ -196,21 +235,21 @@ def setup_llm(
                 model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-small", device_map="auto")
             else:
                 model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-small")
+                model = model.to(device)
 
             text_generation = pipeline(
                 "text2text-generation",
                 model=model,
                 tokenizer=tokenizer,
-                max_new_tokens=max_tokens,
+                max_length=max_tokens,
                 temperature=temperature,
+                top_p=0.95,
             )
 
             return HuggingFacePipeline(pipeline=text_generation)
-
-        except Exception as e2:
-            logger.error(f"Error loading fallback model: {str(e2)}")
-            logger.error("Could not load any model. Exiting.")
-            sys.exit(1)
+        except Exception as fallback_error:
+            logger.error(f"Failed to load fallback model: {str(fallback_error)}")
+            raise
 
 
 def load_vectorstore(vector_db_path, embedding_model, collection_name):
@@ -266,7 +305,7 @@ def main():
     # Create RAG pipeline
     rag_pipeline = ConversationalRAGPipeline(
         vectorstore=vectorstore,
-        llm=llm,
+        llm_chain=llm,
         top_k=args.top_k,
     )
 

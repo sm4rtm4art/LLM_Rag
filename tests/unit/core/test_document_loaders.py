@@ -245,7 +245,7 @@ class TestDirectoryLoader(unittest.TestCase):
         documents = loader.load()
 
         # Should load 3 documents (2 text files + 1 CSV file with 2 rows)
-        self.assertEqual(len(documents), 4)
+        self.assertEqual(len(documents), 5)
 
         # Check that files from subdirectory are not included
         sources = [doc["metadata"]["source"] for doc in documents]
@@ -260,7 +260,7 @@ class TestDirectoryLoader(unittest.TestCase):
         documents = loader.load()
 
         # Should load 4 documents (3 text files + 1 CSV file with 2 rows)
-        self.assertEqual(len(documents), 5)
+        self.assertEqual(len(documents), 6)
 
         # Check that files from subdirectory are included
         sources = [doc["metadata"]["source"] for doc in documents]

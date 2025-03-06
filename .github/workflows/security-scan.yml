@@ -1,12 +1,9 @@
-name: Security Scan
+name: Scheduled Security Scan
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   schedule:
     - cron: "0 0 * * 0" # Run weekly on Sunday at midnight
+  workflow_dispatch: # Allow manual triggering
 
 # Add permissions required for security scanning
 permissions:
@@ -15,22 +12,38 @@ permissions:
   security-events: write # Required for uploading SARIF results
 
 jobs:
-  bandit:
-    name: Bandit Security Scan
+  security-scan:
+    name: Run Security Scans
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      # Add cache for UV
+      - name: Cache UV packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.cache/pip
+          key: ${{ runner.os }}-uv-security-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-security-
+
+      - name: Install UV
         run: |
-          python -m pip install --upgrade pip
-          pip install bandit
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install security tools
+        run: uv pip install --system bandit safety
 
       - name: Run Bandit
         run: |
@@ -43,23 +56,56 @@ jobs:
           name: bandit-results
           path: bandit-results.json
 
-  trivy:
-    name: Trivy Security Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Run Safety Check
+        run: safety check
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+      # Add cache for Trivy
+      - name: Cache Trivy vulnerability database
+        uses: actions/cache@v4
         with:
-          scan-type: "fs"
-          scan-ref: "."
-          format: "sarif"
-          output: "trivy-results.sarif"
-          severity: "CRITICAL,HIGH"
+          path: ~/.cache/trivy
+          key: cache-trivy-${{ github.run_id }}
+          restore-keys: |
+            cache-trivy-
+
+      # Install Trivy directly instead of using the action
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
+          trivy --version
+
+      # Run Trivy with direct command
+      - name: Run Trivy vulnerability scanner
+        env:
+          TRIVY_NO_PROGRESS: true
+          TRIVY_CACHE_DIR: ~/.cache/trivy
+        run: |
+          # First update the database explicitly
+          trivy --cache-dir ~/.cache/trivy image --download-db-only
+          # Then run the scan
+          trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH .
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: "trivy-results.sarif"
+
+      - name: Generate timestamp for report
+        id: timestamp
+        run: echo "timestamp=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Create security report
+        run: |
+          echo "# Security Scan Report - ${{ steps.timestamp.outputs.timestamp }}" > security-report.md
+          echo "" >> security-report.md
+          echo "## Bandit Results" >> security-report.md
+          echo "See attached artifact for detailed Bandit results." >> security-report.md
+          echo "" >> security-report.md
+          echo "## Trivy Results" >> security-report.md
+          echo "See SARIF upload for detailed Trivy results." >> security-report.md
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report-${{ steps.timestamp.outputs.timestamp }}
+          path: security-report.md

@@ -10,6 +10,8 @@ import os
 import sys
 from pathlib import Path
 
+import chromadb
+
 # Add the project root to the path so we can import the llm_rag module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
@@ -20,10 +22,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Import our custom modules
-
-import chromadb
-
 
 def check_db_content(db_path, collection_name="test_collection", limit=5):
     """Check the content of a Chroma database.
@@ -31,72 +29,72 @@ def check_db_content(db_path, collection_name="test_collection", limit=5):
     Args:
         db_path: Path to the Chroma database
         collection_name: Name of the collection to check
-        limit: Number of documents to display
+        limit: Maximum number of documents to display
 
     Returns:
         None
 
     """
+    # Check if the database exists
+    if not os.path.exists(db_path):
+        logger.error(f"Database not found at {db_path}")
+        return
+
+    # Create a client
+    client = chromadb.PersistentClient(path=db_path)
+
+    # Get the collection
     try:
-        print(f"Checking database at: {db_path}")
-        client = chromadb.PersistentClient(db_path)
+        collection = client.get_collection(name=collection_name)
+    except ValueError:
+        logger.error(f"Collection {collection_name} not found in database")
+        return
 
-        # Get all collection names
-        collections = client.list_collections()
-        print(f"Collections in database: {collections}")
+    # Get all documents
+    results = collection.get(limit=limit)
 
-        # If no specific collection name provided, use the first one
-        if not collection_name and collections:
-            collection_name = collections[0]
-            print(f"Using collection: {collection_name}")
+    # Print information about the collection
+    logger.info(f"Collection: {collection_name}")
+    logger.info(f"Number of documents: {collection.count()}")
 
-        # Get the collection
-        try:
-            collection = client.get_collection(collection_name)
-
-            # Get document count
-            doc_count = collection.count()
-            print(f"Number of documents: {doc_count}")
-
-            # Get sample documents
-            results = collection.get(limit=limit)
-
-            # Print sample documents
-            print("\nSample documents:")
-            for i, (doc, metadata) in enumerate(zip(results["documents"], results["metadatas"], strict=False)):
-                print(f"\nDocument {i + 1}:")
-                print(f"Metadata: {metadata}")
-                print(f"Content preview: {doc[:300]}...")
-
-            # Check for unique filenames
-            all_metadatas = collection.get(limit=doc_count)["metadatas"]
-            filenames = set()
-            for metadata in all_metadatas:
-                if "source" in metadata:
-                    filenames.add(metadata["source"])
-                if "filename" in metadata:
-                    filenames.add(metadata["filename"])
-
-            print(f"\nUnique filenames/sources: {sorted(filenames)}")
-        except Exception as e:
-            print(f"Error accessing collection: {e}")
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return None
+    # Print sample documents
+    logger.info("Sample documents:")
+    for i, (doc, metadata) in enumerate(zip(results["documents"], results["metadatas"], strict=False)):
+        logger.info(f"Document {i}:")
+        logger.info(f"  Content: {doc[:100]}...")
+        logger.info(f"  Metadata: {metadata}")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        db_path = sys.argv[1]
-    else:
-        db_path = "test_chroma_db"
+    # Parse command line arguments
+    import argparse
 
-    collection_name = sys.argv[2] if len(sys.argv) > 2 else "test_collection"
-    check_db_content(db_path, collection_name)
+    parser = argparse.ArgumentParser(description="Check the content of a Chroma database")
+    parser.add_argument(
+        "--db-path",
+        type=str,
+        default="test_chroma_db",
+        help="Path to the Chroma database",
+    )
+    parser.add_argument(
+        "--collection",
+        type=str,
+        default="test_collection",
+        help="Name of the collection to check",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=5,
+        help="Maximum number of documents to display",
+    )
+    args = parser.parse_args()
+
+    # Check the database content
+    check_db_content(args.db_path, args.collection, args.limit)
 
     # If synthetic_test_db exists, check it too
-    if Path("synthetic_test_db").exists() and db_path != "synthetic_test_db":
+    if Path("synthetic_test_db").exists() and args.db_path != "synthetic_test_db":
         print("\n" + "=" * 50)
         print("Checking synthetic database:")
-        check_db_content("synthetic_test_db", collection_name)
+        check_db_content("synthetic_test_db", args.collection, args.limit)

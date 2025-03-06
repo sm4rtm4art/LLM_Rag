@@ -64,7 +64,7 @@ def test_single_query(rag_pipeline):
     logger.info("Sources:")
 
     # Log the structure of each document
-    for i, doc in enumerate(result["retrieved_documents"]):
+    for i, doc in enumerate(result["documents"]):
         logger.info(f"Document {i + 1} structure:")
         logger.info(pprint.pformat(doc))
 
@@ -93,7 +93,11 @@ def test_single_query(rag_pipeline):
                 logger.info(f"{i + 1}. {source}: {content}")
 
     logger.info("-" * 50)
-    return result
+
+    # Add an assertion instead of returning the result
+    assert result is not None
+    assert "response" in result
+    assert "documents" in result
 
 
 def main():

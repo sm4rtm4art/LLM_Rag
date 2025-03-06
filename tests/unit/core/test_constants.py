@@ -57,7 +57,7 @@ class TestConstants(unittest.TestCase):
         """Test that vector store parameters are correctly defined."""
         self.assertEqual(DEFAULT_CHUNK_SIZE, 1000)
         self.assertEqual(DEFAULT_CHUNK_OVERLAP, 200)
-        self.assertEqual(DEFAULT_TOP_K, 3)
+        self.assertEqual(DEFAULT_TOP_K, 5)
 
     def test_rag_parameters(self):
         """Test that RAG parameters are correctly defined."""

@@ -1,200 +1,255 @@
 # Multi-Modal RAG System for DIN Standards
 
-This project implements a Retrieval-Augmented Generation (RAG) system specialized for processing DIN standards with multi-modal content, including text, tables, and images/technical drawings.
-
-## Overview
-
-The system is designed to extract, process, and retrieve information from DIN standards documents, providing comprehensive answers to user queries by leveraging different types of content:
-
-- **Text content**: Standard paragraphs, sections, and textual information
-- **Table content**: Structured data presented in tables
-- **Image content**: Figures, diagrams, and technical drawings
+This repository contains a multi-modal Retrieval-Augmented Generation (RAG) system designed for processing and querying DIN standards documents. The system leverages both text and image content from PDF documents to provide comprehensive responses to user queries.
 
 ## Features
 
-- **Multi-modal document processing**: Extract and process text, tables, and images from DIN standards
-- **Specialized chunking**: Content-aware chunking that preserves the integrity of tables and images
-- **Multi-modal vector store**: Separate embedding spaces for different content types
-- **Content-aware retrieval**: Retrieve the most relevant content based on the query type
-- **Conversational interface**: Interactive query system with memory for follow-up questions
+- **Multi-Modal Document Processing**: Extract and process both text and tables/images from PDF documents
+- **Specialized Chunking**: Intelligent document chunking that preserves context and structure
+- **Multi-Modal Vector Store**: Store and retrieve both text and image embeddings
+- **Conversational Interface**: Natural language interface for querying document content
+- **Flexible LLM Integration**: Support for various LLM backends (OpenAI, Hugging Face, Llama.cpp)
+- **Kubernetes Deployment**: Ready-to-use Kubernetes configuration for scalable deployment
 
 ## Repository Structure
 
 ```
 .
-├── demos/                  # Demo scripts and examples
-├── docs/                   # Documentation
-├── k8s/                    # Kubernetes deployment files
-├── notebooks/              # Jupyter notebooks for exploration
-├── scripts/                # Utility scripts
-│   ├── checks/             # Scripts for checking the RAG system
-│   ├── utils/              # Utility scripts for the RAG system
-│   └── run_tests.py        # Script for running tests
-├── src/                    # Source code
+├── src/                    # Source code for the RAG system
 │   └── llm_rag/            # Main package
-│       ├── api/            # API endpoints
-│       ├── document_processing/ # Document processing modules
-│       ├── evaluation/     # Evaluation utilities
-│       ├── models/         # Model implementations
-│       ├── rag/            # RAG pipeline components
-│       ├── utils/          # Utility functions
-│       └── vectorstore/    # Vector store implementations
+│       ├── document_processing/  # Document extraction and chunking
+│       ├── embeddings/     # Text and image embedding models
+│       ├── vectorstore/    # Vector database integration
+│       ├── llm/            # LLM integration
+│       └── api/            # FastAPI application
 ├── tests/                  # Test suite
-│   ├── unit/               # Unit tests
-│   ├── integration/        # Integration tests
-│   └── evaluation/         # Evaluation tests
-├── quarantine_backup/      # Backup of removed files (not tracked in git)
-├── synthetic_test_db/      # Synthetic test database
-└── test_chroma_db/         # Test Chroma database
+├── demos/                  # Demo scripts and examples
+├── scripts/                # Utility scripts
+├── k8s/                    # Kubernetes deployment files
+├── data/                   # Sample data and documents
+│   └── documents/          # PDF documents for processing
+├── notebooks/              # Jupyter notebooks for exploration
+└── docs/                   # Documentation
 ```
 
 ## Installation
 
-This project uses [UV](https://github.com/astral-sh/uv) for package management instead of pip. UV is a fast, reliable Python package installer and resolver.
+### Prerequisites
+
+- Python 3.12+
+- UV package manager (recommended) or pip
+
+### Using UV (Recommended)
 
 ```bash
+# Install UV if you don't have it
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Clone the repository
-git clone https://github.com/yourusername/din-multimodal-rag.git
-cd din-multimodal-rag
+git clone https://github.com/yourusername/llm-rag.git
+cd llm-rag
 
-# Install UV if you don't have it already
-curl -sSf https://astral.sh/uv/install.sh | bash
-
-# Create a virtual environment
-python -m venv .llm_rag
+# Create a virtual environment and install dependencies
+uv venv
 source .llm_rag/bin/activate  # On Windows: .llm_rag\Scripts\activate
-
-# Install dependencies using UV
 uv pip install -e .
+
+# For development
+uv pip install -e ".[dev]"
 ```
 
-### Development Setup
-
-For development, install the project with development dependencies:
+### Using Docker
 
 ```bash
-uv pip install -e ".[dev]"
+# Build the Docker image
+docker build -t llm-rag .
 
-# Install pre-commit hooks
-pre-commit install
+# Run the container in CLI mode
+docker run -p 8000:8000 llm-rag
+
+# Run the container in API mode
+docker run -p 8000:8000 llm-rag api
+
+# Run with specific arguments
+docker run llm-rag --help
 ```
 
 ## Usage
 
 ### Demo Scripts
 
-The project includes several demo scripts in the `demos/` directory:
+The repository includes several demo scripts to showcase different functionalities:
 
 ```bash
-# Run the multi-modal RAG demo
-python demos/demo_din_multimodal_rag.py --din_path /path/to/din/standards
+# Process a PDF document
+python -m demos.process_document --pdf_path data/documents/example.pdf
 
-# Run the Hugging Face model demo
-python demos/demo_huggingface.py
+# Query the RAG system
+python -m demos.query_rag --query "What are the requirements for steel structures?"
 
-# Run the Llama model demo
-python demos/demo_llama_rag.py
+# Run the API server
+python -m uvicorn llm_rag.api.main:app --host 0.0.0.0 --port 8000
 ```
 
-### Command-line Options
+### Command-Line Options
 
-- `--din_path`: Path to DIN standard PDF or directory containing DIN standards (required)
-- `--model`: Name or path of the model to use (default: "microsoft/phi-2")
-- `--device`: Device to use for model inference ("cpu", "cuda", "auto") (default: "auto")
-- `--persist_dir`: Directory to persist the vector store (default: "chroma_din_multimodal")
-- `--top_k`: Number of documents to retrieve per content type (default: 3)
-- `--no_tables`: Disable table extraction
-- `--no_images`: Disable image extraction
-- `--no_drawings`: Disable technical drawing identification
+Most scripts support the following options:
 
-### Interactive Query Session
+- `--pdf_path`: Path to the PDF document
+- `--db_path`: Path to the vector database
+- `--model_name`: Name of the embedding model to use
+- `--llm_provider`: LLM provider to use (openai, huggingface, llamacpp)
+- `--verbose`: Enable verbose logging
 
-The demo script provides an interactive query session where you can ask questions about the DIN standards:
+### API Endpoints
 
-```
-=== DIN Standards Multi-Modal RAG Demo ===
-Type 'exit' or 'quit' to end the session
-Type 'reset' to reset the conversation history
+When running in API mode, the following endpoints are available:
 
-Enter your query: What are the safety requirements for machine tools?
+- `GET /`: Root endpoint with API information
+- `GET /health`: Health check endpoint
+- `POST /query`: Process a single query
+- `POST /conversation`: Process a query in conversation mode
 
-=== Response ===
-[Detailed response about safety requirements in DIN standards]
+Example API request:
 
-=== Sources ===
-[1] TEXT - DIN EN ISO 16090-1:2018-12
-[2] TABLE - DIN EN ISO 16090-1:2018-12
-[3] IMAGE - DIN EN ISO 16090-1:2018-12
+```bash
+curl -X POST "http://localhost:8000/query" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What are the requirements for steel structures?", "top_k": 5}'
 ```
 
 ## Testing
 
-The project includes a comprehensive test suite. To run the tests:
+### Python Tests
+
+To run the tests, use the following command:
 
 ```bash
-# Run all tests
-python scripts/run_tests.py --all
-
-# Run unit tests only
-python scripts/run_tests.py --unit
-
-# Run integration tests only
-python scripts/run_tests.py --integration
-
-# Run a specific test file
-python scripts/run_tests.py --test tests/integration/test_retrieval.py
+python -m pytest
 ```
 
-Note: The test suite is configured to work both in CI environments (using mocks) and locally (using real test data).
+For more verbose output, use:
+
+```bash
+python -m pytest -v
+```
+
+### Bash Script Tests
+
+To test the bash scripts in the project, use the following command:
+
+```bash
+scripts/test_bash_scripts.sh
+```
+
+This will run shellcheck on all bash scripts and perform basic validation. For more thorough testing, install bats-core:
+
+```bash
+brew install bats-core  # macOS
+```
+
+### RAG Evaluation Tests
+
+To run the RAG evaluation tests specifically:
+
+```bash
+scripts/run_rag_tests.sh
+```
+
+### Docker Tests
+
+To test the Docker build and functionality:
+
+```bash
+scripts/test_docker.sh
+```
+
+### Kubernetes Tests
+
+To test the Kubernetes configurations:
+
+```bash
+scripts/test_kubernetes.sh
+```
+
+## Docker
+
+The project includes a multi-stage Dockerfile that creates an optimized image for both development and production use. The multi-stage build approach significantly reduces the final image size by separating the build environment from the runtime environment.
+
+To build the Docker image:
+
+```bash
+docker build -t llm-rag .
+```
+
+To run the container in CLI mode:
+
+```bash
+docker run -it llm-rag
+```
+
+To run the container in API mode:
+
+```bash
+docker run -it -p 8000:8000 llm-rag api
+```
 
 ## Implementation Details
 
 ### Document Processing
 
-The system uses specialized document processing techniques to handle multi-modal content:
+The system processes PDF documents in multiple stages:
 
-1. **Text Extraction**: Standard text extraction from PDF documents
-2. **Table Extraction**: Identification and extraction of tables using heuristics and OCR
-3. **Image Extraction**: Extraction of images and identification of technical drawings
-4. **Content-Aware Chunking**: Chunking that preserves the integrity of tables and images
+1. **Text Extraction**: Extract raw text content from PDF pages
+2. **Table Detection**: Identify and extract tables using tabula-py
+3. **Image Extraction**: Extract images and convert them to a processable format
+4. **Chunking**: Split the document into semantic chunks while preserving context
 
 ### Vector Store
 
-The multi-modal vector store uses specialized embedding models for different content types:
+We use ChromaDB as the vector database, with collections for:
 
-1. **Text Embeddings**: General-purpose text embedding model (e.g., all-MiniLM-L6-v2)
-2. **Table Embeddings**: Specialized model for tabular data
-3. **Image Embeddings**: Vision-language model for image content
+- Text chunks and their embeddings
+- Image embeddings and their metadata
+- Table content and structure
 
-### RAG Pipeline
+### LLM Integration
 
-The RAG pipeline integrates the multi-modal vector store with a language model:
+The system supports multiple LLM backends:
 
-1. **Query Analysis**: Determine the relevant content types for the query
-2. **Multi-Modal Retrieval**: Retrieve relevant documents of each content type
-3. **Response Generation**: Generate comprehensive answers based on retrieved documents
-
-## Utility Scripts
-
-The repository includes various utility scripts in the `scripts/` directory:
-
-- **Utils**: Scripts for loading documents, checking database content, creating test databases, etc.
-- **Checks**: Scripts for checking the RAG system components
-- **run_tests.py**: Script for running tests with various options
-
-For more details, see the README files in the respective directories.
-
-## Quarantine Backup
-
-The repository includes a `quarantine_backup` directory that contains files that were moved from the main repository structure. These files are not tracked in git and are kept for reference purposes only. They include:
-
-- Test data files
-- Quarantined code
-- Vector store data
+- OpenAI API (GPT-3.5, GPT-4)
+- Hugging Face models (deployed locally or via API)
+- Llama.cpp for local deployment of open-source models
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests (`python -m pytest`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+### Development Setup
+
+We use several tools to maintain code quality:
+
+- **Ruff**: For linting and formatting
+- **Mypy**: For type checking
+- **Pre-commit**: For automated checks before commits
+
+To set up the development environment:
+
+```bash
+# Install development dependencies
+uv pip install -e ".[dev]"
+
+# Install pre-commit hooks
+pre-commit install
+```
 
 ## License
 

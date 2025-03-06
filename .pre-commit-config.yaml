@@ -34,6 +34,22 @@ repos:
         args: [--fix]
       - id: ruff-format
 
+  # Add shellcheck for bash script linting
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.9.0
+    hooks:
+      - id: shellcheck
+        args: ["--severity=warning", "--external-sources"]
+        types: [shell]
+
+  # Add shfmt for bash script formatting
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.7.0-1
+    hooks:
+      - id: shfmt
+        args: ["-i", "4", "-ci", "-bn", "-s", "-w"]
+        types: [shell]
+
   # Add mypy for type checking - using a local implementation to avoid issues
   - repo: local
     hooks:
@@ -71,5 +87,15 @@ repos:
         pass_filenames: false
         always_run: false  # Only run when explicitly called or on push
         stages: [pre-push]  # Run on push, not on every commit to avoid slowing down workflow
+
+      # Add bash script testing hook
+      - id: test-bash-scripts
+        name: Test Bash Scripts
+        entry: scripts/test_bash_scripts.sh
+        language: system
+        files: ^scripts/.*\.sh$
+        pass_filenames: false
+        always_run: false  # Only run when explicitly called or on push
+        stages: [pre-push]  # Run on push, not on every commit
 
 exclude: '^\.llm_rag/.*'  # Exclude virtual environment files

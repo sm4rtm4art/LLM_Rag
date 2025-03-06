@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
 
@@ -71,6 +72,8 @@ class ChromaVectorStore(VectorStore):
         collection_name: str = "llm_rag_docs",
         persist_directory: str = "chroma_data",
         embedding_function: Optional[EmbeddingFunction] = None,
+        overwrite: bool = False,
+        environment: str = "development",
     ) -> None:
         """Initialize ChromaDB client and collection.
 
@@ -79,10 +82,18 @@ class ChromaVectorStore(VectorStore):
             collection_name: Name of the collection to use
             persist_directory: Directory to persist vector store data
             embedding_function: Optional custom embedding function
+            overwrite: If True, delete existing collection before creating a new one
+            environment: 'development' or 'production' - affects how duplicates are handled
 
         """
         self._persist_directory = persist_directory
+        self._environment = environment
         persist_path = Path(persist_directory)
+
+        # Handle overwrite option
+        if overwrite and persist_path.exists():
+            shutil.rmtree(persist_path)
+
         persist_path.mkdir(parents=True, exist_ok=True)
 
         self.client: ClientAPI = chromadb.PersistentClient(
@@ -100,6 +111,23 @@ class ChromaVectorStore(VectorStore):
             embedding_function=embedding_function,
             metadata={"hnsw:space": "cosine"},
         )
+
+        # Track document sources to prevent duplicates in production
+        self._document_sources = set()
+        if environment == "production" and not overwrite:
+            # Load existing document sources from metadata
+            self._load_document_sources()
+
+    def _load_document_sources(self):
+        """Load existing document sources from the collection to prevent duplicates."""
+        try:
+            results = self.collection.get()
+            if results["metadatas"]:
+                for metadata in results["metadatas"]:
+                    if metadata and "source" in metadata:
+                        self._document_sources.add(metadata["source"])
+        except Exception as e:
+            print(f"Warning: Could not load document sources: {e}")
 
     def add_documents(
         self,
@@ -129,6 +157,39 @@ class ChromaVectorStore(VectorStore):
 
         if ids is None:
             ids = [str(i) for i in range(len(doc_strings))]
+
+        # In production mode, filter out duplicates based on source filename
+        if self._environment == "production" and metadatas:
+            filtered_docs = []
+            filtered_metadatas = []
+            filtered_ids = []
+
+            for _i, (doc, metadata, doc_id) in enumerate(zip(doc_strings, metadatas, ids, strict=False)):
+                source = metadata.get("source", "")
+
+                # Skip if this source has already been processed
+                if source and source in self._document_sources:
+                    print(f"Skipping duplicate document from source: {source}")
+                    continue
+
+                # Add to filtered lists and track the source
+                filtered_docs.append(doc)
+                filtered_metadatas.append(metadata)
+                filtered_ids.append(doc_id)
+
+                if source:
+                    self._document_sources.add(source)
+
+            # Update the lists to use
+            doc_strings = filtered_docs
+            metadatas = filtered_metadatas
+            ids = filtered_ids
+
+            print(f"Adding {len(doc_strings)} documents after filtering duplicates")
+
+        # Skip if no documents to add
+        if not doc_strings:
+            return
 
         self.collection.add(
             documents=doc_strings,
