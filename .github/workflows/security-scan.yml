@@ -65,14 +65,16 @@ jobs:
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
           trivy --version
 
-      # Run Trivy with direct command and alternative DB repository
+      # Run Trivy with direct command
       - name: Run Trivy vulnerability scanner
         env:
           TRIVY_NO_PROGRESS: true
           TRIVY_CACHE_DIR: ~/.cache/trivy
-          # Use GitHub as the download source instead of GCR
-          TRIVY_DB_REPOSITORY: github.com/aquasecurity/trivy-db
+          # Don't specify a custom DB repository - use the default
         run: |
+          # First update the database explicitly
+          trivy --cache-dir ~/.cache/trivy image --download-db-only
+          # Then run the scan
           trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH .
 
       - name: Upload Trivy scan results
