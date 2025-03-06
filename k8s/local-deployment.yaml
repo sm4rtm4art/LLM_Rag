@@ -56,4 +56,4 @@ spec:
           claimName: models-pvc
       - name: config
         configMap:
-          name: llm-rag-config 
+          name: llm-rag-config

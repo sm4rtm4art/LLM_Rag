@@ -11,4 +11,4 @@ spec:
     requests:
       storage: 1Gi
   # No storageClassName for local testing with KIND
-  storageClassName: "" 
+  storageClassName: ""

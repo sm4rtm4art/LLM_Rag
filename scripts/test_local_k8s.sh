@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 echo -e "${YELLOW}Testing local Kubernetes deployment...${NC}"
 
 # Check if KIND is installed
-if ! command -v kind &> /dev/null; then
+if ! command -v kind &>/dev/null; then
     echo -e "${RED}KIND is not installed. Please install it first.${NC}"
     exit 1
 fi
@@ -22,13 +22,13 @@ if ! kind get clusters | grep -q "llm-rag-local"; then
 fi
 
 # Check if kubectl is installed
-if ! command -v kubectl &> /dev/null; then
+if ! command -v kubectl &>/dev/null; then
     echo -e "${RED}kubectl is not installed. Please install it first.${NC}"
     exit 1
 fi
 
 # Check if the deployment exists
-if ! kubectl get deployment llm-rag -n llm-rag-test &> /dev/null; then
+if ! kubectl get deployment llm-rag -n llm-rag-test &>/dev/null; then
     echo -e "${RED}Deployment 'llm-rag' does not exist in namespace 'llm-rag-test'.${NC}"
     echo -e "${RED}Please run setup_local_k8s.sh first.${NC}"
     exit 1
@@ -50,7 +50,7 @@ sleep 3
 echo -e "${YELLOW}Testing health endpoint...${NC}"
 HEALTH_RESPONSE=$(curl -s http://localhost:8000/health || echo "Failed to connect")
 
-if [[ "$HEALTH_RESPONSE" == *"status"* ]]; then
+if [[ $HEALTH_RESPONSE == *"status"* ]]; then
     echo -e "${GREEN}Health endpoint is working!${NC}"
     echo -e "Response: $HEALTH_RESPONSE"
 else
@@ -65,7 +65,7 @@ QUERY_RESPONSE=$(curl -s -X POST http://localhost:8000/query \
     -H "Content-Type: application/json" \
     -d '{"query": "What is RAG?", "top_k": 1}' || echo "Failed to connect")
 
-if [[ "$QUERY_RESPONSE" == *"response"* ]]; then
+if [[ $QUERY_RESPONSE == *"response"* ]]; then
     echo -e "${GREEN}Query endpoint is working!${NC}"
     echo -e "Response: $QUERY_RESPONSE"
 else
@@ -74,4 +74,4 @@ else
     exit 1
 fi
 
-echo -e "${GREEN}All tests passed!${NC}" 
+echo -e "${GREEN}All tests passed!${NC}"

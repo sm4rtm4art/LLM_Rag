@@ -10,21 +10,21 @@ NC='\033[0m' # No Color
 echo -e "${YELLOW}Setting up local Kubernetes cluster with KIND...${NC}"
 
 # Check if KIND is installed
-if ! command -v kind &> /dev/null; then
+if ! command -v kind &>/dev/null; then
     echo -e "${RED}KIND is not installed. Please install it first:${NC}"
     echo "https://kind.sigs.k8s.io/docs/user/quick-start/#installation"
     exit 1
 fi
 
 # Check if kubectl is installed
-if ! command -v kubectl &> /dev/null; then
+if ! command -v kubectl &>/dev/null; then
     echo -e "${RED}kubectl is not installed. Please install it first:${NC}"
     echo "https://kubernetes.io/docs/tasks/tools/install-kubectl/"
     exit 1
 fi
 
 # Check if Docker is running
-if ! docker info &> /dev/null; then
+if ! docker info &>/dev/null; then
     echo -e "${RED}Docker is not running. Please start Docker first.${NC}"
     exit 1
 fi
@@ -86,4 +86,4 @@ kubectl port-forward svc/llm-rag -n llm-rag-test 8000:8000
 
 echo -e "${YELLOW}Cleaning up...${NC}"
 echo -e "${YELLOW}To delete the cluster, run: kind delete cluster --name llm-rag-local${NC}"
-echo -e "${GREEN}Done!${NC}" 
+echo -e "${GREEN}Done!${NC}"

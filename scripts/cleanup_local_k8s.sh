@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 echo -e "${YELLOW}Cleaning up local Kubernetes cluster...${NC}"
 
 # Check if KIND is installed
-if ! command -v kind &> /dev/null; then
+if ! command -v kind &>/dev/null; then
     echo -e "${RED}KIND is not installed. Nothing to clean up.${NC}"
     exit 1
 fi
@@ -25,4 +25,4 @@ fi
 echo -e "${YELLOW}Deleting KIND cluster 'llm-rag-local'...${NC}"
 kind delete cluster --name llm-rag-local
 
-echo -e "${GREEN}Cleanup complete!${NC}" 
+echo -e "${GREEN}Cleanup complete!${NC}"
