@@ -11,7 +11,6 @@ dependencies = [
     "fastapi>=0.115.8",
     "langchain>=0.1.0",
     "langchain-community>=0.0.10",
-    "langchain-openai>=0.0.2",
     "langchain-chroma>=0.2.0",
     "langchain-huggingface>=0.0.2",
     "numpy>=1.26.4,<2",
@@ -51,6 +50,12 @@ dev = [
     "pre-commit>=4.1.0",  # Added for pre-commit hooks
     "pandas-stubs>=2.2.3",  # Added for mypy pandas type checking
     "promptfoo>=0.1.0",  # For LLM prompt testing and evaluation
+]
+
+# Optional OpenAI integration
+openai = [
+    "langchain-openai>=0.0.2",
+    "openai>=1.0.0",
 ]
 
 [tool.bandit]

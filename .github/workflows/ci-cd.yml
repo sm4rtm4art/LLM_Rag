@@ -20,6 +20,10 @@ on:
         options:
           - dev
           - staging
+      build_docker:
+        description: "Perform Docker build (true/false)"
+        required: false
+        default: "true"
 
 env:
   PYTHON_VERSION: "3.12"
@@ -269,12 +273,14 @@ jobs:
         run: semantic-release publish
 
   ##################################
-  # Job: Build (Docker Image)
+  # Job: Build (Docker Image) - Optional
   ##################################
   build:
     needs: [security, lint, test, bash-lint]
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/KIND_cluster_running') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if:
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/KIND_cluster_running') &&
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_docker == 'true'))
     env:
       UV_LINK_MODE: copy
     steps:

@@ -1,6 +1,12 @@
 # Multi-Modal RAG System for DIN Standards
 
-This repository contains a multi-modal Retrieval-Augmented Generation (RAG) system designed for processing and querying Normed standards documents. The system leverages both text and image content from PDF documents to provide comprehensive responses to user queries.
+[![CI/CD Pipeline](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/ci-cd.yml)
+[![Kubernetes Tests](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/k8s-test.yaml/badge.svg)](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/k8s-test.yaml)
+[![codecov](https://codecov.io/gh/sm4rtm4art/llm-rag/branch/main/graph/badge.svg)](https://codecov.io/gh/sm4rtm4art/llm-rag)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+This repository contains a multi-modal Retrieval-Augmented Generation (RAG) system designed for processing and querying DIN standards documents. The system leverages both text and image content from PDF documents to provide comprehensive responses to user queries.
 
 ## Features
 
@@ -8,8 +14,9 @@ This repository contains a multi-modal Retrieval-Augmented Generation (RAG) syst
 - **Specialized Chunking**: Intelligent document chunking that preserves context and structure
 - **Multi-Modal Vector Store**: Store and retrieve both text and image embeddings
 - **Conversational Interface**: Natural language interface for querying document content
-- **Flexible LLM Integration**: Support for various LLM backends (OpenAI, Hugging Face, Llama.cpp)
+- **Flexible LLM Integration**: Support for various LLM backends (Hugging Face, Llama.cpp)
 - **Kubernetes Deployment**: Ready-to-use Kubernetes configuration for scalable deployment
+- **CI/CD Pipeline**: Comprehensive GitHub Actions workflow for testing, building, and deploying
 
 ## Repository Structure
 
@@ -29,6 +36,7 @@ This repository contains a multi-modal Retrieval-Augmented Generation (RAG) syst
 ├── data/                   # Sample data and documents
 │   └── documents/          # PDF documents for processing
 ├── notebooks/              # Jupyter notebooks for exploration
+├── .github/workflows/      # GitHub Actions CI/CD workflows
 └── docs/                   # Documentation
 ```
 
@@ -98,7 +106,7 @@ Most scripts support the following options:
 - `--pdf_path`: Path to the PDF document
 - `--db_path`: Path to the vector database
 - `--model_name`: Name of the embedding model to use
-- `--llm_provider`: LLM provider to use (openai, huggingface, llamacpp)
+- `--llm_provider`: LLM provider to use (huggingface, llamacpp)
 - `--verbose`: Enable verbose logging
 
 ### API Endpoints
@@ -134,6 +142,14 @@ For more verbose output, use:
 python -m pytest -v
 ```
 
+For test coverage reporting:
+
+```bash
+python -m pytest --cov=src/llm_rag --cov-report=xml --cov-report=term
+```
+
+Our CI/CD pipeline automatically uploads coverage reports to Codecov, which provides detailed insights into which parts of the codebase are covered by tests.
+
 ### Bash Script Tests
 
 To test the bash scripts in the project, use the following command:
@@ -156,6 +172,8 @@ To run the RAG evaluation tests specifically:
 scripts/run_rag_tests.sh
 ```
 
+These tests evaluate the quality of the RAG system's responses against a set of reference answers.
+
 ### Docker Tests
 
 To test the Docker build and functionality:
@@ -171,6 +189,44 @@ To test the Kubernetes configurations:
 ```bash
 scripts/test_kubernetes.sh
 ```
+
+## Code Quality
+
+This project maintains high code quality standards through:
+
+- **Type Checking**: Mypy ensures type safety throughout the codebase
+- **Linting**: Ruff enforces consistent code style and catches potential issues
+- **Pre-commit Hooks**: Automated checks run before each commit
+- **Continuous Integration**: All PRs are automatically tested
+- **Security Scanning**: Bandit, Safety, and Trivy scan for vulnerabilities
+
+## CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and deployment. The pipeline includes:
+
+### Main CI/CD Workflow
+
+The main workflow (`ci-cd.yml`) runs on pushes to the main branch and pull requests:
+
+1. **Bash Linting**: Checks shell scripts for errors and style issues
+2. **Security Scanning**: Runs Bandit, Safety, and Trivy for security vulnerabilities
+3. **Python Linting**: Runs Ruff and Mypy for code quality and type checking
+4. **Testing**: Runs the test suite with coverage reporting
+5. **Semantic Release**: Automatically versions and releases the package
+6. **Docker Build**: Builds and pushes the Docker image to Docker Hub
+7. **Deployment**: Deploys to development or staging environments
+
+### Kubernetes Testing Workflow
+
+A separate workflow (`k8s-test.yaml`) tests the Kubernetes deployment:
+
+1. Builds or pulls the Docker image
+2. Creates a KIND cluster
+3. Deploys the application to the cluster
+4. Runs tests against the deployed application
+5. Cleans up resources
+
+This workflow is configured as non-blocking, so failures won't prevent merges to the main branch.
 
 ## Docker
 
@@ -194,6 +250,24 @@ To run the container in API mode:
 docker run -it -p 8000:8000 llm-rag api
 ```
 
+## Kubernetes Deployment
+
+The project includes Kubernetes configuration files for deploying the application to a Kubernetes cluster. See the [k8s/README.md](k8s/README.md) file for detailed instructions.
+
+For local testing with KIND (Kubernetes IN Docker):
+
+```bash
+# Create a KIND cluster
+kind create cluster --name llm-rag-cluster --config k8s/kind-config.yaml
+
+# Deploy the application
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/pvc.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+```
+
 ## Implementation Details
 
 ### Document Processing
@@ -215,11 +289,12 @@ We use ChromaDB as the vector database, with collections for:
 
 ### LLM Integration
 
-The system supports multiple LLM backends:
+The system currently supports the following LLM backends:
 
-- OpenAI API (GPT-3.5, GPT-4) (NOT YET IMPLEMENTED! )
 - Hugging Face models (deployed locally or via API)
 - Llama.cpp for local deployment of open-source models
+
+Future plans may include integration with additional LLM providers as needed.
 
 ## Contributing
 
