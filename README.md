@@ -14,7 +14,7 @@ This repository contains a multi-modal Retrieval-Augmented Generation (RAG) syst
 - **Specialized Chunking**: Intelligent document chunking that preserves context and structure
 - **Multi-Modal Vector Store**: Store and retrieve both text and image embeddings
 - **Conversational Interface**: Natural language interface for querying document content
-- **Flexible LLM Integration**: Support for various LLM backends (OpenAI, Hugging Face, Llama.cpp)
+- **Flexible LLM Integration**: Support for various LLM backends (Hugging Face, Llama.cpp)
 - **Kubernetes Deployment**: Ready-to-use Kubernetes configuration for scalable deployment
 - **CI/CD Pipeline**: Comprehensive GitHub Actions workflow for testing, building, and deploying
 
@@ -106,7 +106,7 @@ Most scripts support the following options:
 - `--pdf_path`: Path to the PDF document
 - `--db_path`: Path to the vector database
 - `--model_name`: Name of the embedding model to use
-- `--llm_provider`: LLM provider to use (openai, huggingface, llamacpp)
+- `--llm_provider`: LLM provider to use (huggingface, llamacpp)
 - `--verbose`: Enable verbose logging
 
 ### API Endpoints
@@ -289,11 +289,12 @@ We use ChromaDB as the vector database, with collections for:
 
 ### LLM Integration
 
-The system supports multiple LLM backends:
+The system currently supports the following LLM backends:
 
-- OpenAI API (GPT-3.5, GPT-4)
 - Hugging Face models (deployed locally or via API)
 - Llama.cpp for local deployment of open-source models
+
+Future plans may include integration with additional LLM providers as needed.
 
 ## Contributing
 
