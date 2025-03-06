@@ -470,7 +470,7 @@ jobs:
 
       - name: Set up kubectl (external config)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
-        uses: azure/setup-kubectl@v3
+        uses: azure/setup-kubectl@v4
 
       - name: Configure kubectl for dev
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
@@ -610,7 +610,7 @@ jobs:
 
       - name: Set up kubectl (external config)
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
-        uses: azure/setup-kubectl@v3
+        uses: azure/setup-kubectl@v4
 
       - name: Configure kubectl for staging
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
