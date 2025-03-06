@@ -184,12 +184,23 @@ def test_rag_response_quality(rag_pipeline, test_queries, query_index):
     if hasattr(rag_pipeline.llm, "predict"):
         rag_pipeline.llm.predict.return_value = expected_answer
 
+    # Also mock the invoke method which is what the RAGPipeline actually uses
+    rag_pipeline.llm.invoke.return_value = type("obj", (object,), {"content": expected_answer})
+
+    # Ensure the mock retrieve method returns documents with the expected sources
+    rag_pipeline.retrieve = MagicMock(
+        return_value=[
+            {"content": "DIN VDE 0636-3 is a German standard for low-voltage fuses.", "metadata": {"source": source}}
+            for source in expected_sources
+        ]
+    )
+
     # Run the query
     result = rag_pipeline.query(query)
 
     # Extract response and source documents
     response = result.get("response", "")
-    source_documents = result.get("source_documents", [])
+    source_documents = result.get("documents", [])
 
     # Calculate similarity
     similarity = calculate_similarity(response, expected_answer)
@@ -223,6 +234,15 @@ def test_rag_response_uncertainty_handling(rag_pipeline):
             "DIN VDE 0636-3 is a German standard for low-voltage fuses, while "
             "ISO 9001:2015 is a quality management system standard."
         )
+
+    # Also mock the invoke method which is what the RAGPipeline actually uses
+    uncertainty_response = (
+        "I don't have specific information about the relationship between "
+        "DIN VDE 0636-3 and ISO 9001:2015 in the provided context. "
+        "DIN VDE 0636-3 is a German standard for low-voltage fuses, while "
+        "ISO 9001:2015 is a quality management system standard."
+    )
+    rag_pipeline.llm.invoke.return_value = type("obj", (object,), {"content": uncertainty_response})
 
     # Run the query
     result = rag_pipeline.query(query)

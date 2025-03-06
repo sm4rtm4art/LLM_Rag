@@ -23,6 +23,36 @@ on:
           - staging
 
 jobs:
+  # Bash script linting and testing
+  bash-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Install shfmt
+        run: |
+          curl -sS https://webinstall.dev/shfmt | bash
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run shellcheck
+        run: |
+          find scripts -name "*.sh" -type f -exec shellcheck {} \;
+
+      - name: Run shfmt
+        run: |
+          find scripts -name "*.sh" -type f -exec shfmt -d {} \;
+
+      - name: Run bash script tests
+        run: |
+          chmod +x scripts/test_bash_scripts.sh
+          scripts/test_bash_scripts.sh
+
   # Security scanning job
   security:
     runs-on: ubuntu-latest
@@ -197,7 +227,7 @@ jobs:
 
   # Build job - only runs on main branch after all checks pass
   build:
-    needs: [security, lint, test, semantic-release]
+    needs: [security, lint, test, semantic-release, bash-lint]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     env:

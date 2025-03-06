@@ -299,9 +299,9 @@ def run_interactive_mode(rag_pipeline: RAGPipeline) -> None:
         print("=" * 40)
         print("ANSWER:", result["response"])
         print("=" * 40)
-        print(f"Retrieved {len(result['source_documents'])} documents:")
+        print(f"Retrieved {len(result['documents'])} documents:")
 
-        for i, doc in enumerate(result["source_documents"]):
+        for i, doc in enumerate(result["documents"]):
             print(f"\nDocument {i + 1}:")
             print(f"  Source: {doc.get('metadata', {}).get('source', 'Unknown')}")
             print(f"  Content: {doc.get('content', '')[:100]}...")
@@ -404,9 +404,9 @@ def main() -> None:
         print("=" * 40)
         print("ANSWER:", result["response"])
         print("=" * 40)
-        print(f"Retrieved {len(result['source_documents'])} documents:")
+        print(f"Retrieved {len(result['documents'])} documents:")
 
-        for i, doc in enumerate(result["source_documents"]):
+        for i, doc in enumerate(result["documents"]):
             print(f"\nDocument {i + 1}:")
             print(f"  Source: {doc.get('metadata', {}).get('source', 'Unknown')}")
             print(f"  Content: {doc.get('content', '')[:100]}...")

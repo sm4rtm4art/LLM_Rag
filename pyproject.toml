@@ -1,6 +1,6 @@
 [project]
 name = "llm-rag"
-version = "0.1.1"
+version = "0.1.2"
 description = "LLM RAG exploration project"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -12,6 +12,8 @@ dependencies = [
     "langchain>=0.1.0",
     "langchain-community>=0.0.10",
     "langchain-openai>=0.0.2",
+    "langchain-chroma>=0.2.0",
+    "langchain-huggingface>=0.0.2",
     "numpy>=1.26.4,<2",
     "pandas>=2.2.0",
     "pytest>=8.3.4",
@@ -28,6 +30,12 @@ dependencies = [
     "safetensors>=0.4.2",  # For secure model loading
     "bitsandbytes>=0.42.0",  # For quantization support
     "optimum>=1.17.1",      # Performance optimization for transformers
+    # Table extraction dependencies
+    "tabula-py>=2.8.0",     # For extracting tables from PDFs
+    # Image extraction dependencies
+    "pdf2image>=1.16.3",    # For converting PDF pages to images
+    "pytesseract>=0.3.10",  # For OCR on images
+    "Pillow>=10.0.0",       # For image processing
 ]
 
 [project.optional-dependencies]

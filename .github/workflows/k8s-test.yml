@@ -8,23 +8,21 @@ on:
 
 jobs:
   test-kubernetes:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
-      - name: Free up disk space
+      - name: Check disk space
         run: |
-          echo "Freeing up disk space..."
-          df -h
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo docker image prune -af
-          sudo apt-get clean
-          df -h
+          echo "Checking disk space..."
+          Get-PSDrive C | Format-Table -AutoSize
 
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Docker
+        uses: crazy-max/ghaction-setup-docker@v2
+        with:
+          version: latest
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -39,12 +37,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Install Kubernetes tools
+        run: |
+          # Install kubectl
+          choco install kubernetes-cli -y
+          # Install kind
+          choco install kind -y
+
       - name: Create kind cluster
-        uses: helm/kind-action@v1.8.0
-        with:
-          config: ./k8s/kind-config.yaml
-          cluster_name: llm-rag-test
-          wait: 120s
+        run: |
+          kind create cluster --name llm-rag-test --config ./k8s/kind-config.yaml --wait 120s
 
       - name: Load Docker image into kind
         run: |
@@ -62,7 +64,7 @@ jobs:
       - name: Deploy Kubernetes resources
         run: |
           # Update image reference in deployment if needed
-          sed -i 's|image: llm-rag:latest|image: llm-rag:latest|' k8s/deployment.yaml
+          (Get-Content k8s/deployment.yaml) -replace 'image: llm-rag:latest', 'image: llm-rag:latest' | Set-Content k8s/deployment.yaml
 
           # Deploy config map
           kubectl apply -f k8s/configmap.yaml -n llm-rag-test
@@ -80,9 +82,9 @@ jobs:
           kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 
           # Wait for ingress controller to be ready
-          kubectl wait --namespace ingress-nginx \
-            --for=condition=ready pod \
-            --selector=app.kubernetes.io/component=controller \
+          kubectl wait --namespace ingress-nginx `
+            --for=condition=ready pod `
+            --selector=app.kubernetes.io/component=controller `
             --timeout=90s
 
           # Deploy ingress

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script to run promptfoo tests for the LLM RAG system
 
-set -e  # Exit on error
+set -e # Exit on error
 
 # Check if we're in the right directory
 if [ ! -f "promptfoo.yaml" ]; then
@@ -10,7 +10,7 @@ if [ ! -f "promptfoo.yaml" ]; then
 fi
 
 # Check if promptfoo is installed
-if ! command -v promptfoo &> /dev/null; then
+if ! command -v promptfoo &>/dev/null; then
     echo "promptfoo not found. Installing..."
     cd ../../
     uv pip install -e ".[dev]"
@@ -28,7 +28,7 @@ if [ -f "results.html" ]; then
     echo "- $(pwd)/results.html"
 
     # Open the results in the browser if on macOS
-    if [[ "$OSTYPE" == "darwin"* ]]; then
+    if [[ $OSTYPE == "darwin"* ]]; then
         echo "Opening results in browser..."
         open results.html
     fi

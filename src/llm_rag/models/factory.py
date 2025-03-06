@@ -143,6 +143,8 @@ class ModelFactory:
 
         """
         # Import here to avoid circular imports
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
         from src.llm_rag.models.huggingface import HuggingFaceLLM
 
         # Create the model
@@ -151,13 +153,23 @@ class ModelFactory:
         logger.info(f"Additional kwargs: {kwargs}")
 
         try:
+            # Load the model and tokenizer
+            logger.info(f"Loading model {model_name} on {device}")
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                device_map=device,
+                trust_remote_code=True,
+            )
+
             return HuggingFaceLLM(
                 model_name=model_name,
+                tokenizer=tokenizer,
+                model=model,
                 device=device,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 top_p=top_p,
-                repetition_penalty=repetition_penalty,
                 **kwargs,
             )
         except Exception as e:

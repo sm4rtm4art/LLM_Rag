@@ -36,21 +36,42 @@ MODEL_CONFIGS: Final[Dict[str, Dict[str, Union[str, int, float, bool]]]] = {
 # Default parameters for document chunking and retrieval
 DEFAULT_CHUNK_SIZE: Final[int] = 1000
 DEFAULT_CHUNK_OVERLAP: Final[int] = 200
-DEFAULT_TOP_K: Final[int] = 3
+DEFAULT_TOP_K: Final[int] = 5
 
 # ===== RAG Parameters =====
 # Parameters for the RAG pipeline
 DEFAULT_MEMORY_KEY: Final[str] = "chat_history"
 # Template for RAG prompts
-DEFAULT_PROMPT_TEMPLATE: Final[str] = """Answer the question based on the
-following context:
+DEFAULT_PROMPT_TEMPLATE: Final[
+    str
+] = """You are a helpful assistant that provides accurate information based only on the given context.
+If the context doesn't contain enough information to answer the question fully, acknowledge the 
+limitations of the available information.
+Never make up facts or hallucinate information that is not in the context.
 
 Context:
 {context}
 
-Question: {question}
+Question: {query}
 
-Answer:"""
+Answer based strictly on the information in the context above. If the context doesn't contain 
+relevant information, say "I don't have enough information to answer this question accurately."
+"""
+
+SYSTEM_PROMPT = """You are an AI assistant for DIN standards. 
+Answer the question based only on the given context.
+If you cannot answer the question fully, acknowledge the limitations of the 
+available information.
+Do not use prior knowledge that is not provided in the context.
+"""
+
+SYSTEM_PROMPT_WITH_REASONING = """You are an AI assistant for DIN standards.
+First, analyze the question and the provided context.
+Then, reason step by step about how to answer the question using only the provided context.
+Finally, provide a concise answer based on your reasoning.
+If you cannot find sufficient information in the context, say 
+"I don't have enough information to answer this question accurately."
+"""
 
 # ===== System Parameters =====
 # Logging and system configuration

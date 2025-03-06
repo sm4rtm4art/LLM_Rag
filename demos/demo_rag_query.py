@@ -8,6 +8,7 @@ and the documents loaded into the vector store.
 import argparse
 import logging
 import sys
+from typing import Any, Dict
 
 from llm_rag.models.factory import ModelBackend, ModelFactory
 from llm_rag.rag.pipeline import RAGPipeline
@@ -62,7 +63,7 @@ def run_rag_query(
     model_name: str,
     db_path: str,
     collection_name: str,
-) -> str:
+) -> Dict[str, Any]:
     """Run a RAG query against the system.
 
     Args:
@@ -74,7 +75,7 @@ def run_rag_query(
 
     Returns:
     -------
-        The RAG system's response.
+        A dictionary containing the RAG system's response and metadata.
 
     """
     logger.info(f"Loading LLM model: {model_name}")
@@ -99,14 +100,14 @@ def run_rag_query(
     rag_pipeline = RAGPipeline(
         vectorstore=vector_store,
         llm=llm,
-        top_k=3,  # Number of documents to retrieve
+        top_k=5,  # Number of documents to retrieve
     )
 
     # Run the query
     logger.info(f"Running query: {query}")
-    response = rag_pipeline.answer(query)
+    result = rag_pipeline.query(query)
 
-    return response
+    return result
 
 
 def main() -> None:
@@ -120,17 +121,45 @@ def main() -> None:
         query = args.query
 
     try:
-        response = run_rag_query(
+        result = run_rag_query(
             query=query,
             model_name=args.model_name,
             db_path=args.db_path,
             collection_name=args.collection,
         )
 
+        response = result["response"]
+        confidence = result.get("confidence", 0.0)
+        documents = result.get("documents", [])
+
         print("\nRAG System Response:")
         print("-------------------")
         print(response)
         print("-------------------")
+
+        # Display confidence score
+        confidence_level = "High" if confidence >= 0.8 else "Medium" if confidence >= 0.5 else "Low"
+        print(f"\nRetrieval Confidence: {confidence:.2f} ({confidence_level})")
+
+        # Display document sources
+        if documents:
+            print("\nRetrieved from:")
+            for i, doc in enumerate(documents):
+                metadata = doc.get("metadata", {})
+                source = metadata.get("source", "Unknown")
+                filename = metadata.get("filename", "")
+                page = metadata.get("page", "")
+
+                source_info = []
+                if source and source != "Unknown":
+                    source_info.append(f"Source: {source}")
+                if filename:
+                    source_info.append(f"File: {filename}")
+                if page:
+                    source_info.append(f"Page: {page}")
+
+                source_display = ", ".join(source_info) if source_info else "Unknown source"
+                print(f"  {i + 1}. {source_display}")
 
     except Exception as e:
         logger.error(f"Error running RAG query: {e}")
