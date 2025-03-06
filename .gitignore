@@ -220,3 +220,6 @@ data/documents/test_subset/
 
 # Quarantine backup
 quarantine_backup/
+.coverage
+coverage.xml
+htmlcov/

@@ -29,46 +29,12 @@ defaults:
   run:
     shell: bash
 
-##############################
-# Gemeinsame Schritte (Anker)
-##############################
-x-steps:
-  - &checkout
-    name: Checkout Repository
-    uses: actions/checkout@v4
-
-  - &setup-python
-    name: Set up Python
-    uses: actions/setup-python@v4
-    with:
-      python-version: "${{ env.PYTHON_VERSION }}"
-
-  - &install-uv
-    name: Install UV
-    run: |
-      curl -LsSf https://astral.sh/uv/install.sh | sh
-      echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-  - &cache-uv
-    name: Cache UV & pip packages
-    uses: actions/cache@v4
-    with:
-      path: |
-        ~/.cache/uv
-        ~/.cache/pip
-      key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
-      restore-keys: |
-        ${{ runner.os }}-uv-
-
-#########################
-# Jobs
-#########################
-
 jobs:
   bash-lint:
     runs-on: ubuntu-latest
     steps:
-      - *checkout
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Install shellcheck
         run: |
@@ -96,10 +62,28 @@ jobs:
     env:
       UV_LINK_MODE: copy
     steps:
-      - *checkout
-      - *setup-python
-      - *cache-uv
-      - *install-uv
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "${{ env.PYTHON_VERSION }}"
+
+      - name: Cache UV & pip packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.cache/pip
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install security tools
         run: uv pip install --system bandit safety
@@ -148,8 +132,14 @@ jobs:
     env:
       UV_LINK_MODE: copy
     steps:
-      - *checkout
-      - *setup-python
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "${{ env.PYTHON_VERSION }}"
+
       - name: Cache lint dependencies
         uses: actions/cache@v4
         with:
@@ -160,7 +150,12 @@ jobs:
           key: ${{ runner.os }}-uv-lint-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-uv-lint-
-      - *install-uv
+
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Install lint tools
         run: |
           uv pip install --system ruff mypy
@@ -180,8 +175,14 @@ jobs:
     env:
       UV_LINK_MODE: copy
     steps:
-      - *checkout
-      - *setup-python
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "${{ env.PYTHON_VERSION }}"
+
       - name: Cache test dependencies
         uses: actions/cache@v4
         with:
@@ -192,7 +193,12 @@ jobs:
           key: ${{ runner.os }}-uv-test-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-uv-test-
-      - *install-uv
+
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Install test dependencies
         run: |
           uv pip install --system pytest pytest-cov pytest-asyncio
@@ -225,15 +231,22 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - *setup-python
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "${{ env.PYTHON_VERSION }}"
+
       - name: Install semantic-release
         run: |
           python -m pip install --upgrade pip
           pip install python-semantic-release
+
       - name: Configure Git
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
+
       - name: Semantic Release Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -247,10 +260,28 @@ jobs:
     env:
       UV_LINK_MODE: copy
     steps:
-      - *checkout
-      - *setup-python
-      - *cache-uv
-      - *install-uv
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "${{ env.PYTHON_VERSION }}"
+
+      - name: Cache UV & pip packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.cache/pip
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Check Docker availability
         id: check-docker
@@ -348,7 +379,8 @@ jobs:
       (github.event_name == 'push' ||
        (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'dev'))
     steps:
-      - *checkout
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Check if Docker image exists
         id: check-image
@@ -484,7 +516,8 @@ jobs:
       github.event_name == 'workflow_dispatch' &&
       github.event.inputs.deploy_target == 'staging'
     steps:
-      - *checkout
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Check if Docker image exists
         id: check-image
