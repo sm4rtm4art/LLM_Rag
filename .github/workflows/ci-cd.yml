@@ -416,17 +416,56 @@ jobs:
             echo "::warning::Docker image was not built. Deployment will be skipped."
           fi
 
+      # Set up KIND cluster for testing if no Kubernetes config exists
       - name: Check if Kubernetes config exists
         id: check-config
         if: steps.check-image.outputs.image_exists == 'true'
         run: |
           if [ -n "${{ secrets.KUBE_CONFIG_DEV }}" ]; then
             echo "has_config=true" >> $GITHUB_OUTPUT
+            echo "use_kind=false" >> $GITHUB_OUTPUT
           else
             echo "has_config=false" >> $GITHUB_OUTPUT
-            echo "Skipping deployment as KUBE_CONFIG_DEV is not set"
+            echo "use_kind=true" >> $GITHUB_OUTPUT
+            echo "Using KIND cluster for testing as KUBE_CONFIG_DEV is not set"
           fi
 
+      # Set up KIND cluster if no external Kubernetes config exists
+      - name: Set up KIND Cluster
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true'
+        uses: engineerd/setup-kind@v0.5.0
+        with:
+          version: "v0.20.0"
+          name: llm-rag-cluster
+          config: |
+            kind: Cluster
+            apiVersion: kind.x-k8s.io/v1alpha4
+            nodes:
+            - role: control-plane
+              kubeadmConfigPatches:
+              - |
+                kind: InitConfiguration
+                nodeRegistration:
+                  kubeletExtraArgs:
+                    node-labels: "ingress-ready=true"
+              extraPortMappings:
+              - containerPort: 80
+                hostPort: 80
+                protocol: TCP
+              - containerPort: 443
+                hostPort: 443
+                protocol: TCP
+
+      # Verify KIND cluster
+      - name: Verify KIND Cluster
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true'
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+          # Create namespace for deployment
+          kubectl create namespace llm-rag-dev || true
+
+      # Set up kubectl with external config
       - name: Set up kubectl
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
         uses: azure/setup-kubectl@v3
@@ -439,7 +478,7 @@ jobs:
           chmod 600 $HOME/.kube/config
 
       - name: Verify Kubernetes connectivity
-        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
+        if: steps.check-image.outputs.image_exists == 'true' && (steps.check-config.outputs.has_config == 'true' || steps.check-config.outputs.use_kind == 'true')
         id: verify-k8s
         continue-on-error: true
         run: |
@@ -450,8 +489,18 @@ jobs:
             echo "::warning::Could not connect to Kubernetes cluster. Deployment will be skipped."
           fi
 
+      # Load Docker image into KIND if using KIND
+      - name: Load Docker image into KIND
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
+        run: |
+          # Pull the image from Docker Hub
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
+          # Load the image into KIND
+          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} --name llm-rag-cluster
+
+      # Update deployment configuration
       - name: Update deployment configuration
-        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
+        if: steps.check-image.outputs.image_exists == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
         run: |
           # Replace image tag and username in deployment file
           sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}|g" k8s/deployment.yaml
@@ -460,8 +509,30 @@ jobs:
           sed -i "s|ENVIRONMENT: \".*\"|ENVIRONMENT: \"dev\"|g" k8s/deployment.yaml
 
           # Apply the configuration
-          kubectl apply -f k8s/deployment.yaml --validate=false
-          kubectl rollout status deployment/llm-rag
+          if [ "${{ steps.check-config.outputs.use_kind }}" == "true" ]; then
+            # For KIND, apply to the llm-rag-dev namespace
+            kubectl apply -f k8s/deployment.yaml -n llm-rag-dev
+            kubectl rollout status deployment/llm-rag -n llm-rag-dev --timeout=120s
+          else
+            # For external cluster, apply as configured
+            kubectl apply -f k8s/deployment.yaml --validate=false
+            kubectl rollout status deployment/llm-rag --timeout=120s
+          fi
+
+      # Show deployment logs and status for KIND
+      - name: Show Deployment Logs
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
+        run: |
+          echo "=== Deployment logs ==="
+          kubectl get all -n llm-rag-dev
+          kubectl describe pods -n llm-rag-dev
+          kubectl logs -l app=llm-rag -n llm-rag-dev --tail=100 || true
+
+      - name: Show Events
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
+        run: |
+          echo "=== Events ==="
+          kubectl get events -n llm-rag-dev --sort-by=.metadata.creationTimestamp
 
       - name: Download build artifact
         if: steps.check-image.outputs.image_exists != 'true'
@@ -500,17 +571,56 @@ jobs:
             echo "::warning::Docker image was not built. Deployment will be skipped."
           fi
 
+      # Set up KIND cluster for testing if no Kubernetes config exists
       - name: Check if Kubernetes config exists
         id: check-config
         if: steps.check-image.outputs.image_exists == 'true'
         run: |
           if [ -n "${{ secrets.KUBE_CONFIG_STAGING }}" ]; then
             echo "has_config=true" >> $GITHUB_OUTPUT
+            echo "use_kind=false" >> $GITHUB_OUTPUT
           else
             echo "has_config=false" >> $GITHUB_OUTPUT
-            echo "Skipping deployment as KUBE_CONFIG_STAGING is not set"
+            echo "use_kind=true" >> $GITHUB_OUTPUT
+            echo "Using KIND cluster for testing as KUBE_CONFIG_STAGING is not set"
           fi
 
+      # Set up KIND cluster if no external Kubernetes config exists
+      - name: Set up KIND Cluster
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true'
+        uses: engineerd/setup-kind@v0.5.0
+        with:
+          version: "v0.20.0"
+          name: llm-rag-cluster
+          config: |
+            kind: Cluster
+            apiVersion: kind.x-k8s.io/v1alpha4
+            nodes:
+            - role: control-plane
+              kubeadmConfigPatches:
+              - |
+                kind: InitConfiguration
+                nodeRegistration:
+                  kubeletExtraArgs:
+                    node-labels: "ingress-ready=true"
+              extraPortMappings:
+              - containerPort: 80
+                hostPort: 80
+                protocol: TCP
+              - containerPort: 443
+                hostPort: 443
+                protocol: TCP
+
+      # Verify KIND cluster
+      - name: Verify KIND Cluster
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true'
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+          # Create namespace for deployment
+          kubectl create namespace llm-rag-staging || true
+
+      # Set up kubectl with external config
       - name: Set up kubectl
         if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
         uses: azure/setup-kubectl@v3
@@ -523,7 +633,7 @@ jobs:
           chmod 600 $HOME/.kube/config
 
       - name: Verify Kubernetes connectivity
-        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true'
+        if: steps.check-image.outputs.image_exists == 'true' && (steps.check-config.outputs.has_config == 'true' || steps.check-config.outputs.use_kind == 'true')
         id: verify-k8s
         continue-on-error: true
         run: |
@@ -534,8 +644,18 @@ jobs:
             echo "::warning::Could not connect to Kubernetes cluster. Deployment will be skipped."
           fi
 
+      # Load Docker image into KIND if using KIND
+      - name: Load Docker image into KIND
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
+        run: |
+          # Pull the image from Docker Hub
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
+          # Load the image into KIND
+          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} --name llm-rag-cluster
+
+      # Update deployment configuration
       - name: Update deployment configuration
-        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.has_config == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
+        if: steps.check-image.outputs.image_exists == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
         run: |
           # Replace image tag and username in deployment file
           sed -i "s|\${DOCKERHUB_USERNAME}/llm-rag:.*|${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}|g" k8s/deployment.yaml
@@ -544,8 +664,30 @@ jobs:
           sed -i "s|ENVIRONMENT: \".*\"|ENVIRONMENT: \"staging\"|g" k8s/deployment.yaml
 
           # Apply the configuration
-          kubectl apply -f k8s/deployment.yaml --validate=false
-          kubectl rollout status deployment/llm-rag
+          if [ "${{ steps.check-config.outputs.use_kind }}" == "true" ]; then
+            # For KIND, apply to the llm-rag-staging namespace
+            kubectl apply -f k8s/deployment.yaml -n llm-rag-staging
+            kubectl rollout status deployment/llm-rag -n llm-rag-staging --timeout=120s
+          else
+            # For external cluster, apply as configured
+            kubectl apply -f k8s/deployment.yaml --validate=false
+            kubectl rollout status deployment/llm-rag --timeout=120s
+          fi
+
+      # Show deployment logs and status for KIND
+      - name: Show Deployment Logs
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
+        run: |
+          echo "=== Deployment logs ==="
+          kubectl get all -n llm-rag-staging
+          kubectl describe pods -n llm-rag-staging
+          kubectl logs -l app=llm-rag -n llm-rag-staging --tail=100 || true
+
+      - name: Show Events
+        if: steps.check-image.outputs.image_exists == 'true' && steps.check-config.outputs.use_kind == 'true' && steps.verify-k8s.outputs.k8s_connected == 'true'
+        run: |
+          echo "=== Events ==="
+          kubectl get events -n llm-rag-staging --sort-by=.metadata.creationTimestamp
 
       - name: Download build artifact
         if: steps.check-image.outputs.image_exists != 'true'
