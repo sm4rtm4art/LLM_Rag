@@ -217,7 +217,7 @@ We use ChromaDB as the vector database, with collections for:
 
 The system supports multiple LLM backends:
 
-- OpenAI API (GPT-3.5, GPT-4)
+- OpenAI API (GPT-3.5, GPT-4) (NOT YET IMPLEMENTED! )
 - Hugging Face models (deployed locally or via API)
 - Llama.cpp for local deployment of open-source models
 
