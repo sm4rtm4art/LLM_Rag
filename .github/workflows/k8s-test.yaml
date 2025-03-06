@@ -4,17 +4,25 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [main, KIND_cluster_running]
+  workflow_dispatch:
 
 jobs:
   test-kubernetes:
-    # Ubuntu is more reliable for container/K8s workloads
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check disk space
+      - name: Free disk space
         run: |
-          echo "Checking disk space..."
+          echo "Freeing up disk space..."
+          # Remove unnecessary large packages
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          # Clear docker images
+          docker system prune -af
+          # Show available space
           df -h
 
       - name: Checkout code
@@ -23,6 +31,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Use a smaller base image or pre-built image if possible
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
@@ -32,6 +41,9 @@ jobs:
           tags: llm-rag:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # Add build args to reduce image size if possible
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
       - name: Install KIND
         run: |
@@ -47,7 +59,7 @@ jobs:
 
       - name: Create kind cluster
         run: |
-          # Create the cluster with a 2-minute timeout
+          # Create a smaller cluster with fewer resources
           kind create cluster --name llm-rag-test --config ./k8s/kind-config.yaml --wait 120s
 
       - name: Load Docker image into kind

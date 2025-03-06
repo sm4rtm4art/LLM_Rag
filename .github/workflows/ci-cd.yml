@@ -7,7 +7,7 @@ permissions:
 
 on:
   push:
-    branches: [main]
+    branches: [main, KIND_cluster_running]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -30,6 +30,9 @@ defaults:
     shell: bash
 
 jobs:
+  ##################################
+  # Job: Bash Linting and Testing
+  ##################################
   bash-lint:
     runs-on: ubuntu-latest
     steps:
@@ -57,6 +60,9 @@ jobs:
           chmod +x scripts/test_bash_scripts.sh
           scripts/test_bash_scripts.sh
 
+  ##################################
+  # Job: Security Scanning
+  ##################################
   security:
     runs-on: ubuntu-latest
     env:
@@ -127,6 +133,9 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
 
+  ##################################
+  # Job: Linting (Python)
+  ##################################
   lint:
     runs-on: ubuntu-latest
     env:
@@ -170,6 +179,9 @@ jobs:
       - name: Run mypy type checks
         run: mypy src tests
 
+  ##################################
+  # Job: Testing with Coverage
+  ##################################
   test:
     runs-on: ubuntu-latest
     env:
@@ -218,6 +230,9 @@ jobs:
           fail_ci_if_error: false
           verbose: true
 
+  ##################################
+  # Job: Semantic Release
+  ##################################
   semantic-release:
     needs: [lint, test]
     runs-on: ubuntu-latest
@@ -253,10 +268,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: semantic-release publish
 
+  ##################################
+  # Job: Build (Docker Image)
+  ##################################
   build:
-    needs: [security, lint, test, semantic-release, bash-lint]
+    needs: [security, lint, test, bash-lint]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/KIND_cluster_running') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     env:
       UV_LINK_MODE: copy
     steps:
@@ -371,13 +389,15 @@ jobs:
           name: python-package
           path: dist/
 
+  ##################################
+  # Job: Deploy to Dev Environment
+  ##################################
   deploy-dev:
     needs: [build]
     runs-on: ubuntu-latest
     if: >
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'push' ||
-       (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'dev'))
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'dev'))
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -450,8 +470,7 @@ jobs:
           chmod 600 $HOME/.kube/config
 
       - name: Verify Kubernetes connectivity (dev)
-        if: steps.check-image.outputs.image_exists == 'true' &&
-          (steps.check-config.outputs.has_config == 'true' || steps.check-config.outputs.use_kind == 'true')
+        if: steps.check-image.outputs.image_exists == 'true' && (steps.check-config.outputs.has_config == 'true' || steps.check-config.outputs.use_kind == 'true')
         id: verify-k8s
         continue-on-error: true
         run: |
@@ -508,6 +527,9 @@ jobs:
           echo "Docker image not available. Skipping deployment."
           ls -la dist/
 
+  ##################################
+  # Job: Deploy to Staging Environment
+  ##################################
   deploy-staging:
     needs: [deploy-dev]
     runs-on: ubuntu-latest
@@ -523,7 +545,8 @@ jobs:
         id: check-image
         continue-on-error: true
         run: |
-          if curl -s -f -L -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/${{ github.sha }}" &>/dev/null; then
+          if curl -s -f -L -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
+              "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/${{ github.sha }}" &>/dev/null; then
             echo "image_exists=true" >> $GITHUB_OUTPUT
           else
             echo "image_exists=false" >> $GITHUB_OUTPUT
@@ -587,8 +610,7 @@ jobs:
           chmod 600 $HOME/.kube/config
 
       - name: Verify Kubernetes connectivity (staging)
-        if: steps.check-image.outputs.image_exists == 'true' &&
-          (steps.check-config.outputs.has_config == 'true' || steps.check-config.outputs.use_kind == 'true')
+        if: steps.check-image.outputs.image_exists == 'true' && (steps.check-config.outputs.has_config == 'true' || steps.check-config.outputs.use_kind == 'true')
         id: verify-k8s
         continue-on-error: true
         run: |
