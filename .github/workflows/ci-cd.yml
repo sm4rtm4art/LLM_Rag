@@ -676,3 +676,19 @@ jobs:
         run: |
           echo "Docker image not available. Skipping deployment."
           ls -la dist/
+
+  ##################################
+  # Job: Validate Kubernetes Overlays
+  ##################################
+  k8s-validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        provider: [aws, azure, gcp, hetzner]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Validate ${{ matrix.provider }} overlay
+        run: |
+          echo "Validating kustomize overlay for ${{ matrix.provider }}..."
+          kubectl kustomize k8s/${{ matrix.provider }} | kubectl apply --dry-run=client -f -
