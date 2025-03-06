@@ -1,4 +1,4 @@
-# Multi-Modal RAG System for DIN Standards
+# Multi-Modal RAG System for Standardized Documents
 
 [![CI/CD Pipeline](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/ci-cd.yml)
 [![Kubernetes Tests](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/k8s-test.yaml/badge.svg)](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/k8s-test.yaml)
@@ -6,7 +6,7 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This repository contains a multi-modal Retrieval-Augmented Generation (RAG) system designed for processing and querying DIN standards documents. The system leverages both text and image content from PDF documents to provide comprehensive responses to user queries.
+This repository contains a multi-modal Retrieval-Augmented Generation (RAG) system designed for processing and querying standardized technical documents. The system leverages both text and image content from PDF documents to provide comprehensive responses to user queries.
 
 ## Features
 
@@ -28,8 +28,12 @@ This repository contains a multi-modal Retrieval-Augmented Generation (RAG) syst
 │       ├── embeddings/     # Text and image embedding models
 │       ├── vectorstore/    # Vector database integration
 │       ├── llm/            # LLM integration
+│       ├── evaluation/     # RAG evaluation framework
 │       └── api/            # FastAPI application
 ├── tests/                  # Test suite
+│   ├── unit/               # Unit tests
+│   ├── integration/        # Integration tests
+│   └── evaluation/         # RAG evaluation tests
 ├── demos/                  # Demo scripts and examples
 ├── scripts/                # Utility scripts
 ├── k8s/                    # Kubernetes deployment files
@@ -295,6 +299,15 @@ The system currently supports the following LLM backends:
 - Llama.cpp for local deployment of open-source models
 
 Future plans may include integration with additional LLM providers as needed.
+
+### Evaluation Framework
+
+The system includes a comprehensive evaluation framework for assessing RAG performance:
+
+- **Relevance Metrics**: Evaluate the relevance of retrieved documents
+- **Answer Quality**: Assess the quality and accuracy of generated responses
+- **Context Utilization**: Measure how effectively the system uses retrieved context
+- **Automated Testing**: CI/CD integration for continuous evaluation
 
 ## Contributing
 
