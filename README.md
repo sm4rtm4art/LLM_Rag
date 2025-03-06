@@ -1,4 +1,4 @@
-# Multi-Modal RAG System for DIN Standards
+# Multi-Modal RAG System for standartizied documents
 
 [![CI/CD Pipeline](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/ci-cd.yml)
 [![Kubernetes Tests](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/k8s-test.yaml/badge.svg)](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/k8s-test.yaml)
@@ -6,7 +6,7 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This repository contains a multi-modal Retrieval-Augmented Generation (RAG) system designed for processing and querying DIN standards documents. The system leverages both text and image content from PDF documents to provide comprehensive responses to user queries.
+This repository contains a multi-modal Retrieval-Augmented Generation (RAG) system designed for processing and querying standartizied documents. The system leverages both text and image content from PDF documents to provide comprehensive responses to user queries.
 
 ## Features
 
