@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-rag
+  labels:
+    app: llm-rag
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-rag
+  template:
+    metadata:
+      labels:
+        app: llm-rag
+    spec:
+      containers:
+      - name: llm-rag
+        image: llm-rag:local
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: models
+          mountPath: /app/models
+        - name: config
+          mountPath: /app/config
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        command: ["python", "-m", "uvicorn", "llm_rag.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+      volumes:
+      - name: models
+        persistentVolumeClaim:
+          claimName: models-pvc
+      - name: config
+        configMap:
+          name: llm-rag-config 
