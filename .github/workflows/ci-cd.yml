@@ -226,7 +226,7 @@ jobs:
           python -m pytest --cov=src/llm_rag --cov-report=xml --junitxml=junit.xml -o junit_family=legacy -v
 
       - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: coverage.xml
