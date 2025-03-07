@@ -133,7 +133,7 @@ jobs:
           trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH .
 
       - name: Upload Trivy SARIF results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-results.sarif
 
@@ -221,9 +221,9 @@ jobs:
           uv pip install --system sentence-transformers chromadb
           uv pip install --system ".[dev]"
 
-      - name: Run tests with coverage
+      - name: Run tests with coverage and generate JUnit report
         run: |
-          python -m pytest tests/ --cov=src/llm_rag --cov-report=xml -v
+          python -m pytest --cov=src/llm_rag --cov-report=xml --junitxml=junit.xml -o junit_family=legacy -v
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v3
@@ -233,6 +233,12 @@ jobs:
           slug: sm4rtm4art/llm-rag
           fail_ci_if_error: false
           verbose: true
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   ##################################
   # Job: Semantic Release
