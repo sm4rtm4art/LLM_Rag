@@ -1,5 +1,5 @@
 # Stage 1: Build Stage
-FROM python:3.12-slim AS builder
+FROM python:3.13-slim AS builder
 
 # Set environment variables for building
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -43,7 +43,7 @@ RUN python -c "import tomllib; f = open('pyproject.toml', 'rb'); data = tomllib.
 COPY src/ /build/src/
 
 # Stage 2: Runtime Stage
-FROM python:3.12-slim
+FROM python:3.13-slim
 
 # Set runtime environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
