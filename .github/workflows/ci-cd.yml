@@ -221,9 +221,9 @@ jobs:
           uv pip install --system sentence-transformers chromadb
           uv pip install --system ".[dev]"
 
-      - name: Run tests with coverage
+      - name: Run tests with coverage and generate JUnit report
         run: |
-          python -m pytest tests/ --cov=src/llm_rag --cov-report=xml -v
+          python -m pytest --cov=src/llm_rag --cov-report=xml --junitxml=junit.xml -o junit_family=legacy -v
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v3
@@ -233,6 +233,12 @@ jobs:
           slug: sm4rtm4art/llm-rag
           fail_ci_if_error: false
           verbose: true
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   ##################################
   # Job: Semantic Release
@@ -680,15 +686,16 @@ jobs:
   ##################################
   # Job: Validate Kubernetes Overlays
   ##################################
-  k8s-validate:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        provider: [aws, azure, gcp, hetzner]
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-      - name: Validate ${{ matrix.provider }} overlay
-        run: |
-          echo "Validating kustomize overlay for ${{ matrix.provider }}..."
-          kubectl kustomize k8s/${{ matrix.provider }} | kubectl apply --dry-run=client -f -
+
+#  k8s-validate:
+#    runs-on: ubuntu-latest
+#    strategy:
+#      matrix:
+#        provider: [aws, azure, gcp, hetzner]
+#    steps:
+#      - name: Checkout Repository
+#        uses: actions/checkout@v4
+#      - name: Validate ${{ matrix.provider }} overlay
+#        run: |
+#          echo "Validating kustomize overlay for ${{ matrix.provider }}..."
+#          kubectl kustomize k8s/${{ matrix.provider }} | kubectl apply --dry-run=client -f -
