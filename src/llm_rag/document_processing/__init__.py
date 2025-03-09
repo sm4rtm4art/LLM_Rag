@@ -7,12 +7,11 @@ for use in RAG pipelines.
 import importlib
 from typing import Optional
 
+# Import the base loaders that don't have optional dependencies
 from llm_rag.document_processing.chunking import (
     CharacterTextChunker,
     RecursiveTextChunker,
 )
-
-# Import the base loaders that don't have optional dependencies
 from llm_rag.document_processing.loaders import (
     CSVLoader,
     DirectoryLoader,
@@ -20,7 +19,6 @@ from llm_rag.document_processing.loaders import (
     PDFLoader,
     TextFileLoader,
 )
-
 from llm_rag.document_processing.processors import (
     DocumentProcessor,
     TextSplitter,
@@ -54,12 +52,6 @@ def _import_optional(module_name: str, class_name: str) -> Optional[type]:
 
 
 # Import optional loader classes if available
-EnhancedPDFLoader = _import_optional(
-    "llm_rag.document_processing.loaders", "EnhancedPDFLoader"
-)
-JSONLoader = _import_optional(
-    "llm_rag.document_processing.loaders", "JSONLoader"
-)
-WebPageLoader = _import_optional(
-    "llm_rag.document_processing.loaders", "WebPageLoader"
-)
+EnhancedPDFLoader = _import_optional("llm_rag.document_processing.loaders", "EnhancedPDFLoader")
+JSONLoader = _import_optional("llm_rag.document_processing.loaders", "JSONLoader")
+WebPageLoader = _import_optional("llm_rag.document_processing.loaders", "WebPageLoader")
