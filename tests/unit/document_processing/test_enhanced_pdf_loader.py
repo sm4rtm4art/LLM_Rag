@@ -15,6 +15,11 @@ except ImportError:
     has_enhanced_pdf_loader = False
     PDFLoader = object  # Placeholder to prevent further import errors
 
+    # Create a dummy class for tests to patch
+    class EnhancedPDFLoader:
+        pass
+
+
 # Skip all tests if EnhancedPDFLoader is not available
 pytestmark = pytest.mark.skipif(not has_enhanced_pdf_loader, reason="EnhancedPDFLoader not available")
 
