@@ -14,6 +14,9 @@ from llm_rag.document_processing.loaders import (
     DocumentLoader,
     PDFLoader,
     TextFileLoader,
+    EnhancedPDFLoader,
+    JSONLoader,
+    WebPageLoader,
 )
 from llm_rag.document_processing.processors import (
     DocumentProcessor,
@@ -26,6 +29,9 @@ __all__ = [
     "DocumentLoader",
     "PDFLoader",
     "TextFileLoader",
+    "EnhancedPDFLoader",
+    "JSONLoader",
+    "WebPageLoader",
     "DocumentProcessor",
     "TextSplitter",
     "CharacterTextChunker",
