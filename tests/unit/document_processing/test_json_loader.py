@@ -32,7 +32,7 @@ class TestJSONLoader(unittest.TestCase):
         loader = JSONLoader(file_path=self.test_json_path, jq_schema=".items[]", content_key="content")
 
         # Assert
-        self.assertEqual(loader.file_path, self.test_json_path)
+        self.assertEqual(loader.file_path_str, self.test_json_path)
         self.assertEqual(loader.jq_schema, ".items[]")
         self.assertEqual(loader.content_key, "content")
 
