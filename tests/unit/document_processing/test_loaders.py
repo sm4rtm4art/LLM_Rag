@@ -66,7 +66,7 @@ class TestTextFileLoader:
                 assert len(documents) == 1
                 assert documents[0]["content"] == file_content
                 assert documents[0]["metadata"]["source"] == "test.txt"
-                assert documents[0]["metadata"]["filetype"] == "text"
+                assert documents[0]["metadata"]["filetype"] == "txt"
 
     def test_load_with_custom_encoding(self) -> None:
         """Test loading with a custom encoding."""

@@ -78,7 +78,7 @@ class TestTextFileLoader(unittest.TestCase):
         metadata = documents[0]["metadata"]
         self.assertEqual(metadata["source"], str(self.temp_file_path))
         self.assertEqual(metadata["filename"], "test.txt")
-        self.assertEqual(metadata["filetype"], "text")
+        self.assertEqual(metadata["filetype"], "txt")
 
 
 class TestCSVLoader(unittest.TestCase):
