@@ -86,7 +86,7 @@ class TextFileLoader(DocumentLoader):
         metadata = {
             "source": self.file_path_str,
             "filename": self.file_path.name,
-            "filetype": "text",
+            "filetype": "txt",
         }
 
         return [{"content": content, "metadata": metadata}]
