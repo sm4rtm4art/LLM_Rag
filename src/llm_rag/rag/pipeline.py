@@ -1,4 +1,10 @@
-"""RAG Pipeline implementation.
+#!/usr/bin/env python
+# flake8: noqa: E501
+"""RAG pipeline implementation.
+
+This module provides a flexible pipeline for Retrieval-Augmented Generation
+that supports various document retrieval methods, LLMs, and customizable
+processing steps.
 
 This module contains the implementation of the RAG pipeline, which combines
 retrieval and generation to answer questions based on a knowledge base.
@@ -222,14 +228,14 @@ class RAGPipeline:
 
             # Try hybrid search first if available (combines semantic and keyword search)
             try:
-                raw_docs = self.vectorstore.search(
+                documents = self.vectorstore.search(
                     query,
                     n_results=self.top_k,
                     search_type="hybrid",
                     alpha=0.5,  # Balance between semantic (0) and keyword (1) search
                 )
-                logger.info(f"Retrieved {len(raw_docs)} documents using hybrid search")
-                return raw_docs
+                logger.info(f"Retrieved {len(documents)} documents using hybrid search")
+                return documents
             except (TypeError, AttributeError, NotImplementedError) as e:
                 logger.info(f"Hybrid search not available: {e}. Falling back to similarity search.")
 
@@ -247,25 +253,25 @@ class RAGPipeline:
                         break
 
                 if metadata_filter:
-                    raw_docs = self.vectorstore.search(
+                    documents = self.vectorstore.search(
                         query, n_results=self.top_k, search_type="similarity", filter=metadata_filter
                     )
-                    logger.info(f"Retrieved {len(raw_docs)} documents using metadata filtering")
-                    return raw_docs
+                    logger.info(f"Retrieved {len(documents)} documents using metadata filtering")
+                    return documents
             except Exception as e:
                 logger.info(f"Metadata filtering not available: {e}. Continuing with standard search.")
 
             # Standard similarity search
             try:
-                raw_docs = self.vectorstore.search(query, n_results=self.top_k, search_type="similarity")
-                logger.info(f"Retrieved {len(raw_docs)} documents using similarity search")
-                return raw_docs
+                documents = self.vectorstore.search(query, n_results=self.top_k, search_type="similarity")
+                logger.info(f"Retrieved {len(documents)} documents using similarity search")
+                return documents
             except TypeError as e:
                 if "got an unexpected keyword argument 'search_type'" in str(e):
                     # Fall back to search without the search_type parameter
-                    raw_docs = self.vectorstore.search(query, n_results=self.top_k)
-                    logger.info(f"Retrieved {len(raw_docs)} documents using basic search")
-                    return raw_docs
+                    documents = self.vectorstore.search(query, n_results=self.top_k)
+                    logger.info(f"Retrieved {len(documents)} documents using basic search")
+                    return documents
                 else:
                     raise
 
@@ -273,12 +279,12 @@ class RAGPipeline:
             logger.error(f"Error retrieving documents: {e}")
             return []
 
-    def _process_documents(self, raw_docs: Any) -> List[Dict[str, Any]]:
+    def _process_documents(self, documents: Any) -> List[Dict[str, Any]]:
         """Process a list of documents into the standard format.
 
         Args:
         ----
-            raw_docs: The documents to process
+            documents: The documents to process
 
         Returns:
         -------
@@ -288,15 +294,15 @@ class RAGPipeline:
         result: List[Dict[str, Any]] = []
 
         # Check if we got a list
-        if not isinstance(raw_docs, list):
-            logger.warning(f"Expected list but got {type(raw_docs)}")
+        if not isinstance(documents, list):
+            logger.warning(f"Expected list but got {type(documents)}")
             return result
 
         # Process each document in the list
-        for doc in raw_docs:
-            processed_doc = self._process_document(doc)
-            if processed_doc is not None:
-                result.append(processed_doc)
+        for document in documents:
+            processed_document = self._process_document(document)
+            if processed_document is not None:
+                result.append(processed_document)
 
         return result
 
@@ -315,21 +321,21 @@ class RAGPipeline:
         logger.info(f"Retrieving documents for query: {query}")
 
         # Fetch documents from vector store
-        raw_docs = self._fetch_documents_from_vectorstore(query)
+        documents = self._fetch_documents_from_vectorstore(query)
 
         # Process documents if we got any
-        if raw_docs is None:
+        if documents is None:
             return []
 
         # Process the documents
-        return self._process_documents(raw_docs)
+        return self._process_documents(documents)
 
-    def _process_document(self, doc: Any) -> Optional[Dict[str, Any]]:
+    def _process_document(self, document: Any) -> Optional[Dict[str, Any]]:
         """Process a single document into the standard format.
 
         Args:
         ----
-            doc: The document to process
+            document: The document to process
 
         Returns:
         -------
@@ -339,17 +345,17 @@ class RAGPipeline:
         """
         try:
             # Handle dictionary-like documents
-            if isinstance(doc, dict):
-                return cast(Dict[str, Any], doc)
+            if isinstance(document, dict):
+                return cast(Dict[str, Any], document)
 
             # Handle Document-like objects
-            if hasattr(doc, "page_content") and hasattr(doc, "metadata"):
-                content = getattr(doc, "page_content", "")
-                metadata = getattr(doc, "metadata", {})
+            if hasattr(document, "page_content") and hasattr(document, "metadata"):
+                content = getattr(document, "page_content", "")
+                metadata = getattr(document, "metadata", {})
                 return {"content": content, "metadata": metadata}
 
             # Unknown document type
-            logger.warning(f"Unexpected document type: {type(doc)}")
+            logger.warning(f"Unexpected document type: {type(document)}")
 
         except Exception as e:
             logger.error(f"Error processing document: {e}")
@@ -374,27 +380,27 @@ class RAGPipeline:
             if not documents:
                 return "No relevant documents found."
 
-            formatted_docs = []
-            doc_index = 0
-            for _i, doc in enumerate(documents):
-                content = doc.get("content", "")
+            formatted_documents = []
+            document_index = 0
+            for _i, document in enumerate(documents):
+                content = document.get("content", "")
                 if content:  # Only include documents with content
-                    doc_index += 1
-                    formatted_docs.append(f"Document {doc_index}:\n{content}")
+                    document_index += 1
+                    formatted_documents.append(f"Document {document_index}:\n{content}")
 
-            return "\n\n".join(formatted_docs)
+            return "\n\n".join(formatted_documents)
 
         # Production formatting with more details
         if not documents:
             return "No relevant documents found."
 
-        formatted_docs = []
-        for i, doc in enumerate(documents):
-            if isinstance(doc, dict):
-                content = doc.get("content", "")
+        formatted_documents = []
+        for i, document in enumerate(documents):
+            if isinstance(document, dict):
+                content = document.get("content", "")
                 if content:
                     # Extract metadata
-                    metadata = doc.get("metadata", {})
+                    metadata = document.get("metadata", {})
                     source = metadata.get("source", "Unknown source")
                     filename = metadata.get("filename", "")
                     page = metadata.get("page", "")
@@ -411,15 +417,15 @@ class RAGPipeline:
                     source_display = ", ".join(source_info) if source_info else "Unknown source"
 
                     # Format the document with clear separation and source attribution
-                    formatted_docs.append(
+                    formatted_documents.append(
                         f"[DOCUMENT {i + 1}]\nSOURCE: {source_display}\nCONTENT:\n{content}\n[END OF DOCUMENT {i + 1}]"
                     )
 
-        if not formatted_docs:
+        if not formatted_documents:
             return "No relevant documents found."
 
         # Join all documents with clear separation
-        return "\n\n" + "\n\n".join(formatted_docs) + "\n\n"
+        return "\n\n" + "\n\n".join(formatted_documents) + "\n\n"
 
     def generate(self, query: str, context: str, history: str = "") -> str:
         """Generate a response from the LLM.
@@ -482,7 +488,7 @@ class RAGPipeline:
         return response_str
 
     def _calculate_retrieval_confidence(self, query: str, documents: List[Dict[str, Any]]) -> float:
-        """Calculate a confidence score for the retrieved documents.
+        """Calculate a config score for the retrieved documents.
 
         This is a simple heuristic based on:
         1. Number of documents retrieved
@@ -494,42 +500,42 @@ class RAGPipeline:
             documents: The retrieved documents
 
         Returns:
-            A confidence score between 0.0 and 1.0
+            A config score between 0.0 and 1.0
 
         """
         if not documents:
             return 0.0
 
-        # Base confidence starts at 0.5
-        confidence = 0.5
+        # Base config starts at 0.5
+        config = 0.5
 
         # Factor 1: Number of documents (more is better, up to a point)
-        doc_count = len(documents)
-        if doc_count >= 3:
-            confidence += 0.2
-        elif doc_count >= 1:
-            confidence += 0.1
+        document_count = len(documents)
+        if document_count >= 3:
+            config += 0.2
+        elif document_count >= 1:
+            config += 0.1
 
         # Factor 2: Check if query terms appear in the documents
         query_terms = set(term.lower() for term in query.split() if len(term) > 3)
         if query_terms:
             term_matches = 0
-            for doc in documents:
-                content = doc.get("content", "").lower()
+            for document in documents:
+                content = document.get("content", "").lower()
                 for term in query_terms:
                     if term in content:
                         term_matches += 1
 
             # Calculate percentage of query terms found
             term_match_percentage = term_matches / (len(query_terms) * len(documents))
-            confidence += term_match_percentage * 0.2
+            config += term_match_percentage * 0.2
 
         # Factor 3: Check similarity scores if available
         has_scores = False
         total_score = 0.0
 
-        for doc in documents:
-            metadata = doc.get("metadata", {})
+        for document in documents:
+            metadata = document.get("metadata", {})
             if "score" in metadata:
                 has_scores = True
                 total_score += float(metadata["score"])
@@ -537,22 +543,22 @@ class RAGPipeline:
         if has_scores:
             avg_score = total_score / len(documents)
             # Assuming scores are between 0 and 1
-            confidence += avg_score * 0.1
+            config += avg_score * 0.1
 
-        # Ensure confidence is between 0 and 1
-        return min(1.0, max(0.0, confidence))
+        # Ensure config is between 0 and 1
+        return min(1.0, max(0.0, config))
 
     def query(self, query: str, conversation_id: Optional[str] = None) -> Dict[str, Any]:
         """Process a query with conversation history."""
         conversation_id = conversation_id or str(uuid.uuid4())
-        docs = self.retrieve(query)
-        context = self.format_context(docs)
+        documents = self.retrieve(query)
+        context = self.format_context(documents)
 
-        # Calculate retrieval confidence
-        confidence = self._calculate_retrieval_confidence(query, docs)
+        # Calculate retrieval config
+        config = self._calculate_retrieval_confidence(query, documents)
 
         # If no documents were retrieved, provide a clear response about the lack of information
-        if not docs:
+        if not documents:
             response = (
                 "I don't have enough information to answer this question. "
                 "No relevant documents were found in the knowledge base. "
@@ -560,19 +566,19 @@ class RAGPipeline:
             )
             return {
                 "response": response,
-                "documents": docs,
-                "confidence": confidence,
+                "documents": documents,
+                "config": config,
                 "conversation_id": conversation_id,
                 "query": query,
             }
 
-        # Add confidence information to the context if it's low
-        if confidence < 0.7:
-            confidence_warning = (
+        # Add config information to the context if it's low
+        if config < 0.7:
+            config_warning = (
                 "\n\n[SYSTEM NOTE: The retrieved information may not fully answer the query. "
                 "Confidence level is low. Please acknowledge limitations in your response.]\n\n"
             )
-            context = confidence_warning + context
+            context = config_warning + context
 
         # For backward compatibility with tests
         if conversation_id:
@@ -587,11 +593,15 @@ class RAGPipeline:
         # Check if we're in a test environment
         is_test = (
             all(
-                ("content" in doc and isinstance(doc.get("content"), str) and len(doc.get("metadata", {})) <= 1)
-                for doc in docs
-                if "content" in doc
+                (
+                    "content" in document
+                    and isinstance(document.get("content"), str)
+                    and len(document.get("metadata", {})) <= 1
+                )
+                for document in documents
+                if "content" in document
             )
-            if docs
+            if documents
             else False
         )
 
@@ -613,8 +623,8 @@ class RAGPipeline:
         # Return the response with additional information
         return {
             "response": response,
-            "documents": docs,
-            "confidence": confidence,
+            "documents": documents,
+            "config": config,
             "conversation_id": conversation_id,
             "query": query,
         }
@@ -827,14 +837,14 @@ class ConversationalRAGPipeline(RAGPipeline):
     def query(self, query: str, conversation_id: Optional[str] = None) -> Dict[str, Any]:
         """Process a query with conversation history."""
         conversation_id = conversation_id or str(uuid.uuid4())
-        docs = self.retrieve(query)
-        context = self.format_context(docs)
+        documents = self.retrieve(query)
+        context = self.format_context(documents)
 
-        # Calculate retrieval confidence
-        confidence = self._calculate_retrieval_confidence(query, docs)
+        # Calculate retrieval config
+        config = self._calculate_retrieval_confidence(query, documents)
 
         # If no documents were retrieved, provide a clear response about the lack of information
-        if not docs:
+        if not documents:
             response = (
                 "I don't have enough information to answer this question. "
                 "No relevant documents were found in the knowledge base. "
@@ -842,19 +852,19 @@ class ConversationalRAGPipeline(RAGPipeline):
             )
             return {
                 "response": response,
-                "documents": docs,
-                "confidence": confidence,
+                "documents": documents,
+                "config": config,
                 "conversation_id": conversation_id,
                 "query": query,
             }
 
-        # Add confidence information to the context if it's low
-        if confidence < 0.7:
-            confidence_warning = (
+        # Add config information to the context if it's low
+        if config < 0.7:
+            config_warning = (
                 "\n\n[SYSTEM NOTE: The retrieved information may not fully answer the query. "
                 "Confidence level is low. Please acknowledge limitations in your response.]\n\n"
             )
-            context = confidence_warning + context
+            context = config_warning + context
 
         # For backward compatibility with tests
         if conversation_id:
@@ -869,11 +879,15 @@ class ConversationalRAGPipeline(RAGPipeline):
         # Check if we're in a test environment
         is_test = (
             all(
-                ("content" in doc and isinstance(doc.get("content"), str) and len(doc.get("metadata", {})) <= 1)
-                for doc in docs
-                if "content" in doc
+                (
+                    "content" in document
+                    and isinstance(document.get("content"), str)
+                    and len(document.get("metadata", {})) <= 1
+                )
+                for document in documents
+                if "content" in document
             )
-            if docs
+            if documents
             else False
         )
 
@@ -895,8 +909,8 @@ class ConversationalRAGPipeline(RAGPipeline):
         # Return the response with additional information
         return {
             "response": response,
-            "documents": docs,
-            "confidence": confidence,
+            "documents": documents,
+            "config": config,
             "conversation_id": conversation_id,
             "query": query,
         }
