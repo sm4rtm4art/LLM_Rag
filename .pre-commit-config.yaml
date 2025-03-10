@@ -98,4 +98,24 @@ repos:
         always_run: false  # Only run when explicitly called or on push
         stages: [pre-push]  # Run on push, not on every commit
 
-exclude: '^\.llm_rag/.*'  # Exclude virtual environment files
+  # Custom variable naming consistency check
+  - repo: local
+    hooks:
+      - id: variable-naming-consistency
+        name: Check variable naming consistency
+        entry: python -m scripts.tools.check_variable_consistency
+        language: python
+        types: [python]
+        pass_filenames: false
+        verbose: true
+
+exclude: >
+  (?x)^(
+    \.llm_rag/.*|
+    __pycache__/.*|
+    .*\.pyc|
+    \.pytest_cache/.*|
+    \.ruff_cache/.*|
+    \.mypy_cache/.*|
+    .*\.egg-info/.*
+  )$
