@@ -188,7 +188,9 @@ The system is built around the **RAG (Retrieval-Augmented Generation)** paradigm
 
 ### Using UV (Recommended)
 
-````bash
+For more information about uv, please check [here](https://github.com/astral-sh/uv)
+
+```bash
 # Install UV if you don't have it
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
@@ -203,7 +205,7 @@ uv pip install -e .
 
 # For development
 uv pip install -e ".[dev]"
-
+```
 
 ### Using Docker
 
@@ -219,7 +221,7 @@ docker run -p 8000:8000 llm-rag api
 
 # Run with specific arguments
 docker run llm-rag --help
-````
+```
 
 ## Usage
 
@@ -251,6 +253,7 @@ Most scripts support the following options:
 ### API Endpoints
 
 When running in API mode, the following endpoints are available:
+(** !!! UNDER CONSTRUCTUIN !!! \***)
 
 - `GET /`: Root endpoint with API information
 - `GET /health`: Health check endpoint
@@ -522,7 +525,7 @@ We use several tools to automate variable naming consistency:
 3. **IDE Integration**:
 
    - VSCode settings for highlighting non-standard variable names
-   - PyCharm naming convention settings in `.idea` folder
+   - Project-specific editor settings in `.vscode` folder
 
 4. **CI Pipeline Checks**:
    - Automated checks in GitHub Actions to catch inconsistencies
@@ -536,9 +539,14 @@ The following files are automatically excluded from variable naming checks:
 - Linting cache directories (`.ruff_cache/`, `.mypy_cache/`)
 - Build artifacts (`*.egg-info/`)
 - Virtual environment directories (`.llm_rag/`, `venv/`, etc.)
+- Data directories (`data/`)
 
 When making changes, refer to existing code patterns and this guide to maintain consistency. Use search tools to find how similar concepts are named elsewhere in the codebase.
 
 ## License
 
 This project is licensed under the MIT License. See LICENSE for details.
+
+```
+
+```

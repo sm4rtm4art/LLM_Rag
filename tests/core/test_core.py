@@ -35,6 +35,16 @@ class MockRAGPipeline:
         self.llm = llm
         self.top_k = top_k
 
+        # Add attributes for the new modular implementation
+        self._retriever = MagicMock()
+        self._formatter = MagicMock()
+        self._generator = MagicMock()
+
+        # Configure mock behavior
+        self._retriever.retrieve.return_value = [{"content": "test content", "metadata": {"source": "test.txt"}}]
+        self._formatter.format_context.return_value = "Formatted context: test content"
+        self._generator.generate.return_value = "Test response"
+
     def query(self, query, conversation_id=None):
         """Mock query method that returns predefined response for test query."""
         docs = [{"content": "test content", "metadata": {"source": "test.txt"}}]
@@ -159,7 +169,7 @@ def test_main_output(capsys):
             ),
             # Add patch for RAGPipeline
             patch(
-                "llm_rag.rag.pipeline.RAGPipeline",
+                "llm_rag.main.RAGPipeline",
                 MockRAGPipeline,
             ),
         ]

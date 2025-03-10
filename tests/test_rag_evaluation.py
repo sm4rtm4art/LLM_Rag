@@ -99,6 +99,34 @@ def rag_pipeline():
         ]
     )
 
+    # Add a query method for backward compatibility
+    def query(query_text, conversation_id=None):
+        """Process a query through the RAG pipeline.
+
+        Args:
+            query_text: The user's query
+            conversation_id: Optional ID for tracking conversation
+
+        Returns:
+            Dictionary with query, response, and additional information
+        """
+        # Use the mocked retrieve method
+        documents = pipeline.retrieve(query_text)
+
+        # Generate a response using the mock LLM
+        response = mock_llm.predict.return_value
+
+        # Return results
+        return {
+            "query": query_text,
+            "response": response,
+            "documents": documents,
+            "conversation_id": conversation_id or "test-id",
+        }
+
+    # Add the query method to the pipeline
+    pipeline.query = query
+
     return pipeline
 
 
