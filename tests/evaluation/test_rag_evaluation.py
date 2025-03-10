@@ -6,6 +6,7 @@ including metrics for retrieval quality and answer generation quality.
 
 import json
 import os
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -132,32 +133,38 @@ class TestRAGEvaluation(unittest.TestCase):
             },
         ]
 
-        # Save test dataset to file
-        with open(self.test_data_dir / "test_queries.json", "w") as f:
-            json.dump(test_dataset, f)
+        # Create a temporary file for testing instead of modifying version-controlled files
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as temp_file:
+            json.dump(test_dataset, temp_file)
+            temp_file_path = temp_file.name
 
-        # Mock evaluation metrics
-        with patch(
-            "src.llm_rag.evaluation.evaluator.evaluate_rag",
-            return_value={
-                "precision": 0.75,
-                "recall": 0.8,
-                "f1": 0.77,
-                "answer_relevance": 0.85,
-                "answer_factuality": 0.9,
-            },
-        ):
-            from src.llm_rag.evaluation.evaluator import evaluate_rag
+        try:
+            # Mock evaluation metrics
+            with patch(
+                "src.llm_rag.evaluation.evaluator.evaluate_rag",
+                return_value={
+                    "precision": 0.75,
+                    "recall": 0.8,
+                    "f1": 0.77,
+                    "answer_relevance": 0.85,
+                    "answer_factuality": 0.9,
+                },
+            ):
+                from src.llm_rag.evaluation.evaluator import evaluate_rag
 
-            # Evaluate RAG pipeline
-            metrics = evaluate_rag(self.pipeline, test_dataset)
+                # Evaluate RAG pipeline
+                metrics = evaluate_rag(self.pipeline, test_dataset)
 
-            # Assert metrics meet thresholds
-            self.assertGreaterEqual(metrics["precision"], 0.7)
-            self.assertGreaterEqual(metrics["recall"], 0.7)
-            self.assertGreaterEqual(metrics["f1"], 0.7)
-            self.assertGreaterEqual(metrics["answer_relevance"], 0.8)
-            self.assertGreaterEqual(metrics["answer_factuality"], 0.8)
+                # Assert metrics meet thresholds
+                self.assertGreaterEqual(metrics["precision"], 0.7)
+                self.assertGreaterEqual(metrics["recall"], 0.7)
+                self.assertGreaterEqual(metrics["f1"], 0.7)
+                self.assertGreaterEqual(metrics["answer_relevance"], 0.8)
+                self.assertGreaterEqual(metrics["answer_factuality"], 0.8)
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
 
 
 if __name__ == "__main__":
