@@ -116,49 +116,61 @@ class TestPDFLoader:
         assert loader.extract_images is False  # Default value
         assert loader.extract_tables is False  # Default value
 
-    @patch("llm_rag.document_processing.loaders.fitz.open")
-    @patch("pathlib.Path.exists", return_value=True)
-    def test_load_valid_pdf(self, mock_exists, mock_fitz_open) -> None:
+    def test_load_valid_pdf(self) -> None:
         """Test loading content from a valid PDF file."""
+        # Check if fitz is available
+        from llm_rag.document_processing.loaders import fitz
+
+        if fitz is None:
+            pytest.skip("PyMuPDF (fitz) not available")
+
         # Arrange
-        mock_pdf = MagicMock()
-        mock_page1 = MagicMock()
-        mock_page1.get_text.return_value = "Page 1 content"
-        mock_page2 = MagicMock()
-        mock_page2.get_text.return_value = "Page 2 content"
+        with patch("pathlib.Path.exists", return_value=True):
+            with patch("llm_rag.document_processing.loaders.fitz.open") as mock_fitz_open:
+                mock_pdf = MagicMock()
+                mock_page1 = MagicMock()
+                mock_page1.get_text.return_value = "Page 1 content"
+                mock_page2 = MagicMock()
+                mock_page2.get_text.return_value = "Page 2 content"
 
-        mock_pdf.__len__.return_value = 2
-        mock_pdf.__getitem__.side_effect = [mock_page1, mock_page2]
-        mock_fitz_open.return_value = mock_pdf
+                mock_pdf.__len__.return_value = 2
+                mock_pdf.__getitem__.side_effect = [mock_page1, mock_page2]
+                mock_fitz_open.return_value = mock_pdf
 
-        loader = PDFLoader(file_path="test.pdf")
+                loader = PDFLoader(file_path="test.pdf")
 
-        # Act
-        documents = loader.load()
+                # Act
+                documents = loader.load()
 
-        # Assert
-        assert len(documents) == 2
-        assert documents[0]["content"] == "Page 1 content"
-        assert documents[0]["metadata"]["source"] == "test.pdf"
-        assert documents[0]["metadata"]["page"] == 0
-        assert documents[0]["metadata"]["filetype"] == "pdf"
+                # Assert
+                assert len(documents) == 2
+                assert documents[0]["content"] == "Page 1 content"
+                assert documents[0]["metadata"]["source"] == "test.pdf"
+                assert documents[0]["metadata"]["page"] == 0
+                assert documents[0]["metadata"]["filetype"] == "pdf"
 
-        assert documents[1]["content"] == "Page 2 content"
-        assert documents[1]["metadata"]["page"] == 1
+                assert documents[1]["content"] == "Page 2 content"
+                assert documents[1]["metadata"]["page"] == 1
 
-    @patch("llm_rag.document_processing.loaders.fitz.open", side_effect=Exception("PDF error"))
-    @patch("pathlib.Path.exists", return_value=True)
-    def test_load_invalid_pdf(self, mock_exists, mock_fitz_open) -> None:
+    def test_load_invalid_pdf(self) -> None:
         """Test behavior when PDF loading fails."""
-        # Arrange
-        loader = PDFLoader(file_path="test.pdf")
+        # Check if fitz is available
+        from llm_rag.document_processing.loaders import fitz
 
-        # Act & Assert
-        # Since fitz.open raises an exception, it will try to use PyPDF2
-        # But we don't need to mock PyPDF2 specifically since the error
-        # from fitz should be caught and re-raised
-        with pytest.raises(Exception, match="Error loading PDF file"):
-            loader.load()
+        if fitz is None:
+            pytest.skip("PyMuPDF (fitz) not available")
+
+        # Arrange
+        with patch("pathlib.Path.exists", return_value=True):
+            with patch("llm_rag.document_processing.loaders.fitz.open", side_effect=Exception("PDF error")):
+                loader = PDFLoader(file_path="test.pdf")
+
+                # Act & Assert
+                # Since fitz.open raises an exception, it will try to use PyPDF2
+                # But we don't need to mock PyPDF2 specifically since the error
+                # from fitz should be caught and re-raised
+                with pytest.raises(Exception, match="Error loading PDF file"):
+                    loader.load()
 
 
 class TestCSVLoader:
