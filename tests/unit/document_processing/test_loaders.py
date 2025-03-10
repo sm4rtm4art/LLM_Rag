@@ -117,7 +117,8 @@ class TestPDFLoader:
         assert loader.extract_tables is False  # Default value
 
     @patch("llm_rag.document_processing.loaders.fitz.open")
-    def test_load_valid_pdf(self, mock_fitz_open) -> None:
+    @patch("pathlib.Path.exists", return_value=True)
+    def test_load_valid_pdf(self, mock_exists, mock_fitz_open) -> None:
         """Test loading content from a valid PDF file."""
         # Arrange
         mock_pdf = MagicMock()
@@ -146,14 +147,20 @@ class TestPDFLoader:
         assert documents[1]["metadata"]["page"] == 1
 
     @patch("llm_rag.document_processing.loaders.fitz.open", side_effect=Exception("PDF error"))
-    def test_load_invalid_pdf(self, mock_fitz_open) -> None:
+    @patch("pathlib.Path.exists", return_value=True)
+    @patch("llm_rag.document_processing.loaders.PyPDF2")
+    def test_load_invalid_pdf(self, mock_pypdf2, mock_exists, mock_fitz_open) -> None:
         """Test behavior when PDF loading fails."""
         # Arrange
-        loader = PDFLoader(file_path="bad.pdf")
+        # Configure PyPDF2 mock to raise exception when PdfReader is called
+        mock_pypdf2.PdfReader.side_effect = Exception("PyPDF2 error")
+
+        loader = PDFLoader(file_path="test.pdf")
 
         # Act & Assert
-        with pytest.raises(Exception, match="Error loading PDF file"):
-            loader.load()
+        with patch("builtins.open", mock_open(read_data=b"PDF data")):
+            with pytest.raises(Exception, match="Error loading PDF file"):
+                loader.load()
 
 
 class TestCSVLoader:
