@@ -1,8 +1,10 @@
-"""Anti-hallucination utilities for RAG systems.
+#!/usr/bin/env python
+# flake8: noqa: E501
+"""Anti-hallucination techniques for RAG systems.
 
-This module reduces hallucinations by combining entity-based and
-embedding-based verification. It includes backward compatibility,
-model selection flexibility, and caching for performance.
+This module provides functions and classes to detect and mitigate hallucinations
+in LLM responses. It includes methods for entity verification, embedding-based
+similarity checks, and response confidence scoring.
 """
 
 import json
@@ -260,13 +262,13 @@ def load_stopwords(language: str = "en") -> Set[str]:
         Set of stopwords for the specified language
 
     """
-    stopwords_path = os.path.join(os.path.dirname(__file__), "resources", f"stopwords_{language}.json")
+    stopwords_directory = os.path.join(os.path.dirname(__file__), "resources", f"stopwords_{language}.json")
 
     try:
-        with open(stopwords_path, "r", encoding="utf-8") as f:
+        with open(stopwords_directory, "r", encoding="utf-8") as f:
             return set(json.load(f))
     except (FileNotFoundError, json.JSONDecodeError):
-        logger.debug("Could not load stopwords for %s from %s, using defaults", language, stopwords_path)
+        logger.debug("Could not load stopwords for %s from %s, using defaults", language, stopwords_directory)
         return _DEFAULT_STOPWORDS.get(language, set())
 
 
@@ -318,73 +320,89 @@ def extract_key_entities(text: str, languages: List[str] = None) -> Set[str]:
 def verify_entities_in_context(
     response: str, context: str, threshold: float = 0.7, languages: List[str] = None
 ) -> Tuple[bool, float, List[str]]:
-    """Verify that entities in the response exist in the context.
+    """Verify that entities in the response are present in the context.
 
     Args:
         response: The generated response
-        context: The context used to generate the response
-        threshold: The minimum ratio of entities that must be in the context
-        languages: List of language codes to use for stopwords
+        context: The context used for generation
+        threshold: Minimum required ratio of covered entities (0-1)
+        languages: List of languages to use for stopword removal
 
     Returns:
-        A tuple of (is_verified, entity_coverage_ratio, missing_entities)
+        Tuple containing:
+            - Verification success flag (bool)
+            - Coverage ratio (float)
+            - List of missing entities (List[str])
 
     """
-    # Extract entities from response and context
+    # Get entities from both response and context
     response_entities = extract_key_entities(response, languages)
     context_entities = extract_key_entities(context, languages)
 
     if not response_entities:
+        # No entities in response, can't verify
         return True, 1.0, []
 
-    # Find entities in response that are not in context
-    missing_entities = [entity for entity in response_entities if entity not in context_entities]
+    # Find uncovered entities
+    missing_entities = []
+    for entity in response_entities:
+        if entity not in context_entities:
+            missing_entities.append(entity)
 
-    # Calculate coverage ratio
-    coverage_ratio = 1.0 - (len(missing_entities) / len(response_entities))
+    # Calculate ratio of covered entities
+    coverage_ratio = 1 - (len(missing_entities) / len(response_entities))
 
-    # Determine if the response is verified
-    is_verified = coverage_ratio >= threshold
+    # Determine if verification passed
+    verified = coverage_ratio >= threshold
 
-    return is_verified, coverage_ratio, missing_entities
+    return verified, coverage_ratio, missing_entities
 
 
 def embedding_based_verification(
     response: str, context: str, threshold: float = 0.75, model_name: str = "paraphrase-MiniLM-L6-v2"
 ) -> Tuple[bool, float]:
-    """Verify response against context using embedding similarity.
+    """Verify response using embedding similarity with context.
 
     Args:
-        response: Generated response.
-        context: Context used for generation.
-        threshold: Minimum cosine similarity required.
-        model_name: Name of the SentenceTransformer model.
+        response: The generated response
+        context: The context used for generation
+        threshold: Minimum required similarity score (0-1)
+        model_name: Name of the embedding model to use
 
     Returns:
-        Tuple: (is_verified, similarity_score).
+        Tuple containing:
+            - Verification success flag (bool)
+            - Similarity score (float)
 
     """
-    if SentenceTransformer is None or cosine_similarity is None or np is None:
-        logger.warning("Embedding libraries unavailable; skipping check.")
+    # Feature checks
+    if not SentenceTransformer or not np or not cosine_similarity:
+        logger.warning(
+            "Embedding-based verification requires sentence-transformers, "
+            "numpy, and scikit-learn. Skipping verification."
+        )
         return True, 1.0
 
+    # Get or load the model
     model = get_sentence_transformer_model(model_name)
-    if model is None:
-        return True, 1.0
+    if not model:
+        return True, 1.0  # Skip verification if model not available
 
+    # Generate embeddings
     try:
-        response_emb = model.encode([response])
-        context_emb = model.encode([context])
-        sim = cosine_similarity(response_emb, context_emb)[0][0]
-        is_verified = sim >= threshold
+        response_embeddings = model.encode([response])[0]
+        context_embeddings = model.encode([context])[0]
 
-        logger.debug("Embedding similarity score: %.4f (threshold: %.2f, verified: %s)", sim, threshold, is_verified)
+        # Calculate cosine similarity
+        similarity_score = float(cosine_similarity([response_embeddings], [context_embeddings])[0][0])
 
-        return is_verified, sim
+        # Determine if verification passed
+        verified = similarity_score >= threshold
+
+        return verified, similarity_score
     except Exception as e:
-        logger.error("Error during embedding verification: %s", str(e))
-        # Fail open - assume verification passed when check fails
-        return True, 1.0
+        logger.error(f"Error in embedding verification: {e}")
+        return True, 1.0  # Skip verification on error
 
 
 def advanced_verify_response(
@@ -410,7 +428,7 @@ def advanced_verify_response(
         languages: List of language codes for stopwords.
 
     Returns:
-        Tuple: (is_verified, entity_coverage, embed_sim, missing_entities).
+        Tuple: (is_verified, entity_coverage, embeddings_sim, missing_entities).
 
     """
     # Use config object if provided, otherwise create default
@@ -429,11 +447,11 @@ def advanced_verify_response(
     # Perform embedding verification if enabled
     if config.use_embeddings:
         emb_threshold = embedding_threshold or threshold or config.embedding_threshold
-        is_verified_embed, embed_sim = embedding_based_verification(
+        is_verified_embed, embeddings_sim = embedding_based_verification(
             response, context, threshold=emb_threshold, model_name=m_name
         )
     else:
-        is_verified_embed, embed_sim = True, 1.0
+        is_verified_embed, embeddings_sim = True, 1.0
 
     # Combine results
     overall_verified = is_verified_entity and is_verified_embed
@@ -443,17 +461,17 @@ def advanced_verify_response(
         "Verification results: entity_coverage=%.2f, embedding_sim=%.2f, "
         "entities_verified=%s, embeddings_verified=%s, overall=%s",
         entity_cov,
-        embed_sim,
+        embeddings_sim,
         is_verified_entity,
         is_verified_embed,
         overall_verified,
     )
 
-    return overall_verified, entity_cov, embed_sim, missing_entities
+    return overall_verified, entity_cov, embeddings_sim, missing_entities
 
 
 def calculate_hallucination_score(
-    entity_coverage: float, embedding_similarity: Optional[float] = None, entity_weight: float = 0.6
+    entity_coverage: float, embeddings_similarity: Optional[float] = None, entity_weight: float = 0.6
 ) -> float:
     """Calculate a combined hallucination score (0-1 scale).
 
@@ -461,7 +479,7 @@ def calculate_hallucination_score(
 
     Args:
         entity_coverage: Ratio of entities found in context.
-        embedding_similarity: Embedding similarity score (if available).
+        embeddings_similarity: Embedding similarity score (if available).
         entity_weight: Weight given to entity coverage vs embedding.
 
     Returns:
@@ -469,11 +487,11 @@ def calculate_hallucination_score(
         hallucinations.
 
     """
-    if embedding_similarity is None:
+    if embeddings_similarity is None:
         return entity_coverage
 
     # Combine scores with configurable weighting
-    return entity_coverage * entity_weight + embedding_similarity * (1 - entity_weight)
+    return entity_coverage * entity_weight + embeddings_similarity * (1 - entity_weight)
 
 
 def needs_human_review(
@@ -482,7 +500,7 @@ def needs_human_review(
     critical_threshold: Optional[float] = None,
     entity_coverage: float = 0.0,
     entity_critical_threshold: Optional[float] = None,
-    embedding_similarity: Optional[float] = None,
+    embeddings_similarity: Optional[float] = None,
     embedding_critical_threshold: Optional[float] = None,
 ) -> bool:
     """Determine if a response requires human review.
@@ -493,7 +511,7 @@ def needs_human_review(
         critical_threshold: Override for the combined score threshold.
         entity_coverage: Entity coverage ratio.
         entity_critical_threshold: Override for entity critical threshold.
-        embedding_similarity: Embedding similarity score.
+        embeddings_similarity: Embedding similarity score.
         embedding_critical_threshold: Override for embedding threshold.
 
     Returns:
@@ -517,21 +535,24 @@ def needs_human_review(
     if entity_coverage < e_threshold:
         return True
 
-    if embedding_similarity is not None and embedding_similarity < emb_threshold:
+    if embeddings_similarity is not None and embeddings_similarity < emb_threshold:
         return True
 
     return False
 
 
 def generate_verification_warning(
-    missing_entities: List[str], coverage_ratio: float, embed_sim: Optional[float] = None, human_review: bool = False
+    missing_entities: List[str],
+    coverage_ratio: float,
+    embeddings_sim: Optional[float] = None,
+    human_review: bool = False,
 ) -> str:
     """Generate a warning message for potentially hallucinated content.
 
     Args:
         missing_entities: List of entities not found in the context
         coverage_ratio: The ratio of entities that were found in the context
-        embed_sim: Optional embedding similarity score
+        embeddings_sim: Optional embedding similarity score
         human_review: Whether this response has been flagged for human review
 
     Returns:
@@ -541,11 +562,11 @@ def generate_verification_warning(
     if not missing_entities:
         return ""
 
-    confidence_level = "low" if coverage_ratio < 0.5 else "moderate"
+    config_level = "low" if coverage_ratio < 0.5 else "moderate"
 
     warning = (
         "\n\n[SYSTEM WARNING: This response may contain hallucinated "
-        f"information. Confidence level: {confidence_level}. "
+        f"information. Confidence level: {config_level}. "
         f"The following terms were not found in the retrieved documents: "
         f"{', '.join(missing_entities[:5])}"
     )
@@ -553,8 +574,8 @@ def generate_verification_warning(
     if len(missing_entities) > 5:
         warning += f" and {len(missing_entities) - 5} more"
 
-    if embed_sim is not None:
-        warning += f". Semantic similarity score: {embed_sim:.2f}"
+    if embeddings_sim is not None:
+        warning += f". Semantic similarity score: {embeddings_sim:.2f}"
 
     if human_review:
         warning += ". This response has been flagged for expert review"
@@ -631,7 +652,7 @@ def post_process_response(
         config.human_review_threshold = human_review_threshold
 
     # Advanced verification
-    verified, entity_cov, embed_sim, missing_entities = advanced_verify_response(
+    verified, entity_cov, embeddings_sim, missing_entities = advanced_verify_response(
         response=response,
         context=context,
         config=config,
@@ -643,7 +664,7 @@ def post_process_response(
     )
 
     # Calculate hallucination score
-    hallucination_score = calculate_hallucination_score(entity_cov, embed_sim, config.entity_weight)
+    hallucination_score = calculate_hallucination_score(entity_cov, embeddings_sim, config.entity_weight)
 
     # Check if human review is needed
     requires_review = False
@@ -652,19 +673,19 @@ def post_process_response(
             hallucination_score=hallucination_score,
             config=config,
             entity_coverage=entity_cov,
-            embedding_similarity=embed_sim,
+            embeddings_similarity=embeddings_sim,
         )
 
     # Add warning if not verified or requires review
     if not verified or requires_review:
-        warning = generate_verification_warning(missing_entities, entity_cov, embed_sim, requires_review)
+        warning = generate_verification_warning(missing_entities, entity_cov, embeddings_sim, requires_review)
         response += warning
 
     # Create metadata for caller
     metadata = {
         "verified": verified,
         "entity_coverage": entity_cov,
-        "embedding_similarity": embed_sim,
+        "embeddings_similarity": embeddings_sim,
         "missing_entities": missing_entities,
         "hallucination_score": hallucination_score,
         "human_review_recommended": requires_review,
