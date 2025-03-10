@@ -61,14 +61,14 @@ def load_yaml_config(file_path: Union[str, Path]) -> Dict[str, Any]:
             f"Error parsing YAML configuration: {str(e)}",
             error_code=ErrorCode.INVALID_FILE_FORMAT,
             original_exception=e,
-        )
+        ) from e
     except Exception as e:
         if isinstance(e, ConfigurationError):
             raise
         raise ConfigurationError(
             f"Error loading configuration from {file_path}",
             original_exception=e,
-        )
+        ) from e
 
 
 def load_json_config(file_path: Union[str, Path]) -> Dict[str, Any]:
@@ -103,14 +103,14 @@ def load_json_config(file_path: Union[str, Path]) -> Dict[str, Any]:
             f"Error parsing JSON configuration: {str(e)}",
             error_code=ErrorCode.INVALID_FILE_FORMAT,
             original_exception=e,
-        )
+        ) from e
     except Exception as e:
         if isinstance(e, ConfigurationError):
             raise
         raise ConfigurationError(
             f"Error loading configuration from {file_path}",
             original_exception=e,
-        )
+        ) from e
 
 
 def load_env_config(prefix: str, lowercase_keys: bool = True) -> Dict[str, str]:
@@ -177,7 +177,7 @@ def validate_config(config: Dict[str, Any], model_cls: type[T]) -> T:
             error_code=ErrorCode.INVALID_CONFIG,
             original_exception=e,
             details={"errors": e.errors()},
-        )
+        ) from e
 
 
 def merge_configs(*configs: Dict[str, Any]) -> Dict[str, Any]:

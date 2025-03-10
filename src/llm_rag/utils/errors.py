@@ -147,11 +147,20 @@ class ConfigurationError(LLMRagError):
     def __init__(
         self,
         message: str,
-        error_code: str = ErrorCode.INVALID_CONFIG,
+        error_code: Optional[ErrorCode] = None,
         original_exception: Optional[Exception] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__(message, error_code, original_exception, details)
+        """Initialize the configuration error.
+
+        Args:
+            message: Error message
+            error_code: Optional error code
+            original_exception: Original exception that caused this error
+            details: Additional error details
+
+        """
+        super().__init__(message, error_code or ErrorCode.INVALID_CONFIG, original_exception, details)
 
 
 class DataAccessError(LLMRagError):
@@ -160,11 +169,20 @@ class DataAccessError(LLMRagError):
     def __init__(
         self,
         message: str,
-        error_code: str = ErrorCode.FILE_NOT_FOUND,
+        error_code: Optional[ErrorCode] = None,
         original_exception: Optional[Exception] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__(message, error_code, original_exception, details)
+        """Initialize the data source error.
+
+        Args:
+            message: Error message
+            error_code: Optional error code
+            original_exception: Original exception that caused this error
+            details: Additional error details
+
+        """
+        super().__init__(message, error_code or ErrorCode.FILE_NOT_FOUND, original_exception, details)
 
 
 class ExternalServiceError(LLMRagError):
@@ -173,11 +191,20 @@ class ExternalServiceError(LLMRagError):
     def __init__(
         self,
         message: str,
-        error_code: str = ErrorCode.SERVICE_UNAVAILABLE,
+        error_code: Optional[ErrorCode] = None,
         original_exception: Optional[Exception] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__(message, error_code, original_exception, details)
+        """Initialize the service error.
+
+        Args:
+            message: Error message
+            error_code: Optional error code
+            original_exception: Original exception that caused this error
+            details: Additional error details
+
+        """
+        super().__init__(message, error_code or ErrorCode.SERVICE_UNAVAILABLE, original_exception, details)
 
 
 class ValidationError(LLMRagError):
@@ -186,11 +213,20 @@ class ValidationError(LLMRagError):
     def __init__(
         self,
         message: str,
-        error_code: str = ErrorCode.INVALID_INPUT,
+        error_code: Optional[ErrorCode] = None,
         original_exception: Optional[Exception] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__(message, error_code, original_exception, details)
+        """Initialize the validation error.
+
+        Args:
+            message: Error message
+            error_code: Optional error code
+            original_exception: Original exception that caused this error
+            details: Additional error details
+
+        """
+        super().__init__(message, error_code or ErrorCode.INVALID_INPUT, original_exception, details)
 
 
 class ModelError(LLMRagError):
@@ -199,11 +235,20 @@ class ModelError(LLMRagError):
     def __init__(
         self,
         message: str,
-        error_code: str = ErrorCode.INFERENCE_ERROR,
+        error_code: Optional[ErrorCode] = None,
         original_exception: Optional[Exception] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__(message, error_code, original_exception, details)
+        """Initialize the model error.
+
+        Args:
+            message: Error message
+            error_code: Optional error code
+            original_exception: Original exception that caused this error
+            details: Additional error details
+
+        """
+        super().__init__(message, error_code or ErrorCode.INFERENCE_ERROR, original_exception, details)
 
 
 class PipelineError(LLMRagError):
@@ -212,11 +257,20 @@ class PipelineError(LLMRagError):
     def __init__(
         self,
         message: str,
-        error_code: str = ErrorCode.PIPELINE_CONFIG_ERROR,
+        error_code: Optional[ErrorCode] = None,
         original_exception: Optional[Exception] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__(message, error_code, original_exception, details)
+        """Initialize the pipeline error.
+
+        Args:
+            message: Error message
+            error_code: Optional error code
+            original_exception: Original exception that caused this error
+            details: Additional error details
+
+        """
+        super().__init__(message, error_code or ErrorCode.PIPELINE_CONFIG_ERROR, original_exception, details)
 
 
 class VectorstoreError(LLMRagError):
@@ -225,11 +279,20 @@ class VectorstoreError(LLMRagError):
     def __init__(
         self,
         message: str,
-        error_code: str = ErrorCode.VECTORSTORE_CONNECTION_ERROR,
+        error_code: Optional[ErrorCode] = None,
         original_exception: Optional[Exception] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__(message, error_code, original_exception, details)
+        """Initialize the vectorstore error.
+
+        Args:
+            message: Error message
+            error_code: Optional error code
+            original_exception: Original exception that caused this error
+            details: Additional error details
+
+        """
+        super().__init__(message, error_code or ErrorCode.VECTORSTORE_CONNECTION_ERROR, original_exception, details)
 
 
 class DocumentProcessingError(LLMRagError):
@@ -238,11 +301,20 @@ class DocumentProcessingError(LLMRagError):
     def __init__(
         self,
         message: str,
-        error_code: str = ErrorCode.DOCUMENT_PARSE_ERROR,
+        error_code: Optional[ErrorCode] = None,
         original_exception: Optional[Exception] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__(message, error_code, original_exception, details)
+        """Initialize the document processing error.
+
+        Args:
+            message: Error message
+            error_code: Optional error code
+            original_exception: Original exception that caused this error
+            details: Additional error details
+
+        """
+        super().__init__(message, error_code or ErrorCode.DOCUMENT_PARSE_ERROR, original_exception, details)
 
 
 def handle_exceptions(
@@ -252,7 +324,7 @@ def handle_exceptions(
     log_exception: bool = True,
     reraise: bool = False,
 ) -> Callable[[Callable[..., T]], Callable[..., Union[T, Optional[Dict[str, Any]]]]]:
-    """Decorator for handling exceptions in a consistent way.
+    """Handle exceptions consistently in functions.
 
     This decorator catches exceptions and wraps them in appropriate LLMRagError
     subclasses. It also provides logging and optional reraising.
@@ -314,7 +386,7 @@ def handle_exceptions(
                     )
 
                 if reraise:
-                    raise wrapped_error
+                    raise wrapped_error from e
 
                 return None
 

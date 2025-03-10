@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for the multimodal vectorstore implementation."""
 
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -41,7 +42,11 @@ class TestMultiModalEmbeddingFunction(unittest.TestCase):
 
         # With mock, it should not have text_model_name as attribute but have the models
         self.assertEqual(mmef.embedding_dim, 512)
-        self.assertFalse(mmef.is_mock)  # Should be False unless in GitHub Actions
+
+        # Skip is_mock check in GitHub Actions environment
+        if os.environ.get("GITHUB_ACTIONS") != "true":
+            self.assertFalse(mmef.is_mock)  # Should be False unless in GitHub Actions
+
         self.assertTrue(hasattr(mmef, "text_model"))
 
         # Test initialization with custom parameters

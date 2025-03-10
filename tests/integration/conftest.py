@@ -95,10 +95,10 @@ def rag_pipeline(vectorstore):
                 processed_docs.append(doc)
 
         # Format retrieved documents into context
-        context = pipeline._formatter.format_context(processed_docs)
+        # Keeping this commented to show intent, but not using it to avoid linting error
+        # context = pipeline._formatter.format_context(processed_docs)
 
         # Generate a response directly using the MockLLM
-        # This avoids the issue with the generator expecting a specific response format
         response = "This is a mock response from the LLM."
 
         # Return results
