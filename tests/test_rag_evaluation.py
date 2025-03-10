@@ -20,48 +20,43 @@ def load_test_queries():
     """Load test queries from the test data file."""
     test_data_path = Path(__file__).parent / "test_data" / "test_queries.json"
 
-    # Create directory if it doesn't exist
-    test_data_path.parent.mkdir(exist_ok=True)
+    # If file exists, load and return it
+    if test_data_path.exists():
+        with open(test_data_path, "r") as f:
+            return json.load(f)
 
-    # Create the file with sample data if it doesn't exist
-    if not test_data_path.exists():
-        sample_data = [
-            {
-                "query": "What is DIN VDE 0636-3?",
-                "expected_answer": (
-                    "DIN VDE 0636-3 is a German standard for low-voltage fuses, "
-                    "specifically detailing supplementary requirements for fuses "
-                    "used by unskilled persons in household applications."
-                ),
-                "expected_sources": ["VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf"],
-            },
-            {
-                "query": "What are the requirements for fuses according to DIN VDE 0636-3?",
-                "expected_answer": (
-                    "DIN VDE 0636-3 specifies requirements for fuses used by "
-                    "unskilled persons, including safety aspects, standardized "
-                    "fuse systems, and national committee responsibilities for "
-                    "implementation."
-                ),
-                "expected_sources": ["VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf"],
-            },
-            {
-                "query": "What is the scope of DIN VDE 0636-3?",
-                "expected_answer": (
-                    "DIN VDE 0636-3 covers standardized fuse systems with respect "
-                    "to their safety aspects, with national committees responsible "
-                    "for selecting fuse systems from the standard for their "
-                    "national standards."
-                ),
-                "expected_sources": ["VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf"],
-            },
-        ]
-        with open(test_data_path, "w") as f:
-            json.dump(sample_data, f, indent=2)
-
-    # Load the test data
-    with open(test_data_path, "r") as f:
-        return json.load(f)
+    # If file doesn't exist, return default data without writing to disk
+    return [
+        {
+            "query": "What is DIN VDE 0636-3?",
+            "expected_answer": (
+                "DIN VDE 0636-3 is a German standard for low-voltage fuses, "
+                "specifically detailing supplementary requirements for fuses "
+                "used by unskilled persons in household applications."
+            ),
+            "expected_sources": ["VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf"],
+        },
+        {
+            "query": "What are the requirements for fuses according to DIN VDE 0636-3?",
+            "expected_answer": (
+                "DIN VDE 0636-3 specifies requirements for fuses used by "
+                "unskilled persons, including safety aspects, standardized "
+                "fuse systems, and national committee responsibilities for "
+                "implementation."
+            ),
+            "expected_sources": ["VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf"],
+        },
+        {
+            "query": "What is the scope of DIN VDE 0636-3?",
+            "expected_answer": (
+                "DIN VDE 0636-3 covers standardized fuse systems with respect "
+                "to their safety aspects, with national committees responsible "
+                "for selecting fuse systems from the standard for their "
+                "national standards."
+            ),
+            "expected_sources": ["VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf"],
+        },
+    ]
 
 
 # Mock document for testing
