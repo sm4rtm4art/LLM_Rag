@@ -145,7 +145,7 @@ class VectorStoreRetriever(BaseRetriever):
                 raise VectorstoreError(
                     f"Failed to retrieve documents from vector store: {str(e)}",
                     original_exception=e,
-                )
+                ) from e
 
             # Re-raise PipelineError
             if isinstance(e, PipelineError):
@@ -156,7 +156,7 @@ class VectorStoreRetriever(BaseRetriever):
             raise PipelineError(
                 f"Document retrieval failed: {str(e)}",
                 original_exception=e,
-            )
+            ) from e
 
 
 class HybridRetriever(BaseRetriever):
@@ -248,7 +248,7 @@ class HybridRetriever(BaseRetriever):
             raise PipelineError(
                 f"Hybrid document retrieval failed: {str(e)}",
                 original_exception=e,
-            )
+            ) from e
 
     def _deduplicate_documents(self, documents: List[Any]) -> List[Any]:
         """Remove duplicate documents from the results.
@@ -294,7 +294,7 @@ def create_retriever(
     top_k: int = 5,
     **kwargs,
 ) -> BaseRetriever:
-    """Factory function to create an appropriate retriever.
+    """Create an appropriate retriever.
 
     This function simplifies the creation of retrievers based on the provided source.
 

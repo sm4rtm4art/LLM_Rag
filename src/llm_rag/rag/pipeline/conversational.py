@@ -121,7 +121,7 @@ class ConversationalRAGPipeline(RAGPipeline):
             # Skip anti-hallucination checks for tests to ensure deterministic behavior
             if getattr(self, "_test_mode", False):
                 return response
-                
+
             processed_response = post_process_response(
                 response=response,
                 context=context,
@@ -133,7 +133,7 @@ class ConversationalRAGPipeline(RAGPipeline):
             raise PipelineError(
                 f"Failed to generate response: {str(e)}",
                 original_exception=e,
-            )
+            ) from e
 
     def query(self, query: str, conversation_id: Optional[str] = None) -> Dict[str, any]:
         """Process a query through the full RAG pipeline with conversation context.

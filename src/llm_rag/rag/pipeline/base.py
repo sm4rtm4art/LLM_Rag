@@ -212,25 +212,26 @@ class RAGPipeline:
 
     def query(self, query: str) -> Dict[str, Any]:
         """Process a query through the RAG pipeline.
-        
+
         This method orchestrates the entire RAG process: retrieval, context formatting,
         and response generation.
-        
+
         Args:
             query: The query to process
-            
+
         Returns:
             Dictionary containing the query, response, and retrieved documents
+
         """
         # Retrieve documents
         documents = self._retriever.retrieve(query)
-        
+
         # Format context
         context = self._formatter.format_context(documents)
-        
+
         # Generate response
         response = self._generator.generate(query=query, context=context)
-        
+
         # Return results
         return {
             "query": query,

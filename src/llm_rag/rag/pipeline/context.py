@@ -195,7 +195,7 @@ class SimpleContextFormatter(BaseContextFormatter):
             raise PipelineError(
                 f"Context formatting failed: {str(e)}",
                 original_exception=e,
-            )
+            ) from e
 
 
 class MarkdownContextFormatter(BaseContextFormatter):
@@ -323,7 +323,7 @@ class MarkdownContextFormatter(BaseContextFormatter):
             raise PipelineError(
                 f"Markdown context formatting failed: {str(e)}",
                 original_exception=e,
-            )
+            ) from e
 
 
 def create_formatter(
@@ -332,7 +332,7 @@ def create_formatter(
     max_length: Optional[int] = None,
     **kwargs,
 ) -> BaseContextFormatter:
-    """Factory function to create a context formatter.
+    """Create a context formatter.
 
     Args:
         format_type: Type of formatter ("simple" or "markdown")

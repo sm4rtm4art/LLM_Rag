@@ -193,7 +193,7 @@ class LLMGenerator(BaseGenerator):
                 raise ModelError(
                     f"Language model failed to generate response: {str(e)}",
                     original_exception=e,
-                )
+                ) from e
 
             logger.debug("Raw response generated")
 
@@ -218,7 +218,7 @@ class LLMGenerator(BaseGenerator):
             raise PipelineError(
                 f"Response generation failed: {str(e)}",
                 original_exception=e,
-            )
+            ) from e
 
 
 class TemplatedGenerator(LLMGenerator):
@@ -314,7 +314,7 @@ def create_generator(
     apply_anti_hallucination: bool = True,
     **kwargs,
 ) -> BaseGenerator:
-    """Factory function to create a response generator.
+    """Create a response generator.
 
     Args:
         llm: The language model to use for generation
