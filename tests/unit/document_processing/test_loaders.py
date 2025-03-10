@@ -4,7 +4,6 @@ This module contains tests for various document loaders,
 including TextFileLoader, PDFLoader, DirectoryLoader, etc.
 """
 
-import sys
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
@@ -149,20 +148,17 @@ class TestPDFLoader:
 
     @patch("llm_rag.document_processing.loaders.fitz.open", side_effect=Exception("PDF error"))
     @patch("pathlib.Path.exists", return_value=True)
-    @patch("builtins.open", mock_open(read_data=b"PDF data"))
     def test_load_invalid_pdf(self, mock_exists, mock_fitz_open) -> None:
         """Test behavior when PDF loading fails."""
         # Arrange
-        # Mock PyPDF2 by patching the actual module import
-        with patch.object(sys.modules["llm_rag.document_processing.loaders"], "PyPDF2") as mock_pypdf2:
-            # Configure PyPDF2 mock to raise exception when PdfReader is called
-            mock_pypdf2.PdfReader.side_effect = Exception("PyPDF2 error")
+        loader = PDFLoader(file_path="test.pdf")
 
-            loader = PDFLoader(file_path="test.pdf")
-
-            # Act & Assert
-            with pytest.raises(Exception, match="Error loading PDF file"):
-                loader.load()
+        # Act & Assert
+        # Since fitz.open raises an exception, it will try to use PyPDF2
+        # But we don't need to mock PyPDF2 specifically since the error
+        # from fitz should be caught and re-raised
+        with pytest.raises(Exception, match="Error loading PDF file"):
+            loader.load()
 
 
 class TestCSVLoader:
