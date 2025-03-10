@@ -17,7 +17,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.vectorstores import VectorStore
 from pydantic import ValidationError
 
-from src.llm_rag.rag.anti_hallucination import post_process_response
+from llm_rag.rag.anti_hallucination import post_process_response
 
 
 # Define a simple in-memory chat message history class
