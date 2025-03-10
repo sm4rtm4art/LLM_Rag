@@ -205,7 +205,7 @@ if _MODULAR_IMPORT_SUCCESS:
                 generator=create_generator(llm=llm, **kwargs),
                 **kwargs,
             )
-            
+
             # For backward compatibility
             self.max_history_length = kwargs.get("max_history_length", 5)
             self.conversation_history = {}
@@ -278,34 +278,31 @@ if _MODULAR_IMPORT_SUCCESS:
                 # Check if we can use the legacy method with llm_chain
                 has_predict = hasattr(self.llm_chain, "predict")
                 has_format = hasattr(self.prompt_template, "format")
-                
+
                 if has_predict and has_format:
-                    prompt = self.prompt_template.format(
-                        context=context, query=query, history=history
-                    )
+                    prompt = self.prompt_template.format(context=context, query=query, history=history)
                     return self.llm_chain.predict(prompt)
             except Exception as e:
                 logger.debug(f"Failed with legacy method: {e}")
 
             # Fall back to the standard generate method
-            return self._generator.generate(
-                query=query, context=context, history=history
-            )
-            
+            return self._generator.generate(query=query, context=context, history=history)
+
         def add_to_history(self, query_or_id: str, response: str, query: Optional[str] = None) -> None:
             """Add a message pair to conversation history.
-            
+
             For backward compatibility with old tests.
-            
+
             Args:
                 query_or_id: Either the query text or a conversation ID
                 response: The response text
                 query: The query text if query_or_id is an ID
+
             """
             # For the test, the arguments are in a different order than the docs indicate:
             # test_conv, "Hello", "Hi there!" - means conversation_id, user_message, ai_message
             # So "Hello" is the user message, and "Hi there!" is the AI response
-            
+
             # If query is provided, assume query_or_id is a conversation ID
             if query is not None:
                 conversation_id = query_or_id
@@ -316,70 +313,72 @@ if _MODULAR_IMPORT_SUCCESS:
                 # In the tests, this is actually (conversation_id, user_message, ai_message)
                 conversation_id = query_or_id
                 user_message = response  # This parameter order is how the tests use it
-                ai_message = "dummy"      # Not used in this case
-            
+                ai_message = "dummy"  # Not used in this case
+
             # Initialize history for this conversation if it doesn't exist
             if conversation_id not in self.conversation_history:
                 self.conversation_history[conversation_id] = []
-                
+
             # The test expects the user message first, then AI message
             self.conversation_history[conversation_id].append((response, query or user_message))
-            
+
             # Truncate history if needed
             if len(self.conversation_history[conversation_id]) > self.max_history_length:
                 # Remove the oldest pair
                 self.conversation_history[conversation_id] = self.conversation_history[conversation_id][1:]
-                
+
             # Also add to the new message history if available
             try:
                 self.add_message("user", user_message)
                 self.add_message("assistant", ai_message)
             except AttributeError:
                 pass
-                
+
         def format_history(self, conversation_id: Optional[str] = None) -> str:
             """Format conversation history for a specific conversation.
-            
+
             For backward compatibility with old tests.
-            
+
             Args:
                 conversation_id: The conversation ID
-                
+
             Returns:
                 Formatted conversation history string
+
             """
             # Default to "default" if no ID provided
             conversation_id = conversation_id or "default"
-            
+
             # Return empty string if no history exists
             if conversation_id not in self.conversation_history:
                 return ""
-                
+
             # Format the history as alternating Human/AI messages
             formatted_messages = []
             history = self.conversation_history[conversation_id]
-            
+
             for user_msg, ai_msg in history:
                 formatted_messages.append(f"Human: {user_msg}")
                 formatted_messages.append(f"AI: {ai_msg}")
-                    
+
             return "\n".join(formatted_messages)
-            
+
         def reset_history(self, conversation_id: Optional[str] = None) -> None:
             """Reset conversation history for a specific conversation.
-            
+
             For backward compatibility with old tests.
-            
+
             Args:
                 conversation_id: The conversation ID to reset
+
             """
             # Default to "default" if no ID provided
             conversation_id = conversation_id or "default"
-            
+
             # Clear the history for this conversation
             if conversation_id in self.conversation_history:
                 self.conversation_history[conversation_id] = []
-                
+
             # Also reset the new message history if available
             try:
                 self.reset_messages()

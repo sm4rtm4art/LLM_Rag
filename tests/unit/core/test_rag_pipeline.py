@@ -6,8 +6,7 @@ from unittest.mock import MagicMock
 from langchain.prompts import PromptTemplate
 
 # Import the adapter classes from the pipeline module
-from llm_rag.rag.pipeline import RAGPipeline
-from llm_rag.rag.pipeline import ConversationalRAGPipeline
+from llm_rag.rag.pipeline import ConversationalRAGPipeline, RAGPipeline
 
 
 # Define helper functions
@@ -46,12 +45,14 @@ class TestRAGPipeline(unittest.TestCase):
 
         # Set test mode to ensure test formatting is used
         self.pipeline._test_mode = True
-        
+
         # Mock the retrieve method to return a list of documents
-        self.pipeline.retrieve = MagicMock(return_value=[
-            {"content": "Test document 1", "metadata": {"source": "test1.txt"}},
-            {"content": "Test document 2", "metadata": {"source": "test2.txt"}},
-        ])
+        self.pipeline.retrieve = MagicMock(
+            return_value=[
+                {"content": "Test document 1", "metadata": {"source": "test1.txt"}},
+                {"content": "Test document 2", "metadata": {"source": "test2.txt"}},
+            ]
+        )
 
     def test_init_default_prompt(self):
         """Test initialization with default prompt template."""
@@ -150,33 +151,32 @@ class TestRAGPipeline(unittest.TestCase):
             vectorstore=MagicMock(),
             llm=MagicMock(),
         )
-        
+
         # Set test mode
         pipeline._test_mode = True
-        
+
         # Mock internal methods to avoid validation issues
-        pipeline._retriever.retrieve = MagicMock(return_value=[
-            {"content": "Test document 1", "metadata": {"source": "test1.txt"}},
-            {"content": "Test document 2", "metadata": {"source": "test2.txt"}},
-        ])
-        
+        pipeline._retriever.retrieve = MagicMock(
+            return_value=[
+                {"content": "Test document 1", "metadata": {"source": "test1.txt"}},
+                {"content": "Test document 2", "metadata": {"source": "test2.txt"}},
+            ]
+        )
+
         pipeline._formatter.format_context = MagicMock(
             return_value="Document 1:\nTest document 1\n\nDocument 2:\nTest document 2"
         )
-        
+
         pipeline._generator.generate = MagicMock(return_value="This is a test response.")
-        
+
         # Call query directly to avoid the validation in the modular implementation
         result = {
             "query": "What is RAG?",
             "documents": pipeline._retriever.retrieve("What is RAG?"),
             "context": pipeline._formatter.format_context([]),
-            "response": pipeline._generator.generate(
-                query="What is RAG?",
-                context="Test context"
-            )
+            "response": pipeline._generator.generate(query="What is RAG?", context="Test context"),
         }
-        
+
         # Verify result structure
         self.assertEqual(result["query"], "What is RAG?")
         self.assertIn("documents", result)
@@ -235,18 +235,15 @@ class TestConversationalRAGPipeline(unittest.TestCase):
                 ("How are you?", "I'm fine!"),
             ]
         }
-        
+
         # Mock format_history to return what the test expects
-        self.pipeline.format_history = MagicMock(return_value=(
-            "Human: Hello\n"
-            "AI: Hi there!\n"
-            "Human: How are you?\n"
-            "AI: I'm fine!"
-        ))
-        
+        self.pipeline.format_history = MagicMock(
+            return_value=("Human: Hello\nAI: Hi there!\nHuman: How are you?\nAI: I'm fine!")
+        )
+
         # Format the history
         history = self.pipeline.format_history("test_conv")
-        
+
         # Verify the format
         self.assertIn("Human: Hello", history)
         self.assertIn("AI: Hi there!", history)
@@ -292,7 +289,7 @@ class TestConversationalRAGPipeline(unittest.TestCase):
         """Test that conversation history is truncated appropriately."""
         # Mock the conversation history and format_history method
         self.pipeline.max_history_length = 2
-        
+
         # Create a history with only the last two message pairs
         self.pipeline.conversation_history = {
             "test_conv": [
@@ -300,20 +297,15 @@ class TestConversationalRAGPipeline(unittest.TestCase):
                 ("Message 3", "Response 3"),
             ]
         }
-        
+
         # Mock the format_history to return only Message 2 and Message 3
-        expected_history = (
-            "Human: Message 2\n"
-            "AI: Response 2\n"
-            "Human: Message 3\n"
-            "AI: Response 3"
-        )
-        
+        expected_history = "Human: Message 2\nAI: Response 2\nHuman: Message 3\nAI: Response 3"
+
         self.pipeline.format_history = MagicMock(return_value=expected_history)
-        
+
         # Get the history
         history = self.pipeline.format_history("test_conv")
-        
+
         # Check truncation
         self.assertNotIn("Message 1", history)
         self.assertIn("Message 2", history)
