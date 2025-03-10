@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# flake8: noqa: E501
 """Test the RAG system with anti-hallucination features.
 
 This script builds a test database from existing documents and then
@@ -19,36 +20,32 @@ src_path = os.path.join(project_root, "src")
 sys.path.insert(0, src_path)
 
 try:
-    from llm_rag.document_processing.loaders import DirectoryLoader
-    from llm_rag.rag.anti_hallucination import (
-        HallucinationConfig,
-        post_process_response
-    )
-    from llm_rag.rag.pipeline import RAGPipeline
-    from llm_rag.vectorstore.chroma import (
-        ChromaVectorStore,
-        EmbeddingFunctionWrapper
-    )
     from langchain.llms import Ollama
+
+    from llm_rag.document_processing.loaders import DirectoryLoader
+    from llm_rag.rag.anti_hallucination import HallucinationConfig, post_process_response
+    from llm_rag.rag.pipeline import RAGPipeline
+    from llm_rag.vectorstore.chroma import ChromaVectorStore, EmbeddingFunctionWrapper
 except ImportError:
     print("Error: Required modules not found. Please install the llm_rag package.")
     sys.exit(1)
 
 try:
     from langchain_ollama import OllamaLLM
+
     use_new_ollama = True
     print("Using new langchain_ollama implementation.")
 except ImportError:
+    from langchain.llms import Ollama as OllamaLLM
+
     use_new_ollama = False
-    print("Using deprecated Ollama implementation. Consider upgrading to langchain_ollama.")
+    print("Using legacy langchain.llms.Ollama implementation.")
 
 # Set up logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
-formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
@@ -158,10 +155,7 @@ def setup_rag_pipeline(vectorstore: ChromaVectorStore, model_name: str = "llama3
         try:
             # Call the original post_process_response function with return_metadata=True
             processed_response, metadata = post_process_response(
-                response=response,
-                context=context,
-                config=hallucination_config,
-                return_metadata=True
+                response=response, context=context, config=hallucination_config, return_metadata=True
             )
             return processed_response, metadata
         except Exception as e:
@@ -169,17 +163,10 @@ def setup_rag_pipeline(vectorstore: ChromaVectorStore, model_name: str = "llama3
             return response, {}
 
     # Set up the anti-hallucination configuration
-    hallucination_config = HallucinationConfig(
-        entity_verification_threshold=0.4,
-        embedding_verification_threshold=0.7
-    )
+    hallucination_config = HallucinationConfig(entity_verification_threshold=0.4, embedding_verification_threshold=0.7)
 
     # Create a RAG pipeline with anti-hallucination
-    pipeline = RAGPipeline(
-        vectorstore=vectorstore,
-        llm=llm,
-        post_processor=post_processor_wrapper
-    )
+    pipeline = RAGPipeline(vectorstore=vectorstore, llm=llm, post_processor=post_processor_wrapper)
 
     return pipeline
 

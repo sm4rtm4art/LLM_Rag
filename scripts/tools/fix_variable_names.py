@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+# flake8: noqa: E501
 """Script to fix variable naming inconsistencies in the codebase."""
 
-import re
 import logging
 import os
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
