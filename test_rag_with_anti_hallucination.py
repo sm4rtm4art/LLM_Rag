@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# flake8: noqa: E501
 """Test the RAG system with anti-hallucination features.
 
 This script builds a test database from existing documents and then
@@ -399,3 +397,20 @@ def fix_anti_hallucination_py():
 fix_pipeline_py()
 fix_anti_hallucination_py()
 print("Variable naming fixes applied to pipeline.py and anti_hallucination.py")
+
+# In pipeline.py - after refactoring
+from .pipeline.base import RAGPipeline as _RAGPipeline
+from .pipeline.conversational import ConversationalRAGPipeline as _ConversationalRAGPipeline
+
+# Re-export with original names
+RAGPipeline = _RAGPipeline
+ConversationalRAGPipeline = _ConversationalRAGPipeline
+
+import warnings
+
+warnings.warn(
+    "Importing from 'llm_rag.rag.pipeline' is deprecated and will be removed in a future version. "
+    "Please update your imports to use 'llm_rag.rag.pipeline.base' and related modules instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)

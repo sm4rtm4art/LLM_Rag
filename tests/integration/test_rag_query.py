@@ -69,35 +69,18 @@ def test_single_query(rag_pipeline):
         logger.info(pprint.pformat(doc))
 
         # Try to access the source from the document's metadata
-        source = doc.get("metadata", {}).get("source", "Unknown")
-        source_filename = doc.get("metadata", {}).get("filename", "")
+        if hasattr(doc, "metadata"):
+            # This is a langchain Document object
+            source = doc.metadata.get("source", "Unknown")
+        else:
+            # This is a dictionary
+            source = doc.get("metadata", {}).get("source", "Unknown")
 
-        # Try to access the content from different possible fields
-        content = None
-        if "content" in doc and doc["content"]:
-            content = doc["content"]
-        elif "document" in doc and doc["document"]:
-            content = doc["document"]
-        elif "page_content" in doc and doc["page_content"]:
-            content = doc["page_content"]
+        logger.info(f"Source: {source}")
 
-        if content:
-            # Truncate content if it's too long
-            if len(content) > 100:
-                content = content[:100] + "..."
-
-            # Log the document source and content
-            if source_filename:
-                logger.info(f"{i + 1}. {source}: {content}")
-            else:
-                logger.info(f"{i + 1}. {source}: {content}")
-
-    logger.info("-" * 50)
-
-    # Add an assertion instead of returning the result
-    assert result is not None
-    assert "response" in result
-    assert "documents" in result
+    # Check that we got a response
+    assert result["response"], "Response should not be empty"
+    assert result["documents"], "Documents should not be empty"
 
 
 def main():
