@@ -18,12 +18,32 @@ src_path = os.path.join(project_root, "src")
 sys.path.insert(0, src_path)
 
 try:
-    from langchain.llms import Ollama
+    # Updated import for Ollama
+    from langchain_community.llms import Ollama
+
+    # Import OllamaLLM if it exists in langchain_community
+    try:
+        from langchain_community.llms.ollama import OllamaLLM
+    except ImportError:
+        # If OllamaLLM doesn't exist, we'll use Ollama only
+        OllamaLLM = None
+
+    # Add deprecation warning for old imports
+    import warnings
 
     from llm_rag.document_processing.loaders import DirectoryLoader
     from llm_rag.rag.anti_hallucination import HallucinationConfig, post_process_response
-    from llm_rag.rag.pipeline import RAGPipeline
+
+    # Import the new pipeline modules
+    from llm_rag.rag.pipeline.base import RAGPipeline
     from llm_rag.vectorstore.chroma import ChromaVectorStore, EmbeddingFunctionWrapper
+
+    warnings.warn(
+        "Importing from 'llm_rag.rag.pipeline' is deprecated and will be removed in a future version. "
+        "Please update your imports to use 'llm_rag.rag.pipeline.base' and related modules instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 except ImportError:
     print("Error: Required modules not found. Please install the llm_rag package.")
     sys.exit(1)
@@ -123,19 +143,19 @@ def build_vectorstore(
 
 
 def setup_rag_pipeline(vectorstore: ChromaVectorStore, model_name: str = "llama3") -> RAGPipeline:
-    """Set up the RAG pipeline with anti-hallucination features.
+    """Set up a RAG pipeline with anti-hallucination features.
 
     Args:
-        vectorstore: The vector store to use for retrieving documents.
-        model_name: Name of the Ollama model to use (default: llama3).
+        vectorstore: Vector store for document retrieval
+        model_name: Name of the Ollama model to use
 
     Returns:
-        RAG pipeline instance.
+        Configured RAG pipeline
 
     """
     # Initialize LLM with proper Ollama implementation
     try:
-        if use_new_ollama:
+        if use_new_ollama and OllamaLLM is not None:
             # Use the new recommended implementation
             llm = OllamaLLM(model=model_name)
             logger.info(f"Successfully initialized OllamaLLM with model: {model_name}")
@@ -149,72 +169,115 @@ def setup_rag_pipeline(vectorstore: ChromaVectorStore, model_name: str = "llama3
 
     # Define a wrapper for post_process_response to ensure it returns the expected format
     def post_processor_wrapper(response, context):
-        """Ensure post_process_response returns the expected format."""
         try:
-            # Call the original post_process_response function with return_metadata=True
+            # Process the response with anti-hallucination checks
             processed_response, metadata = post_process_response(
-                response=response, context=context, config=hallucination_config, return_metadata=True
+                response=response,
+                context=context,
+                return_metadata=True,
             )
-            return processed_response, metadata
+
+            # Print analysis if available
+            if metadata:
+                print_analysis(response, context, metadata)
+
+            return processed_response
         except Exception as e:
             logger.error(f"Error in post-processing: {e}")
-            return response, {}
+            return response
 
-    # Set up the anti-hallucination configuration
-    hallucination_config = HallucinationConfig(entity_verification_threshold=0.4, embedding_verification_threshold=0.7)
-
-    # Create a RAG pipeline with anti-hallucination
-    pipeline = RAGPipeline(vectorstore=vectorstore, llm=llm, post_processor=post_processor_wrapper)
-
+    # Import the necessary modules
+    from llm_rag.rag.pipeline.generation import create_generator, DEFAULT_PROMPT_TEMPLATE
+    from llm_rag.utils.errors import ModelError
+    
+    # Create the pipeline with the vectorstore and LLM
+    pipeline = RAGPipeline(
+        vectorstore=vectorstore,
+        llm=llm,
+    )
+    
+    # Create a patched generator.generate method that can handle Ollama's string output
+    original_generate = pipeline._generator.generate
+    
+    def patched_generate(query, context, history="", **kwargs):
+        """Patched generate method that handles Ollama's string output format."""
+        logger.debug(f"Using patched generate method for query: {query}")
+        
+        # Format prompt directly to avoid the content attribute error
+        prompt = DEFAULT_PROMPT_TEMPLATE.format(
+            query=query,
+            context=context,
+            history=history,
+        )
+        
+        try:
+            # Generate response directly from the LLM
+            response_raw = llm.invoke(prompt)
+            
+            # Handle the response format - could be string or an object with content attribute
+            if hasattr(response_raw, 'content'):
+                response = response_raw.content
+            else:
+                response = str(response_raw)
+            
+            # Apply anti-hallucination processing
+            processed_response = post_processor_wrapper(response, context)
+            return processed_response
+            
+        except Exception as e:
+            logger.error(f"Error in patched_generate: {e}")
+            return f"I apologize, but I couldn't generate a proper response due to a technical issue: {str(e)}"
+    
+    # Replace the generator's generate method with our patched version
+    pipeline._generator.generate = patched_generate
+    
     return pipeline
 
 
 def print_analysis(response: str, context: str, metadata: Dict[str, Any]) -> None:
-    """Print an analysis of the RAG response, including entities and hallucination metrics.
+    """Print analysis of the response and hallucination detection.
 
     Args:
-        response: The response from the RAG system.
-        context: The context used to generate the response.
-        metadata: Metadata from the anti-hallucination post-processor.
+        response: The generated response
+        context: The context used to generate the response
+        metadata: Metadata from hallucination detection
 
     """
     print("\n" + "=" * 80)
     print("RESPONSE ANALYSIS")
+    print("=" * 80)
+
+    # Print the original response
+    print("\nOriginal Response:")
+    print("-" * 40)
+    print(response)
+    print("-" * 40)
+
+    # Print hallucination detection results if available
+    if "entity_verification" in metadata:
+        print("\nEntity Verification:")
+        print(f"Score: {metadata['entity_verification']['score']:.2f}")
+
+        if "entities" in metadata["entity_verification"]:
+            print("\nEntities Found:")
+            for entity, verified in metadata["entity_verification"]["entities"].items():
+                status = "✓" if verified else "✗"
+                print(f"  {status} {entity}")
+
+    if "embedding_verification" in metadata:
+        print("\nEmbedding Verification:")
+        print(f"Score: {metadata['embedding_verification']['score']:.2f}")
+
+        if "similarity" in metadata["embedding_verification"]:
+            print(f"Similarity: {metadata['embedding_verification']['similarity']:.2f}")
+
+    if "combined_score" in metadata:
+        print(f"\nCombined Score: {metadata['combined_score']:.2f}")
+
+    if "needs_human_review" in metadata and metadata["needs_human_review"]:
+        print("\n⚠️ This response may need human review!")
+
     print("=" * 80 + "\n")
-
-    # Print context entities
-    context_entities = metadata.get("context_entities", [])
-    print(f"Context entities ({len(context_entities)}):")
-    if context_entities:
-        for entity in sorted(context_entities):
-            print(f"  {entity}")
-    print()
-
-    # Print response entities
-    response_entities = metadata.get("response_entities", [])
-    print(f"Response entities ({len(response_entities)}):")
-    if response_entities:
-        for entity in sorted(response_entities):
-            print(f"  {entity}")
-    print()
-
-    # Print potentially hallucinated entities
-    hallucinated = metadata.get("potentially_hallucinated_entities", [])
-    print(f"Potentially hallucinated entities ({len(hallucinated)}):")
-    if hallucinated:
-        for entity in sorted(hallucinated):
-            print(f"  {entity}")
-    print()
-
-    # Print verification results
-    print("Verification results:")
-    print(f"  Verified: {metadata.get('verified', False)}")
-    print(f"  Entity coverage: {metadata.get('entity_coverage', 0.0):.2f}")
-    print(f"  Embedding similarity: {metadata.get('embedding_similarity', 0.0):.2f}")
-    print(f"  Hallucination score: {metadata.get('hallucination_score', 1.0):.2f}")
-    print(f"  Human review recommended: {metadata.get('human_review', False)}")
-
-    print("\n" + "=" * 80 + "\n")
 
 
 def interactive_rag_session(rag: RAGPipeline) -> None:
@@ -234,7 +297,8 @@ def interactive_rag_session(rag: RAGPipeline) -> None:
 
     use_anti_hallucination = True
     config = HallucinationConfig(
-        flag_for_human_review=True, use_embeddings=True, entity_threshold=0.7, embedding_threshold=0.5
+        flag_for_human_review=True, use_embeddings=True, 
+        entity_threshold=0.7, embedding_threshold=0.5
     )
 
     while True:
@@ -279,29 +343,21 @@ def interactive_rag_session(rag: RAGPipeline) -> None:
         try:
             # Get response from RAG system
             result = rag.query(query)
-
-            # Check if result is a tuple (response, metadata) or just a string
-            if isinstance(result, tuple) and len(result) == 2:
-                response, metadata = result
+            
+            # Check if result is a dictionary or a string
+            if isinstance(result, dict):
+                response = result.get("response", "No response generated")
             else:
-                # If it's just a string, we don't have metadata
+                # If it's just a string, use it directly
                 response = result
-                metadata = {}
-
+            
             # Print the response
             print(f"\nResponse {'(with anti-hallucination)' if use_anti_hallucination else ''}:")
             print(response)
-
-            # Print analysis if we have metadata
-            if metadata and use_anti_hallucination:
-                print_analysis(response, getattr(rag, "_last_context", ""), metadata)
-
+            
         except Exception as e:
-            logger.error(f"Error during query: {e}")
-            import traceback
-
-            traceback.print_exc()
-            print(f"\nError: {e}")
+            print(f"\nError: {str(e)}")
+            logger.error(f"Error during RAG query: {e}", exc_info=True)
 
 
 def main():
@@ -397,20 +453,3 @@ def fix_anti_hallucination_py():
 fix_pipeline_py()
 fix_anti_hallucination_py()
 print("Variable naming fixes applied to pipeline.py and anti_hallucination.py")
-
-# In pipeline.py - after refactoring
-from .pipeline.base import RAGPipeline as _RAGPipeline
-from .pipeline.conversational import ConversationalRAGPipeline as _ConversationalRAGPipeline
-
-# Re-export with original names
-RAGPipeline = _RAGPipeline
-ConversationalRAGPipeline = _ConversationalRAGPipeline
-
-import warnings
-
-warnings.warn(
-    "Importing from 'llm_rag.rag.pipeline' is deprecated and will be removed in a future version. "
-    "Please update your imports to use 'llm_rag.rag.pipeline.base' and related modules instead.",
-    DeprecationWarning,
-    stacklevel=2,
-)
