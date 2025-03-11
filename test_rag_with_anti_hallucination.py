@@ -187,50 +187,47 @@ def setup_rag_pipeline(vectorstore: ChromaVectorStore, model_name: str = "llama3
             return response
 
     # Import the necessary modules
-    from llm_rag.rag.pipeline.generation import create_generator, DEFAULT_PROMPT_TEMPLATE
-    from llm_rag.utils.errors import ModelError
-    
+    from llm_rag.rag.pipeline.generation import DEFAULT_PROMPT_TEMPLATE
+
     # Create the pipeline with the vectorstore and LLM
     pipeline = RAGPipeline(
         vectorstore=vectorstore,
         llm=llm,
     )
-    
+
     # Create a patched generator.generate method that can handle Ollama's string output
-    original_generate = pipeline._generator.generate
-    
     def patched_generate(query, context, history="", **kwargs):
         """Patched generate method that handles Ollama's string output format."""
         logger.debug(f"Using patched generate method for query: {query}")
-        
+
         # Format prompt directly to avoid the content attribute error
         prompt = DEFAULT_PROMPT_TEMPLATE.format(
             query=query,
             context=context,
             history=history,
         )
-        
+
         try:
             # Generate response directly from the LLM
             response_raw = llm.invoke(prompt)
-            
+
             # Handle the response format - could be string or an object with content attribute
             if hasattr(response_raw, 'content'):
                 response = response_raw.content
             else:
                 response = str(response_raw)
-            
+
             # Apply anti-hallucination processing
             processed_response = post_processor_wrapper(response, context)
             return processed_response
-            
+
         except Exception as e:
             logger.error(f"Error in patched_generate: {e}")
             return f"I apologize, but I couldn't generate a proper response due to a technical issue: {str(e)}"
-    
+
     # Replace the generator's generate method with our patched version
     pipeline._generator.generate = patched_generate
-    
+
     return pipeline
 
 
@@ -297,7 +294,7 @@ def interactive_rag_session(rag: RAGPipeline) -> None:
 
     use_anti_hallucination = True
     config = HallucinationConfig(
-        flag_for_human_review=True, use_embeddings=True, 
+        flag_for_human_review=True, use_embeddings=True,
         entity_threshold=0.7, embedding_threshold=0.5
     )
 
@@ -343,18 +340,18 @@ def interactive_rag_session(rag: RAGPipeline) -> None:
         try:
             # Get response from RAG system
             result = rag.query(query)
-            
+
             # Check if result is a dictionary or a string
             if isinstance(result, dict):
                 response = result.get("response", "No response generated")
             else:
                 # If it's just a string, use it directly
                 response = result
-            
+
             # Print the response
             print(f"\nResponse {'(with anti-hallucination)' if use_anti_hallucination else ''}:")
             print(response)
-            
+
         except Exception as e:
             print(f"\nError: {str(e)}")
             logger.error(f"Error during RAG query: {e}", exc_info=True)
