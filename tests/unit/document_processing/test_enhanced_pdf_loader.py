@@ -77,7 +77,8 @@ class TestEnhancedPDFLoader(unittest.TestCase):
         with (
             patch("pathlib.Path.exists", return_value=True),
             patch("src.llm_rag.document_processing.loaders.pdf_loaders.PYMUPDF_AVAILABLE", True),
-            patch.object(EnhancedPDFLoader, "_load_with_pypdf2", return_value=[]),
+            # This is key - also need to patch the parent load_from_file to call our mocked method
+            patch.object(PDFLoader, "load_from_file", side_effect=lambda path: mock_load_with_pymupdf(path)),
         ):
             # Act
             documents = loader.load()
@@ -103,8 +104,9 @@ class TestEnhancedPDFLoader(unittest.TestCase):
         with (
             patch("pathlib.Path.exists", return_value=True),
             patch("src.llm_rag.document_processing.loaders.pdf_loaders.PYMUPDF_AVAILABLE", True),
-            patch.object(EnhancedPDFLoader, "_load_with_pypdf2", return_value=[]),
-            patch.object(PDFLoader, "_load_with_pypdf2", return_value=[]),
+            # This is key - also need to patch the parent load_from_file to call our mocked methods
+            patch.object(EnhancedPDFLoader, "load_from_file", side_effect=lambda path: mock_enhanced_load(path)),
+            patch.object(PDFLoader, "load_from_file", side_effect=lambda path: mock_parent_load(path)),
         ):
             # Act
             enhanced_docs = enhanced_loader.load()
