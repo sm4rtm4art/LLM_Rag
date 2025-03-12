@@ -13,35 +13,24 @@ import sys
 import warnings
 from pathlib import Path
 
-from .base import (
-    DirectoryLoader as BaseDirectoryLoader,
-)
-from .base import (
-    DocumentLoader,
-    FileLoader,
-    LoaderRegistry,
-    registry,
-)
-from .base import (
-    WebLoader as BaseWebLoader,
-)
+from .base import DirectoryLoader as BaseDirectoryLoader
+from .base import DocumentLoader, FileLoader, LoaderRegistry, registry
+from .base import WebLoader as BaseWebLoader
 
 # Import the concrete loader implementations
 from .directory_loader import DirectoryLoader
 
 # Import factory functions
-from .factory import (
-    get_available_loader_extensions,
-    load_document,
-    load_documents_from_directory,
-)
+from .factory import get_available_loader_extensions, load_document, load_documents_from_directory
 from .file_loaders import CSVLoader, TextFileLoader, XMLLoader
 from .json_loader import JSONLoader
 from .pdf_loaders import EnhancedPDFLoader, PDFLoader
 from .web_loader import WebLoader, WebPageLoader
 
-# Get the path to the legacy loaders.py file
-loaders_path = Path(__file__).parent.parent / "loaders.py"
+# Get the path to the legacy loaders.py file that's now in quarantine_backup
+# Using absolute path resolution to make sure we find the file
+project_root = Path(__file__).parent.parent.parent.parent.parent
+loaders_path = project_root / "quarantine_backup" / "document_processing" / "loaders.py"
 spec = importlib.util.spec_from_file_location("legacy_loaders", loaders_path)
 legacy_loaders = importlib.util.module_from_spec(spec)
 sys.modules["legacy_loaders"] = legacy_loaders

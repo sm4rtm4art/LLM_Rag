@@ -54,7 +54,7 @@ class DocumentLoader(ABC):
         pass
 
 
-# Import the new modular loaders instead of the legacy ones
+# Import the new modular loaders
 from .loaders import (  # noqa: E402
     CSVLoader,
     DirectoryLoader,
