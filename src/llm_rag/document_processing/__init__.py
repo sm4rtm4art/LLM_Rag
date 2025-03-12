@@ -22,17 +22,20 @@ Documents: TypeAlias = List[Document]
 class DocumentLoader(ABC):
     """Abstract base class for document loaders.
 
-    DEPRECATED: Use the DocumentLoader from llm_rag.document_processing.loaders instead.
+    DEPRECATED: Use the DocumentLoader from
+    llm_rag.document_processing.loaders instead.
     """
 
     def __init__(self, *args, **kwargs):
         """Initialize the DocumentLoader with a deprecation warning.
 
-        This constructor is deliberately kept simple as this class is deprecated.
+        This constructor is deliberately kept simple as this class is
+        deprecated.
         """
         warnings.warn(
             "This DocumentLoader class is deprecated. "
-            "Use the DocumentLoader from llm_rag.document_processing.loaders instead.",
+            "Use the DocumentLoader from "
+            "llm_rag.document_processing.loaders instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -66,8 +69,9 @@ from .loaders import (  # noqa: E402
 
 # Show deprecation warning for directly importing from this module
 warnings.warn(
-    "Importing loaders directly from llm_rag.document_processing is deprecated. "
-    "Please import them from llm_rag.document_processing.loaders instead.",
+    "Importing loaders directly from llm_rag.document_processing "
+    "is deprecated. Please import them from "
+    "llm_rag.document_processing.loaders instead.",
     DeprecationWarning,
     stacklevel=2,
 )

@@ -92,9 +92,7 @@ def extract_definitions():
     """Extract term definitions from the document."""
     print("\n=== EXTRACTING DEFINITIONS ===\n")
 
-    loader = XMLLoader(
-        DIN_DOCUMENT_PATH, split_by_tag="din:definition", content_tags=["din:term", "din:description"]
-    )
+    loader = XMLLoader(DIN_DOCUMENT_PATH, split_by_tag="din:definition", content_tags=["din:term", "din:description"])
     documents = loader.load()
 
     print(f"Extracted {len(documents)} definitions")
