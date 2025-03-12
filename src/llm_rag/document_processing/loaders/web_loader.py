@@ -143,8 +143,12 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
 
         Raises
         ------
+        ConnectionError
+            If there's a network connection error.
+        ValueError
+            If there's an HTTP error (like 404, 500, etc.)
         Exception
-            If URL fetching fails.
+            For other unexpected errors.
 
         """
         headers = headers or self.headers
@@ -177,9 +181,20 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
 
             return documents
 
+        except requests.exceptions.ConnectionError as e:
+            # Network connection error
+            logger.error(f"Connection error loading URL {url}: {e}")
+            raise
+
+        except requests.exceptions.HTTPError as e:
+            # HTTP error (404, 500, etc.)
+            logger.error(f"HTTP error loading URL {url}: {e}")
+            raise ValueError(str(e)) from e
+
         except Exception as e:
+            # Other unexpected errors
             logger.error(f"Error loading URL {url}: {e}")
-            raise Exception(f"Error loading URL {url}: {str(e)}") from e
+            raise
 
     def _process_html(self, html_content: str, url: str, metadata: Dict) -> Documents:
         """Process HTML content into documents.
