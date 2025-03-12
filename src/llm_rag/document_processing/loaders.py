@@ -1,13 +1,35 @@
-"""Document loaders for the RAG system."""
+"""Document loaders for the RAG system.
+
+DEPRECATED: This monolithic module is deprecated and will be removed in a future version.
+Please use the modular loaders from llm_rag.document_processing.loaders instead.
+
+Example:
+  # Old way (deprecated)
+  from llm_rag.document_processing.loaders import PDFLoader
+
+  # New way
+  from llm_rag.document_processing.loaders import PDFLoader
+  # or for explicit imports:
+  from llm_rag.document_processing.loaders.pdf_loaders import PDFLoader
+"""
 
 import csv
 import json
 import logging
+import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import requests
+
+# Show deprecation warning when this module is imported
+warnings.warn(
+    "The monolithic loaders.py module is deprecated and will be removed in a future version. "
+    "Please use the modular loaders from llm_rag.document_processing.loaders instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 logger = logging.getLogger(__name__)
 

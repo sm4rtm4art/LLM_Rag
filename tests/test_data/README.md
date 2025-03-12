@@ -1,42 +1,90 @@
-# Public Test Data for RAG System
+# LLM RAG Examples
 
-This directory contains public test data that can be safely shared on GitHub and used for testing the RAG system. These files do not contain any sensitive information and are intended for demonstration and testing purposes only.
+This directory contains example scripts demonstrating how to use the LLM RAG framework with various document types.
 
-## Files
+## DIN XML Document Examples
 
-- `sample.txt`: A general overview of Retrieval-Augmented Generation (RAG) systems, their benefits, challenges, and applications.
-- `llama3_info.txt`: Information about Meta's Llama 3 large language model, including its features, capabilities, and use cases.
-- `rag_systems.txt`: Detailed information about RAG systems, their components, and how they work.
-- `test_queries.json`: A collection of test queries that can be used to test the RAG system with the public test data.
+The `din_document.xml` file is a DIN-formatted XML document that follows a standardized structure for technical documentation. It's used in several example scripts to demonstrate how the XMLLoader can be used to process structured XML content for RAG systems.
 
-## Usage
+### Running the Examples
 
-These files can be used with the `test_rag_public.py` script to test the RAG system:
+First, make sure you have installed the required dependencies:
 
 ```bash
-python scripts/test_rag_public.py --load-documents --collection public_test --query "What is RAG?"
+# For basic functionality
+pip install -e .
+
+# For advanced RAG demo with embeddings
+pip install sentence-transformers
 ```
 
-Or you can use one of the predefined test queries from `test_queries.json`:
+Then, run the examples from the project root directory:
 
 ```bash
-python scripts/test_rag_public.py --load-documents --collection public_test --use-test-query 0
+# Basic loading examples
+python examples/din_loader_demo.py
+
+# Advanced RAG demo (requires sentence-transformers)
+python examples/din_rag_demo.py
+
+# XML namespace utilities
+python examples/xml_namespace_utils.py
 ```
 
-## Adding New Test Data
+### Example Scripts
 
-When adding new test data to this directory, please ensure that:
+1. **din_loader_demo.py**
 
-1. The data does not contain any sensitive or proprietary information
-2. The data is relevant for testing the RAG system
-3. The data is documented in this README file
+   - Demonstrates various ways to load and extract information from the DIN document
+   - Shows how to extract metadata, split into sections, extract definitions, code examples, and tables
 
-## Test Queries
+2. **din_rag_demo.py**
 
-The `test_queries.json` file contains a collection of test queries that can be used to test the RAG system. Each query includes:
+   - Creates a simple RAG system using the DIN document
+   - Implements vector-based search with sentence-transformers
+   - Shows how to answer questions using retrieved content
 
-- `query`: The question to ask the RAG system
-- `expected_answer`: The expected answer from the RAG system
-- `expected_sources`: The expected sources that should be retrieved for the query
+3. **xml_namespace_utils.py**
+   - Helper functions for working with namespaced XML documents
+   - Examples of extracting namespaces, finding elements by tag, and handling definitions
 
-These test queries can be used for automated testing to ensure that the RAG system is working correctly.
+### Further Documentation
+
+For more detailed information about the DIN document structure and how to use it with the XMLLoader, see the `README_din_document.md` file in this directory.
+
+## What You Can Now Do
+
+### 1. Load the DIN Document in Different Ways
+
+You can use the XMLLoader to load the document as a whole or in various structured ways:
+
+```python
+from llm_rag.document_processing.loaders import XMLLoader
+
+# Load the entire document
+loader = XMLLoader("examples/din_document.xml")
+documents = loader.load()
+
+# Load by sections
+loader = XMLLoader(
+    "examples/din_document.xml",
+    split_by_tag="din:section",
+    metadata_tags=["din:title"]
+)
+sections = loader.load()
+
+# Extract just the definitions
+loader = XMLLoader(
+    "examples/din_document.xml",
+    split_by_tag="din:definition",
+    content_tags=["din:term", "din:description"]
+)
+definitions = loader.load()
+```
+
+### 2. Use It in a RAG System
+
+The advanced demo (`din_rag_demo.py`) shows how to use the DIN document in a full RAG system:
+
+- It loads each section as a separate document
+-

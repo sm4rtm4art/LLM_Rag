@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library>
+  <metadata>
+    <name>Public Library Collection</name>
+    <lastUpdated>2023-12-15</lastUpdated>
+    <version>2.1</version>
+  </metadata>
+
+  <book category="fiction" id="B001">
+    <title>The Great Gatsby</title>
+    <author>F. Scott Fitzgerald</author>
+    <year>1925</year>
+    <publisher>Charles Scribner's Sons</publisher>
+    <description>
+      A novel set in the Jazz Age on Long Island, the novel depicts first-person
+      narrator Nick Carraway's interactions with mysterious millionaire Jay Gatsby.
+    </description>
+    <keywords>
+      <keyword>Jazz Age</keyword>
+      <keyword>American Dream</keyword>
+      <keyword>Wealth</keyword>
+    </keywords>
+  </book>
+
+  <book category="non-fiction" id="B002">
+    <title>Sapiens: A Brief History of Humankind</title>
+    <author>Yuval Noah Harari</author>
+    <year>2011</year>
+    <publisher>Harper</publisher>
+    <description>
+      A book that examines the history of humankind from the evolution of archaic human
+      species in the Stone Age up to the twenty-first century.
+    </description>
+    <keywords>
+      <keyword>History</keyword>
+      <keyword>Evolution</keyword>
+      <keyword>Anthropology</keyword>
+    </keywords>
+  </book>
+
+  <book category="fiction" id="B003">
+    <title>To Kill a Mockingbird</title>
+    <author>Harper Lee</author>
+    <year>1960</year>
+    <publisher>J. B. Lippincott & Co.</publisher>
+    <description>
+      The story of the Finch family, focusing on the growth of the father's children and
+      their changing perspective on attorney Atticus Finch.
+    </description>
+    <keywords>
+      <keyword>Southern Gothic</keyword>
+      <keyword>Coming of Age</keyword>
+      <keyword>Social Issues</keyword>
+    </keywords>
+  </book>
+</library>
