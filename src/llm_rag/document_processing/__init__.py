@@ -9,8 +9,8 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, TypeAlias, Union
 
 # Re-export from existing modules for backward compatibility
-from .chunking import CharacterTextChunker, RecursiveTextChunker
-from .processors import DocumentProcessor, TextSplitter
+from .chunking import CharacterTextChunker, RecursiveTextChunker  # noqa: F401
+from .processors import DocumentProcessor, TextSplitter  # noqa: F401
 
 # Type aliases to improve readability and avoid long lines
 DocumentMetadata: TypeAlias = Dict[str, Any]
@@ -54,18 +54,28 @@ class DocumentLoader(ABC):
         pass
 
 
-# Import the new modular loaders
-from .loaders import (  # noqa: E402
-    CSVLoader,
-    DirectoryLoader,
-    EnhancedPDFLoader,
-    JSONLoader,
-    PDFLoader,
-    TextFileLoader,
-    WebLoader,
-    WebPageLoader,
-    XMLLoader,
-)
+# Import the new modular loaders with error handling in case they're not available
+try:
+    from .loaders import (  # noqa: E402
+        CSVLoader,
+        DirectoryLoader,
+        EnhancedPDFLoader,
+        JSONLoader,
+        PDFLoader,
+        TextFileLoader,
+        WebLoader,
+        WebPageLoader,
+        XMLLoader,
+    )
+
+    _has_loaders = True
+except ImportError as e:
+    warnings.warn(
+        f"Error importing document loaders: {str(e)}. Some functionality may be limited.",
+        ImportWarning,
+        stacklevel=2,
+    )
+    _has_loaders = False
 
 # Show deprecation warning for directly importing from this module
 warnings.warn(
@@ -76,8 +86,8 @@ warnings.warn(
     stacklevel=2,
 )
 
-# These will be added in the new modular structure
-__all__ = [
+# Define the exports based on what's available
+_common_exports = [
     "DocumentMetadata",
     "DocumentContent",
     "Document",
@@ -87,13 +97,19 @@ __all__ = [
     "TextSplitter",
     "CharacterTextChunker",
     "RecursiveTextChunker",
-    "CSVLoader",
-    "DirectoryLoader",
-    "EnhancedPDFLoader",
-    "JSONLoader",
-    "PDFLoader",
-    "TextFileLoader",
-    "WebLoader",
-    "WebPageLoader",
-    "XMLLoader",
 ]
+
+if _has_loaders:
+    __all__ = _common_exports + [
+        "CSVLoader",
+        "DirectoryLoader",
+        "EnhancedPDFLoader",
+        "JSONLoader",
+        "PDFLoader",
+        "TextFileLoader",
+        "WebLoader",
+        "WebPageLoader",
+        "XMLLoader",
+    ]
+else:
+    __all__ = _common_exports

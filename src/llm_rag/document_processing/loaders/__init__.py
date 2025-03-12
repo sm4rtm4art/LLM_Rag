@@ -27,14 +27,33 @@ from .json_loader import JSONLoader
 from .pdf_loaders import EnhancedPDFLoader, PDFLoader
 from .web_loader import WebLoader, WebPageLoader
 
-# Get the path to the legacy loaders.py file that's now in quarantine_backup
-# Using absolute path resolution to make sure we find the file
-project_root = Path(__file__).parent.parent.parent.parent.parent
-loaders_path = project_root / "quarantine_backup" / "document_processing" / "loaders.py"
-spec = importlib.util.spec_from_file_location("legacy_loaders", loaders_path)
-legacy_loaders = importlib.util.module_from_spec(spec)
-sys.modules["legacy_loaders"] = legacy_loaders
-spec.loader.exec_module(legacy_loaders)
+# Try to load legacy loaders, but allow it to fail gracefully in CI environments
+try:
+    # Using absolute path resolution to make sure we find the file
+    project_root = Path(__file__).parent.parent.parent.parent.parent
+    loaders_path = project_root / "quarantine_backup" / "document_processing" / "loaders.py"
+
+    if loaders_path.exists():
+        # Only attempt to load if the file exists
+        spec = importlib.util.spec_from_file_location("legacy_loaders", loaders_path)
+        legacy_loaders = importlib.util.module_from_spec(spec)
+        sys.modules["legacy_loaders"] = legacy_loaders
+        spec.loader.exec_module(legacy_loaders)
+        _has_legacy_loaders = True
+    else:
+        warnings.warn(
+            "Legacy loaders.py file not found. Legacy loader functionality will be disabled.",
+            ImportWarning,
+            stacklevel=2,
+        )
+        _has_legacy_loaders = False
+except Exception as e:
+    warnings.warn(
+        f"Failed to import legacy loaders: {str(e)}. Legacy loader functionality will be disabled.",
+        ImportWarning,
+        stacklevel=2,
+    )
+    _has_legacy_loaders = False
 
 
 # Function to generate deprecation warning
@@ -48,21 +67,92 @@ def _deprecation_warning(old_class, new_class):
     )
 
 
-# Create wrapper classes for legacy loaders with deprecation warnings
-class LegacyCSVLoader(legacy_loaders.CSVLoader):
-    """Legacy CSV loader wrapper that emits deprecation warnings.
+# Define dummy legacy loader classes that raise NotImplementedError if legacy loaders aren't available
+if not _has_legacy_loaders:
+    # Create base exception class for legacy loaders
+    class LegacyLoaderNotAvailableError(NotImplementedError):
+        """Exception raised when legacy loaders are requested but not available."""
 
-    DEPRECATED: Use CSVLoader from llm_rag.document_processing.loaders
-    instead.
-    """
+        def __init__(self, loader_name):
+            """Initialize with loader name."""
+            super().__init__(
+                f"{loader_name} is not available because the legacy loaders.py file "
+                f"is not present. Please use the new loaders from "
+                f"llm_rag.document_processing.loaders instead."
+            )
 
-    def __init__(self, *args, **kwargs):
-        """Initialize with deprecation warning.
+    # Create placeholder classes for all legacy loaders
+    class LegacyCSVLoader:
+        """Legacy CSV loader placeholder that raises error when legacy file is not available."""
 
-        Parameters are passed to the underlying loader.
+        def __init__(self, *args, **kwargs):
+            """Raise error as the legacy implementation is not available."""
+            raise LegacyLoaderNotAvailableError("LegacyCSVLoader")
+
+    class LegacyDirectoryLoader:
+        """Legacy directory loader placeholder that raises error when legacy file is not available."""
+
+        def __init__(self, *args, **kwargs):
+            """Raise error as the legacy implementation is not available."""
+            raise LegacyLoaderNotAvailableError("LegacyDirectoryLoader")
+
+    class LegacyDocumentLoader:
+        """Legacy document loader placeholder that raises error when legacy file is not available."""
+
+        def __init__(self, *args, **kwargs):
+            """Raise error as the legacy implementation is not available."""
+            raise LegacyLoaderNotAvailableError("LegacyDocumentLoader")
+
+    class LegacyEnhancedPDFLoader:
+        """Legacy enhanced PDF loader placeholder that raises error when legacy file is not available."""
+
+        def __init__(self, *args, **kwargs):
+            """Raise error as the legacy implementation is not available."""
+            raise LegacyLoaderNotAvailableError("LegacyEnhancedPDFLoader")
+
+    class LegacyJSONLoader:
+        """Legacy JSON loader placeholder that raises error when legacy file is not available."""
+
+        def __init__(self, *args, **kwargs):
+            """Raise error as the legacy implementation is not available."""
+            raise LegacyLoaderNotAvailableError("LegacyJSONLoader")
+
+    class LegacyPDFLoader:
+        """Legacy PDF loader placeholder that raises error when legacy file is not available."""
+
+        def __init__(self, *args, **kwargs):
+            """Raise error as the legacy implementation is not available."""
+            raise LegacyLoaderNotAvailableError("LegacyPDFLoader")
+
+    class LegacyTextFileLoader:
+        """Legacy text file loader placeholder that raises error when legacy file is not available."""
+
+        def __init__(self, *args, **kwargs):
+            """Raise error as the legacy implementation is not available."""
+            raise LegacyLoaderNotAvailableError("LegacyTextFileLoader")
+
+    class LegacyWebPageLoader:
+        """Legacy web page loader placeholder that raises error when legacy file is not available."""
+
+        def __init__(self, *args, **kwargs):
+            """Raise error as the legacy implementation is not available."""
+            raise LegacyLoaderNotAvailableError("LegacyWebPageLoader")
+else:
+    # Create wrapper classes for legacy loaders with deprecation warnings
+    class LegacyCSVLoader(legacy_loaders.CSVLoader):
+        """Legacy CSV loader wrapper that emits deprecation warnings.
+
+        DEPRECATED: Use CSVLoader from llm_rag.document_processing.loaders
+        instead.
         """
-        _deprecation_warning(legacy_loaders.CSVLoader, CSVLoader)
-        super().__init__(*args, **kwargs)
+
+        def __init__(self, *args, **kwargs):
+            """Initialize with deprecation warning.
+
+            Parameters are passed to the underlying loader.
+            """
+            _deprecation_warning(legacy_loaders.CSVLoader, CSVLoader)
+            super().__init__(*args, **kwargs)
 
 
 class LegacyDirectoryLoader(legacy_loaders.DirectoryLoader):
