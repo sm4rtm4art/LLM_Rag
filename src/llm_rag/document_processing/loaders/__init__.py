@@ -5,13 +5,13 @@ All loaders implement the DocumentLoader interface and return standardized
 documents.
 """
 
+# Import the base classes and interfaces first
 # Import the legacy loaders directly from the loaders.py file
 # to avoid circular imports
 import importlib.util
 import sys
 from pathlib import Path
 
-# Import all the modules we need to re-export
 from .base import (
     DirectoryLoader as BaseDirectoryLoader,
 )
@@ -24,21 +24,19 @@ from .base import (
 from .base import (
     WebLoader as BaseWebLoader,
 )
+
+# Import the concrete loader implementations
 from .directory_loader import DirectoryLoader
+
+# Import factory functions
 from .factory import (
     get_available_loader_extensions,
     load_document,
     load_documents_from_directory,
 )
-from .file_loaders import (
-    CSVLoader,
-    TextFileLoader,
-)
+from .file_loaders import CSVLoader, TextFileLoader
 from .json_loader import JSONLoader
-from .pdf_loaders import (
-    EnhancedPDFLoader,
-    PDFLoader,
-)
+from .pdf_loaders import EnhancedPDFLoader, PDFLoader
 from .web_loader import WebLoader, WebPageLoader
 
 # Get the path to the legacy loaders.py file

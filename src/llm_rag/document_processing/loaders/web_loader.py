@@ -73,10 +73,13 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
 
         """
         if not REQUESTS_AVAILABLE:
-            raise ImportError("Requests library is required for WebLoader. Install it with 'pip install requests'.")
+            raise ImportError("Requests library is required for WebLoader. Install it with 'pip install requests'")
 
         self.url = url
         self.headers = headers or {}
+        # Add default User-Agent if not provided
+        if "User-Agent" not in self.headers:
+            self.headers["User-Agent"] = "Mozilla/5.0 (compatible; LLM-RAG/1.0; +https://github.com/example/llm-rag)"
         self.extract_metadata = extract_metadata
         self.extract_images = extract_images
         self.encoding = encoding
@@ -249,12 +252,9 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
         return [{"content": content, "metadata": metadata}]
 
 
-class WebPageLoader(WebLoader):
-    """Legacy name for WebLoader for backward compatibility."""
-
-    pass
-
-
-# Register the loaders
+# Register the loader
 registry.register(WebLoader, extensions=["html", "htm"])
+
+# Alias for backward compatibility
+WebPageLoader = WebLoader
 registry.register(WebPageLoader, name="WebPageLoader")
