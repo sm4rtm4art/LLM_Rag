@@ -91,9 +91,12 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
         # Check if we have markdown support if needed
         if html_mode == "markdown":
             try:
-                import html2text
+                import importlib.util
 
-                self._has_html2text = True
+                if importlib.util.find_spec("html2text") is not None:
+                    self._has_html2text = True
+                else:
+                    raise ImportError("html2text module not found")
             except ImportError:
                 logger.warning("html2text not available. Using plain text extraction instead.")
                 self._has_html2text = False
@@ -173,7 +176,7 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
 
         except Exception as e:
             logger.error(f"Error loading URL {url}: {e}")
-            raise Exception(f"Error loading URL {url}: {str(e)}")
+            raise Exception(f"Error loading URL {url}: {str(e)}") from e
 
     def _process_html(self, html_content: str, url: str, metadata: Dict) -> Documents:
         """Process HTML content into documents.

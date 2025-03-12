@@ -4,6 +4,7 @@ This module provides document loaders for various file types including text, CSV
 """
 
 import csv
+import importlib.util
 import logging
 from pathlib import Path
 from typing import List, Optional, Union
@@ -13,23 +14,6 @@ from .base import DocumentLoader, FileLoader, registry
 
 logger = logging.getLogger(__name__)
 
-# Optional imports for PDF processing
-try:
-    import fitz  # PyMuPDF
-
-    PYMUPDF_AVAILABLE = True
-except ImportError:
-    PYMUPDF_AVAILABLE = False
-    logger.warning("PyMuPDF not available. PDF loading capabilities will be limited.")
-
-try:
-    from PyPDF2 import PdfReader
-
-    PYPDF2_AVAILABLE = True
-except ImportError:
-    PYPDF2_AVAILABLE = False
-    logger.warning("PyPDF2 not available. Some PDF loading capabilities may be affected.")
-
 # Optional imports for pandas
 try:
     import pandas as pd
@@ -38,6 +22,16 @@ try:
 except ImportError:
     PANDAS_AVAILABLE = False
     logger.warning("Pandas not available. Some CSV/Excel loading capabilities will be affected.")
+
+# Check for PyMuPDF availability
+PYMUPDF_AVAILABLE = importlib.util.find_spec("fitz") is not None
+if not PYMUPDF_AVAILABLE:
+    logger.warning("PyMuPDF not available. PDF loading capabilities will be limited.")
+
+# Check for PyPDF2 availability
+PYPDF2_AVAILABLE = importlib.util.find_spec("PyPDF2") is not None
+if not PYPDF2_AVAILABLE:
+    logger.warning("PyPDF2 not available. PDF loading capabilities will be limited.")
 
 
 class TextFileLoader(DocumentLoader, FileLoader):

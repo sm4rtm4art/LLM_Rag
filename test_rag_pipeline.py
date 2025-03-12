@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-End Test of the RAG Pipeline
+"""End-to-End Test of the RAG Pipeline.
 
 This script tests the complete RAG pipeline using the refactored document
 loaders.

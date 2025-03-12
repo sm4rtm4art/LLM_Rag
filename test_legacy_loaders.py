@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test script for legacy loaders.py
+"""Test script for legacy loaders.py.
 
 This script tests that the legacy loaders from loaders.py still work after refactoring.
 """

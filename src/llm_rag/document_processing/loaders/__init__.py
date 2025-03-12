@@ -11,6 +11,36 @@ import importlib.util
 import sys
 from pathlib import Path
 
+# Import all the modules we need to re-export
+from .base import (
+    DirectoryLoader as BaseDirectoryLoader,
+)
+from .base import (
+    DocumentLoader,
+    FileLoader,
+    LoaderRegistry,
+    registry,
+)
+from .base import (
+    WebLoader as BaseWebLoader,
+)
+from .directory_loader import DirectoryLoader
+from .factory import (
+    get_available_loader_extensions,
+    load_document,
+    load_documents_from_directory,
+)
+from .file_loaders import (
+    CSVLoader,
+    TextFileLoader,
+)
+from .json_loader import JSONLoader
+from .pdf_loaders import (
+    EnhancedPDFLoader,
+    PDFLoader,
+)
+from .web_loader import WebLoader, WebPageLoader
+
 # Get the path to the legacy loaders.py file
 loaders_path = Path(__file__).parent.parent / "loaders.py"
 spec = importlib.util.spec_from_file_location("legacy_loaders", loaders_path)
@@ -27,48 +57,6 @@ LegacyJSONLoader = legacy_loaders.JSONLoader
 LegacyPDFLoader = legacy_loaders.PDFLoader
 LegacyTextFileLoader = legacy_loaders.TextFileLoader
 LegacyWebPageLoader = legacy_loaders.WebPageLoader
-
-# Re-export the base classes and interfaces
-from .base import (
-    DirectoryLoader as BaseDirectoryLoader,
-)
-from .base import (
-    DocumentLoader,
-    FileLoader,
-    LoaderRegistry,
-    registry,
-)
-from .base import (
-    WebLoader as BaseWebLoader,
-)
-
-# Re-export directory loader
-from .directory_loader import DirectoryLoader
-
-# Re-export the factory functions
-from .factory import (
-    get_available_loader_extensions,
-    load_document,
-    load_documents_from_directory,
-)
-
-# Re-export the file loaders
-from .file_loaders import (
-    CSVLoader,
-    TextFileLoader,
-)
-
-# Re-export JSON loader
-from .json_loader import JSONLoader
-
-# Re-export PDF loaders
-from .pdf_loaders import (
-    EnhancedPDFLoader,
-    PDFLoader,
-)
-
-# Re-export web loader
-from .web_loader import WebLoader, WebPageLoader
 
 # For backward compatibility and public API access
 __all__ = [

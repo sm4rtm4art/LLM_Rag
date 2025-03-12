@@ -46,7 +46,7 @@ class PDFLoader(DocumentLoader, FileLoader):
         start_page: int = 0,
         end_page: Optional[int] = None,
     ):
-        """Initialize the PDF loader.
+        r"""Initialize the PDF loader.
 
         Parameters
         ----------
@@ -125,7 +125,7 @@ class PDFLoader(DocumentLoader, FileLoader):
                 raise ImportError("No PDF processing library available. Install PyMuPDF or PyPDF2.")
         except Exception as e:
             logger.error(f"Error loading PDF file {file_path}: {e}")
-            raise Exception(f"Error loading PDF file {file_path}: {str(e)}")
+            raise Exception(f"Error loading PDF file {file_path}: {str(e)}") from e
 
     def _load_with_pymupdf(self, file_path: Path) -> Documents:
         """Load PDF using PyMuPDF.
@@ -242,7 +242,7 @@ class EnhancedPDFLoader(PDFLoader):
         start_page: int = 0,
         end_page: Optional[int] = None,
     ):
-        """Initialize the enhanced PDF loader.
+        r"""Initialize the enhanced PDF loader.
 
         Parameters
         ----------
@@ -278,21 +278,34 @@ class EnhancedPDFLoader(PDFLoader):
         # Check for optional dependencies
         if self.use_ocr:
             try:
-                import PIL
-                import pytesseract
+                import importlib.util
 
-                self._has_ocr = True
-            except ImportError:
-                logger.warning("OCR requested but pytesseract or PIL not available.")
+                has_pil = importlib.util.find_spec("PIL") is not None
+                has_pytesseract = importlib.util.find_spec("pytesseract") is not None
+
+                if has_pil and has_pytesseract:
+                    self._has_ocr = True
+                else:
+                    missing = []
+                    if not has_pil:
+                        missing.append("PIL")
+                    if not has_pytesseract:
+                        missing.append("pytesseract")
+                    raise ImportError(f"Missing required modules: {', '.join(missing)}")
+            except ImportError as e:
+                logger.warning(f"OCR requested but dependencies not available: {e}")
                 self._has_ocr = False
         else:
             self._has_ocr = False
 
         if self.extract_tables:
             try:
-                import tabula
+                import importlib.util
 
-                self._has_tabula = True
+                if importlib.util.find_spec("tabula") is not None:
+                    self._has_tabula = True
+                else:
+                    raise ImportError("tabula module not found")
             except ImportError:
                 logger.warning("Table extraction requested but tabula-py not available.")
                 self._has_tabula = False

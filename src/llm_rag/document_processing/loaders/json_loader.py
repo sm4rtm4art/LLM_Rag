@@ -59,9 +59,12 @@ class JSONLoader(DocumentLoader, FileLoader):
         # Check if jq is available if a filter is provided
         if jq_filter:
             try:
-                import jq
+                import importlib.util
 
-                self._has_jq = True
+                if importlib.util.find_spec("jq") is not None:
+                    self._has_jq = True
+                else:
+                    raise ImportError("jq module not found")
             except ImportError:
                 logger.warning("jq library not available. JQ filtering will be disabled.")
                 self._has_jq = False
