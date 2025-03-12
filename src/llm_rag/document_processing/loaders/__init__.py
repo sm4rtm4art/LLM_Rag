@@ -27,6 +27,10 @@ from .json_loader import JSONLoader
 from .pdf_loaders import EnhancedPDFLoader, PDFLoader
 from .web_loader import WebLoader, WebPageLoader
 
+# Set default for legacy loaders
+_has_legacy_loaders = False
+legacy_loaders = None
+
 # Try to load legacy loaders, but allow it to fail gracefully in CI environments
 try:
     # Using absolute path resolution to make sure we find the file
@@ -46,18 +50,17 @@ try:
             ImportWarning,
             stacklevel=2,
         )
-        _has_legacy_loaders = False
 except Exception as e:
     warnings.warn(
         f"Failed to import legacy loaders: {str(e)}. Legacy loader functionality will be disabled.",
         ImportWarning,
         stacklevel=2,
     )
-    _has_legacy_loaders = False
 
 
 # Function to generate deprecation warning
 def _deprecation_warning(old_class, new_class):
+    """Generate a deprecation warning for legacy loaders."""
     warnings.warn(
         f"{old_class.__name__} is deprecated and will be removed in a "
         f"future version. Use {new_class.__name__} from "
@@ -67,20 +70,142 @@ def _deprecation_warning(old_class, new_class):
     )
 
 
-# Define dummy legacy loader classes that raise NotImplementedError if legacy loaders aren't available
-if not _has_legacy_loaders:
-    # Create base exception class for legacy loaders
-    class LegacyLoaderNotAvailableError(NotImplementedError):
-        """Exception raised when legacy loaders are requested but not available."""
+# Base exception for legacy loader not available
+class LegacyLoaderNotAvailableError(NotImplementedError):
+    """Exception raised when legacy loaders are requested but not available."""
 
-        def __init__(self, loader_name):
-            """Initialize with loader name."""
-            super().__init__(
-                f"{loader_name} is not available because the legacy loaders.py file "
-                f"is not present. Please use the new loaders from "
-                f"llm_rag.document_processing.loaders instead."
-            )
+    def __init__(self, loader_name):
+        """Initialize with loader name."""
+        super().__init__(
+            f"{loader_name} is not available because the legacy loaders.py file "
+            f"is not present. Please use the new loaders from "
+            f"llm_rag.document_processing.loaders instead."
+        )
 
+
+# Define legacy loader classes based on availability
+if _has_legacy_loaders:
+    # Create wrapper classes for legacy loaders with deprecation warnings
+    class LegacyCSVLoader(legacy_loaders.CSVLoader):
+        """Legacy CSV loader wrapper that emits deprecation warnings.
+
+        DEPRECATED: Use CSVLoader from llm_rag.document_processing.loaders
+        instead.
+        """
+
+        def __init__(self, *args, **kwargs):
+            """Initialize with deprecation warning.
+
+            Parameters are passed to the underlying loader.
+            """
+            _deprecation_warning(legacy_loaders.CSVLoader, CSVLoader)
+            super().__init__(*args, **kwargs)
+
+    class LegacyDirectoryLoader(legacy_loaders.DirectoryLoader):
+        """Legacy directory loader wrapper that emits deprecation warnings.
+
+        DEPRECATED: Use DirectoryLoader from llm_rag.document_processing.loaders
+        instead.
+        """
+
+        def __init__(self, *args, **kwargs):
+            """Initialize with deprecation warning.
+
+            Parameters are passed to the underlying loader.
+            """
+            _deprecation_warning(legacy_loaders.DirectoryLoader, DirectoryLoader)
+            super().__init__(*args, **kwargs)
+
+    class LegacyDocumentLoader(legacy_loaders.DocumentLoader):
+        """Legacy document loader wrapper that emits deprecation warnings.
+
+        DEPRECATED: Use DocumentLoader from llm_rag.document_processing.loaders
+        instead.
+        """
+
+        def __init__(self, *args, **kwargs):
+            """Initialize with deprecation warning.
+
+            Parameters are passed to the underlying loader.
+            """
+            _deprecation_warning(legacy_loaders.DocumentLoader, DocumentLoader)
+            super().__init__(*args, **kwargs)
+
+    class LegacyEnhancedPDFLoader(legacy_loaders.EnhancedPDFLoader):
+        """Legacy enhanced PDF loader wrapper that emits deprecation warnings.
+
+        DEPRECATED: Use EnhancedPDFLoader from llm_rag.document_processing.loaders
+        instead.
+        """
+
+        def __init__(self, *args, **kwargs):
+            """Initialize with deprecation warning.
+
+            Parameters are passed to the underlying loader.
+            """
+            _deprecation_warning(legacy_loaders.EnhancedPDFLoader, EnhancedPDFLoader)
+            super().__init__(*args, **kwargs)
+
+    class LegacyJSONLoader(legacy_loaders.JSONLoader):
+        """Legacy JSON loader wrapper that emits deprecation warnings.
+
+        DEPRECATED: Use JSONLoader from llm_rag.document_processing.loaders
+        instead.
+        """
+
+        def __init__(self, *args, **kwargs):
+            """Initialize with deprecation warning.
+
+            Parameters are passed to the underlying loader.
+            """
+            _deprecation_warning(legacy_loaders.JSONLoader, JSONLoader)
+            super().__init__(*args, **kwargs)
+
+    class LegacyPDFLoader(legacy_loaders.PDFLoader):
+        """Legacy PDF loader wrapper that emits deprecation warnings.
+
+        DEPRECATED: Use PDFLoader from llm_rag.document_processing.loaders
+        instead.
+        """
+
+        def __init__(self, *args, **kwargs):
+            """Initialize with deprecation warning.
+
+            Parameters are passed to the underlying loader.
+            """
+            _deprecation_warning(legacy_loaders.PDFLoader, PDFLoader)
+            super().__init__(*args, **kwargs)
+
+    class LegacyTextFileLoader(legacy_loaders.TextFileLoader):
+        """Legacy text file loader wrapper that emits deprecation warnings.
+
+        DEPRECATED: Use TextFileLoader from llm_rag.document_processing.loaders
+        instead.
+        """
+
+        def __init__(self, *args, **kwargs):
+            """Initialize with deprecation warning.
+
+            Parameters are passed to the underlying loader.
+            """
+            _deprecation_warning(legacy_loaders.TextFileLoader, TextFileLoader)
+            super().__init__(*args, **kwargs)
+
+    class LegacyWebPageLoader(legacy_loaders.WebPageLoader):
+        """Legacy web page loader wrapper that emits deprecation warnings.
+
+        DEPRECATED: Use WebPageLoader from llm_rag.document_processing.loaders
+        instead.
+        """
+
+        def __init__(self, *args, **kwargs):
+            """Initialize with deprecation warning.
+
+            Parameters are passed to the underlying loader.
+            """
+            _deprecation_warning(legacy_loaders.WebPageLoader, WebPageLoader)
+            super().__init__(*args, **kwargs)
+else:
     # Create placeholder classes for all legacy loaders
     class LegacyCSVLoader:
         """Legacy CSV loader placeholder that raises error when legacy file is not available."""
@@ -137,134 +262,6 @@ if not _has_legacy_loaders:
         def __init__(self, *args, **kwargs):
             """Raise error as the legacy implementation is not available."""
             raise LegacyLoaderNotAvailableError("LegacyWebPageLoader")
-else:
-    # Create wrapper classes for legacy loaders with deprecation warnings
-    class LegacyCSVLoader(legacy_loaders.CSVLoader):
-        """Legacy CSV loader wrapper that emits deprecation warnings.
-
-        DEPRECATED: Use CSVLoader from llm_rag.document_processing.loaders
-        instead.
-        """
-
-        def __init__(self, *args, **kwargs):
-            """Initialize with deprecation warning.
-
-            Parameters are passed to the underlying loader.
-            """
-            _deprecation_warning(legacy_loaders.CSVLoader, CSVLoader)
-            super().__init__(*args, **kwargs)
-
-
-class LegacyDirectoryLoader(legacy_loaders.DirectoryLoader):
-    """Legacy directory loader wrapper that emits deprecation warnings.
-
-    DEPRECATED: Use DirectoryLoader from llm_rag.document_processing.loaders
-    instead.
-    """
-
-    def __init__(self, *args, **kwargs):
-        """Initialize with deprecation warning.
-
-        Parameters are passed to the underlying loader.
-        """
-        _deprecation_warning(legacy_loaders.DirectoryLoader, DirectoryLoader)
-        super().__init__(*args, **kwargs)
-
-
-class LegacyDocumentLoader(legacy_loaders.DocumentLoader):
-    """Legacy document loader wrapper that emits deprecation warnings.
-
-    DEPRECATED: Use DocumentLoader from llm_rag.document_processing.loaders
-    instead.
-    """
-
-    def __init__(self, *args, **kwargs):
-        """Initialize with deprecation warning.
-
-        Parameters are passed to the underlying loader.
-        """
-        _deprecation_warning(legacy_loaders.DocumentLoader, DocumentLoader)
-        super().__init__(*args, **kwargs)
-
-
-class LegacyEnhancedPDFLoader(legacy_loaders.EnhancedPDFLoader):
-    """Legacy enhanced PDF loader wrapper that emits deprecation warnings.
-
-    DEPRECATED: Use EnhancedPDFLoader from llm_rag.document_processing.loaders
-    instead.
-    """
-
-    def __init__(self, *args, **kwargs):
-        """Initialize with deprecation warning.
-
-        Parameters are passed to the underlying loader.
-        """
-        _deprecation_warning(legacy_loaders.EnhancedPDFLoader, EnhancedPDFLoader)
-        super().__init__(*args, **kwargs)
-
-
-class LegacyJSONLoader(legacy_loaders.JSONLoader):
-    """Legacy JSON loader wrapper that emits deprecation warnings.
-
-    DEPRECATED: Use JSONLoader from llm_rag.document_processing.loaders
-    instead.
-    """
-
-    def __init__(self, *args, **kwargs):
-        """Initialize with deprecation warning.
-
-        Parameters are passed to the underlying loader.
-        """
-        _deprecation_warning(legacy_loaders.JSONLoader, JSONLoader)
-        super().__init__(*args, **kwargs)
-
-
-class LegacyPDFLoader(legacy_loaders.PDFLoader):
-    """Legacy PDF loader wrapper that emits deprecation warnings.
-
-    DEPRECATED: Use PDFLoader from llm_rag.document_processing.loaders
-    instead.
-    """
-
-    def __init__(self, *args, **kwargs):
-        """Initialize with deprecation warning.
-
-        Parameters are passed to the underlying loader.
-        """
-        _deprecation_warning(legacy_loaders.PDFLoader, PDFLoader)
-        super().__init__(*args, **kwargs)
-
-
-class LegacyTextFileLoader(legacy_loaders.TextFileLoader):
-    """Legacy text file loader wrapper that emits deprecation warnings.
-
-    DEPRECATED: Use TextFileLoader from llm_rag.document_processing.loaders
-    instead.
-    """
-
-    def __init__(self, *args, **kwargs):
-        """Initialize with deprecation warning.
-
-        Parameters are passed to the underlying loader.
-        """
-        _deprecation_warning(legacy_loaders.TextFileLoader, TextFileLoader)
-        super().__init__(*args, **kwargs)
-
-
-class LegacyWebPageLoader(legacy_loaders.WebPageLoader):
-    """Legacy web page loader wrapper that emits deprecation warnings.
-
-    DEPRECATED: Use WebPageLoader from llm_rag.document_processing.loaders
-    instead.
-    """
-
-    def __init__(self, *args, **kwargs):
-        """Initialize with deprecation warning.
-
-        Parameters are passed to the underlying loader.
-        """
-        _deprecation_warning(legacy_loaders.WebPageLoader, WebPageLoader)
-        super().__init__(*args, **kwargs)
 
 
 # For backward compatibility and public API access
