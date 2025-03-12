@@ -34,7 +34,7 @@ from .factory import (
     load_document,
     load_documents_from_directory,
 )
-from .file_loaders import CSVLoader, TextFileLoader
+from .file_loaders import CSVLoader, TextFileLoader, XMLLoader
 from .json_loader import JSONLoader
 from .pdf_loaders import EnhancedPDFLoader, PDFLoader
 from .web_loader import WebLoader, WebPageLoader
@@ -74,6 +74,7 @@ __all__ = [
     "TextFileLoader",
     "WebLoader",
     "WebPageLoader",
+    "XMLLoader",
     # Factory functions
     "load_document",
     "load_documents_from_directory",

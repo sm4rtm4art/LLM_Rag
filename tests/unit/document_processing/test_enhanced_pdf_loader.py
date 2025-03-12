@@ -73,8 +73,12 @@ class TestEnhancedPDFLoader(unittest.TestCase):
         # Create loader
         loader = EnhancedPDFLoader(file_path=self.test_pdf_path)
 
-        # Patch the exists method to return True
-        with patch("pathlib.Path.exists", return_value=True):
+        # Patch the exists method to return True and ensure PYMUPDF_AVAILABLE is True
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch("src.llm_rag.document_processing.loaders.pdf_loaders.PYMUPDF_AVAILABLE", True),
+            patch.object(EnhancedPDFLoader, "_load_with_pypdf2", return_value=[]),
+        ):
             # Act
             documents = loader.load()
 
@@ -95,8 +99,13 @@ class TestEnhancedPDFLoader(unittest.TestCase):
         enhanced_loader = EnhancedPDFLoader(file_path=self.test_pdf_path)
         regular_loader = PDFLoader(file_path=self.test_pdf_path)
 
-        # Patch the exists method to return True
-        with patch("pathlib.Path.exists", return_value=True):
+        # Patch the exists method to return True and ensure PYMUPDF_AVAILABLE is True
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch("src.llm_rag.document_processing.loaders.pdf_loaders.PYMUPDF_AVAILABLE", True),
+            patch.object(EnhancedPDFLoader, "_load_with_pypdf2", return_value=[]),
+            patch.object(PDFLoader, "_load_with_pypdf2", return_value=[]),
+        ):
             # Act
             enhanced_docs = enhanced_loader.load()
             regular_docs = regular_loader.load()
