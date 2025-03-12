@@ -24,28 +24,31 @@ except ImportError:
 pytestmark = pytest.mark.skipif(not has_enhanced_pdf_loader, reason="EnhancedPDFLoader not available")
 
 
-@pytest.mark.skipif(not has_enhanced_pdf_loader, reason="EnhancedPDFLoader not available")
+@pytest.mark.refactoring
 class TestEnhancedPDFLoader(unittest.TestCase):
     """Test cases for the EnhancedPDFLoader class."""
 
     def setUp(self):
         """Set up test fixtures."""
         self.test_pdf_path = "test.pdf"
-        self.output_dir = "test_output"
 
     def test_initialization(self):
         """Test the initialization of EnhancedPDFLoader."""
         # Arrange & Act
         loader = EnhancedPDFLoader(
-            file_path=self.test_pdf_path, extract_images=True, extract_tables=True, output_dir=self.output_dir
+            file_path=self.test_pdf_path, 
+            extract_images=True, 
+            extract_tables=True, 
+            use_ocr=True,
+            ocr_languages="eng"
         )
 
         # Assert
-        self.assertEqual(loader.file_path_str, self.test_pdf_path)
+        self.assertEqual(loader.file_path, Path(self.test_pdf_path))
         self.assertTrue(loader.extract_images)
         self.assertTrue(loader.extract_tables)
-        self.assertTrue(loader.use_enhanced_extraction)
-        self.assertEqual(loader.output_dir, self.output_dir)
+        self.assertTrue(loader.use_ocr)
+        self.assertEqual(loader.ocr_languages, "eng")
 
     def test_initialization_default_values(self):
         """Test the initialization with default values."""
@@ -55,8 +58,7 @@ class TestEnhancedPDFLoader(unittest.TestCase):
         # Assert
         self.assertTrue(loader.extract_images)  # Default is True for enhanced
         self.assertTrue(loader.extract_tables)  # Default is True for enhanced
-        self.assertTrue(loader.use_enhanced_extraction)
-        self.assertIsNone(loader.output_dir)
+        self.assertFalse(loader.use_ocr)  # Default is False
 
     def test_initialization_inheritance(self):
         """Test that EnhancedPDFLoader properly inherits from PDFLoader."""
@@ -66,46 +68,47 @@ class TestEnhancedPDFLoader(unittest.TestCase):
         # Assert
         self.assertIsInstance(loader, PDFLoader)
 
-    @patch.object(PDFLoader, "_load_enhanced")
-    def test_load_calls_load_enhanced(self, mock_load_enhanced):
-        """Test that load() calls _load_enhanced()."""
+    @patch.object(EnhancedPDFLoader, "_load_with_pymupdf")
+    def test_load_calls_load_with_pymupdf(self, mock_load_with_pymupdf):
+        """Test that load() calls _load_with_pymupdf()."""
         # Arrange
-        mock_load_enhanced.return_value = [{"content": "Enhanced content", "metadata": {"filetype": "pdf"}}]
+        mock_load_with_pymupdf.return_value = [{"content": "Enhanced content", "metadata": {"filetype": "pdf"}}]
 
         # Create loader
         loader = EnhancedPDFLoader(file_path=self.test_pdf_path)
 
-        # Act
-        documents = loader.load()
+        # Patch the exists method to return True
+        with patch("pathlib.Path.exists", return_value=True):
+            # Act
+            documents = loader.load()
 
         # Assert
-        mock_load_enhanced.assert_called_once()
+        mock_load_with_pymupdf.assert_called_once()
         self.assertEqual(len(documents), 1)
         self.assertEqual(documents[0]["content"], "Enhanced content")
 
-    @patch.object(EnhancedPDFLoader, "_load_enhanced")
-    @patch.object(PDFLoader, "load")
-    def test_load_vs_parent_load(self, mock_parent_load, mock_load_enhanced):
-        """Test that EnhancedPDFLoader load() differs from parent load()."""
+    @patch.object(EnhancedPDFLoader, "_load_with_pymupdf")
+    @patch.object(PDFLoader, "_load_with_pymupdf")
+    def test_load_vs_parent_load(self, mock_parent_load, mock_enhanced_load):
+        """Test that EnhancedPDFLoader _load_with_pymupdf() extends parent method."""
         # Arrange
-        mock_load_enhanced.return_value = [{"content": "Enhanced content", "metadata": {"filetype": "pdf_enhanced"}}]
+        mock_enhanced_load.return_value = [{"content": "Enhanced content", "metadata": {"filetype": "pdf"}}]
         mock_parent_load.return_value = [{"content": "Regular content", "metadata": {"filetype": "pdf"}}]
 
         # Create loaders
         enhanced_loader = EnhancedPDFLoader(file_path=self.test_pdf_path)
-        regular_loader = PDFLoader(file_path=self.test_pdf_path, use_enhanced_extraction=False)
+        regular_loader = PDFLoader(file_path=self.test_pdf_path)
 
-        # Act
-        enhanced_docs = enhanced_loader.load()
-        regular_docs = regular_loader.load()
+        # Patch the exists method to return True
+        with patch("pathlib.Path.exists", return_value=True):
+            # Act
+            enhanced_docs = enhanced_loader.load()
+            regular_docs = regular_loader.load()
 
         # Assert
-        mock_load_enhanced.assert_called_once()
-        mock_parent_load.assert_called_once()
+        mock_enhanced_load.assert_called_once()
         self.assertEqual(enhanced_docs[0]["content"], "Enhanced content")
-        self.assertEqual(enhanced_docs[0]["metadata"]["filetype"], "pdf_enhanced")
         self.assertEqual(regular_docs[0]["content"], "Regular content")
-        self.assertEqual(regular_docs[0]["metadata"]["filetype"], "pdf")
 
 
 @pytest.mark.local_only
@@ -124,13 +127,13 @@ class TestEnhancedPDFLoaderWithRealFiles:
         """Test enhanced extraction from a real PDF file."""
         # This test will only run if the test PDF file exists
         pdf_path = setup_test_pdf
-        output_dir = "tests/test_data/output_enhanced"
-
-        # Create the output directory if it doesn't exist
-        Path(output_dir).mkdir(exist_ok=True, parents=True)
 
         # Create loader with enhanced extraction
-        loader = EnhancedPDFLoader(file_path=pdf_path, output_dir=output_dir)
+        loader = EnhancedPDFLoader(
+            file_path=pdf_path,
+            extract_images=True,
+            extract_tables=True
+        )
 
         # Load documents
         documents = loader.load()
@@ -141,11 +144,6 @@ class TestEnhancedPDFLoaderWithRealFiles:
         assert isinstance(documents[0], dict)
         assert "content" in documents[0]
         assert "metadata" in documents[0]
-
-        # Clean up output directory after test
-        # This is commented out to allow inspection of the output
-        # import shutil
-        # shutil.rmtree(output_dir)
 
 
 if __name__ == "__main__":
