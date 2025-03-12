@@ -1,7 +1,5 @@
 """Unit tests for the PDFLoader image and table extraction methods."""
 
-import builtins
-import sys
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
@@ -81,12 +79,12 @@ class TestPDFExtraction(unittest.TestCase):
             # Mock the _load_with_pymupdf method to test image extraction is called
             with patch.object(PDFLoader, "_load_with_pymupdf") as mock_load:
                 mock_load.return_value = [{"content": "Test content", "metadata": {}}]
-                
+
                 # Patch the exists method to return True
                 with patch("pathlib.Path.exists", return_value=True):
-                    # Act
-                    documents = loader.load()
-                
+                    # Act - assign to _ to indicate intentionally unused
+                    _ = loader.load()
+
                 # Assert that the method was called
                 mock_load.assert_called_once()
 
@@ -116,14 +114,14 @@ class TestPDFExtraction(unittest.TestCase):
             # Mock the _load_with_pypdf2 method to test image extraction is called
             with patch.object(PDFLoader, "_load_with_pypdf2") as mock_load:
                 mock_load.return_value = [{"content": "Test content", "metadata": {}}]
-                
+
                 # Completely bypass the load_from_file method to avoid file existence check
                 with patch.object(PDFLoader, "load_from_file") as mock_load_from_file:
                     mock_load_from_file.return_value = [{"content": "Test content", "metadata": {}}]
-                    
-                    # Act
-                    documents = loader.load()
-                
+
+                    # Act - assign to _ to indicate intentionally unused
+                    _ = loader.load()
+
                 # Assert that our method was called (indirectly)
                 mock_load_from_file.assert_called_once()
 
@@ -133,44 +131,43 @@ class TestPDFExtraction(unittest.TestCase):
         mock_tabula = MagicMock()
         mock_df = MockDataFrame()
         mock_tabula.read_pdf.return_value = [mock_df]
-    
+
         # Create a mock pandas module
         class MockPandas:
             DataFrame = MockDataFrame
-    
+
         mock_pd = MockPandas()
-    
+
         # Create loader with table extraction
         loader = PDFLoader(file_path=self.test_pdf_path, extract_tables=True)
-    
+
         # We need to patch the PDFLoader._load_with_pymupdf method
         with patch.object(PDFLoader, "_load_with_pymupdf") as mock_load_pymupdf:
             # Set up the mock to return a document
             mock_load_pymupdf.return_value = [{"content": "Test content", "metadata": {}}]
-    
+
             # Completely bypass the load_from_file method to avoid file existence check
             with patch.object(PDFLoader, "load_from_file") as mock_load_from_file:
                 mock_load_from_file.return_value = [{"content": "Test content", "metadata": {}}]
-    
+
                 # Now patch tabula in the right context
                 with patch.dict("sys.modules", {"tabula": mock_tabula, "pandas": mock_pd}):
                     # Mock the actual extraction method to use our mock tabula
                     original_load = loader.load
-    
+
                     # Replace the load method temporarily
                     def mock_table_extraction(*args, **kwargs):
                         # Call tabula.read_pdf during execution
                         if hasattr(loader, "extract_tables") and loader.extract_tables:
-                            # Convert Path to string to ensure consistent type
                             mock_tabula.read_pdf(str(loader.file_path), pages="all", multiple_tables=True)
                         return mock_load_from_file()
-    
+
                     loader.load = mock_table_extraction
-    
+
                     try:
-                        # Act
-                        documents = loader.load()
-    
+                        # Act - assign to _ to indicate intentionally unused
+                        _ = loader.load()
+
                         # Assert that tabula was used during the load process
                         mock_tabula.read_pdf.assert_called_once_with(
                             str(self.test_pdf_path), pages="all", multiple_tables=True
@@ -191,12 +188,12 @@ class TestPDFExtraction(unittest.TestCase):
         # Completely bypass the load_from_file method to avoid file existence check
         with patch.object(PDFLoader, "load_from_file") as mock_load_from_file:
             mock_load_from_file.return_value = [{"content": "Test content", "metadata": {}}]
-            
+
             # Now patch tabula in the right context
             with patch.dict("sys.modules", {"tabula": mock_tabula}):
                 # Mock the actual extraction method to use our mock tabula
                 original_load = loader.load
-                
+
                 # Replace the load method temporarily
                 def mock_table_extraction(*args, **kwargs):
                     # Try to call tabula.read_pdf, but it will raise an exception
@@ -206,13 +203,13 @@ class TestPDFExtraction(unittest.TestCase):
                     except Exception:
                         pass  # This should be caught by the loader implementation
                     return mock_load_from_file()
-                
+
                 loader.load = mock_table_extraction
-                
+
                 try:
-                    # Act
-                    documents = loader.load()
-                    
+                    # Act - assign to _ to indicate intentionally unused
+                    _ = loader.load()
+
                     # Assert that tabula was attempted to be used
                     mock_tabula.read_pdf.assert_called_once()
                 finally:
@@ -224,7 +221,7 @@ class TestPDFExtraction(unittest.TestCase):
         """Test extracting tables from a single page."""
         # Arrange
         mock_page = MagicMock()
-    
+
         # Create a mock for the page that returns HTML-like content with table
         mock_page.get_text.return_value = """
         <table>
@@ -238,16 +235,16 @@ class TestPDFExtraction(unittest.TestCase):
             </tr>
         </table>
         """
-    
+
         # Create loader with table extraction
         loader = PDFLoader(file_path=self.test_pdf_path, extract_tables=True)
-    
+
         # Setup the mock PDF document and page
         mock_pdf = MagicMock()
         mock_pdf.__len__.return_value = 1
         mock_pdf.__getitem__.return_value = mock_page
         mock_fitz.open.return_value.__enter__.return_value = mock_pdf
-    
+
         # Completely bypass the load_from_file method to avoid file existence check
         with patch.object(PDFLoader, "load_from_file") as mock_load_from_file:
             # Have the load_from_file method call _load_with_pymupdf directly
@@ -261,12 +258,12 @@ class TestPDFExtraction(unittest.TestCase):
                         "metadata": {"page": 0, "source": str(self.test_pdf_path)},
                     }
                 ]
-    
+
             mock_load_from_file.return_value = mock_pymupdf_load()
-    
+
             # Act
             documents = loader.load()
-    
+
             # Assert
             self.assertEqual(len(documents), 1)
             # The document should have been processed by our mock
@@ -285,22 +282,16 @@ class TestPDFExtraction(unittest.TestCase):
         mock_fitz.open.return_value.__enter__.return_value = mock_pdf
 
         # Create a loader with both image and table extraction
-        loader = PDFLoader(
-            file_path=self.test_pdf_path, 
-            extract_images=True, 
-            extract_tables=True
-        )
+        loader = PDFLoader(file_path=self.test_pdf_path, extract_images=True, extract_tables=True)
 
         # Completely bypass the load_from_file method to avoid file existence check
         with patch.object(PDFLoader, "load_from_file") as mock_load_from_file:
             # Setup mock to return content directly
-            mock_load_from_file.return_value = [
-                {"content": "Page content", "metadata": {"page": 0}}
-            ]
-            
+            mock_load_from_file.return_value = [{"content": "Page content", "metadata": {"page": 0}}]
+
             # Act
             documents = loader.load()
-            
+
             # Assert basic expectations
             assert len(documents) == 1
             assert documents[0]["content"] == "Page content"
@@ -324,11 +315,7 @@ class TestPDFExtractionWithRealFiles:
         pdf_path = setup_test_pdf
 
         # Create loader with enhanced extraction
-        loader = PDFLoader(
-            file_path=pdf_path,
-            extract_images=True,
-            extract_tables=True
-        )
+        loader = PDFLoader(file_path=pdf_path, extract_images=True, extract_tables=True)
 
         # Load documents
         documents = loader.load()

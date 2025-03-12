@@ -4,8 +4,8 @@ This module contains tests for various document loaders,
 including TextFileLoader, PDFLoader, DirectoryLoader, etc.
 """
 
-from unittest.mock import MagicMock, mock_open, patch
 from pathlib import Path
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
@@ -36,9 +36,10 @@ except ImportError:
 
 # Try to import PyMuPDF for PDF tests
 try:
-    import fitz
+    # Using importlib to check if fitz is available without importing it
+    import importlib.util
 
-    has_pymupdf = True
+    has_pymupdf = importlib.util.find_spec("fitz") is not None
 except ImportError:
     has_pymupdf = False
 
@@ -83,7 +84,8 @@ class TestTextFileLoader:
         """Test behavior when file is not found."""
         # Arrange
         with patch("builtins.open", side_effect=FileNotFoundError("File not found")):
-            # Also patch Path.exists to return True to bypass the check in __init__
+            # Also patch Path.exists to return True to bypass the
+            # check in __init__
             with patch("pathlib.Path.exists", return_value=True):
                 loader = TextFileLoader(file_path="nonexistent.txt")
 
@@ -150,7 +152,9 @@ class TestPDFLoader:
 
         # Arrange
         with patch("pathlib.Path.exists", return_value=True):
-            with patch("src.llm_rag.document_processing.loaders.pdf_loaders.fitz.open", side_effect=Exception("PDF error")):
+            with patch(
+                "src.llm_rag.document_processing.loaders.pdf_loaders.fitz.open", side_effect=Exception("PDF error")
+            ):
                 loader = PDFLoader(file_path="test.pdf")
 
                 # Act & Assert
@@ -243,7 +247,7 @@ class TestJSONLoader:
         with patch("builtins.open", mock_file):
             with patch("json.load") as mock_json_load:
                 mock_json_load.return_value = {"items": [{"id": 1, "name": "Item 1"}, {"id": 2, "name": "Item 2"}]}
-                
+
                 # Also patch Path.exists to return True
                 with patch("pathlib.Path.exists", return_value=True):
                     loader = JSONLoader(file_path="test.json", content_key="name")
@@ -253,7 +257,8 @@ class TestJSONLoader:
 
                     # Assert
                     mock_file.assert_called_once_with(Path("test.json"), "r", encoding="utf-8")
-                    assert len(documents) == 1  # The entire JSON structure as one document
+                    # The entire JSON structure as one document
+                    assert len(documents) == 1
                     assert documents[0]["metadata"]["source"] == "test.json"
 
 
@@ -278,7 +283,8 @@ class TestWebPageLoader:
         html_content = "<html><body><h1>Test Page</h1><p>Test content</p></body></html>"
         mock_response = MagicMock()
         mock_response.text = html_content
-        mock_response.headers = {"Content-Type": "text/plain"}  # Use plain text to avoid BeautifulSoup
+        # Use plain text to avoid BeautifulSoup
+        mock_response.headers = {"Content-Type": "text/plain"}
         mock_response.status_code = 200
         mock_get.return_value = mock_response
 
@@ -317,7 +323,7 @@ class TestDirectoryLoader:
         """Test loading documents from a directory."""
         # Arrange
         mock_file_paths = [Path("file1.txt"), Path("file2.pdf"), Path("file3.csv")]
-        
+
         # Patch Path.exists and Path.is_dir to return True
         with patch("pathlib.Path.exists", return_value=True):
             with patch("pathlib.Path.is_dir", return_value=True):
@@ -326,7 +332,9 @@ class TestDirectoryLoader:
                     # Mock the file.is_file method to return True
                     with patch("pathlib.Path.is_file", return_value=True):
                         # Mock the load_document function
-                        with patch("src.llm_rag.document_processing.loaders.directory_loader.load_document") as mock_load_document:
+                        with patch(
+                            "src.llm_rag.document_processing.loaders.directory_loader.load_document"
+                        ) as mock_load_document:
                             # Setup mock documents to be returned
                             mock_load_document.side_effect = [
                                 [{"content": "Text content", "metadata": {"source": "file1.txt"}}],

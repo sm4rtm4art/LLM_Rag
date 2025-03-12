@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Test configuration for document processing tests."""
 
+import os
 from unittest.mock import patch
 
 import pytest
-import os
 
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def pytest_configure(config):
 def pytest_collection_modifyitems(config, items):
     """Skip tests marked as refactoring if SKIP_REFACTORING_TESTS is set."""
     skip_refactoring = pytest.mark.skip(reason="Test is being refactored")
-    
+
     # Skip tests being refactored if env var is set (for CI/CD)
     if os.environ.get("SKIP_REFACTORING_TESTS", "").lower() in ("1", "true", "yes"):
         for item in items:

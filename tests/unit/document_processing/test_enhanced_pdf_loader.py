@@ -36,11 +36,7 @@ class TestEnhancedPDFLoader(unittest.TestCase):
         """Test the initialization of EnhancedPDFLoader."""
         # Arrange & Act
         loader = EnhancedPDFLoader(
-            file_path=self.test_pdf_path, 
-            extract_images=True, 
-            extract_tables=True, 
-            use_ocr=True,
-            ocr_languages="eng"
+            file_path=self.test_pdf_path, extract_images=True, extract_tables=True, use_ocr=True, ocr_languages="eng"
         )
 
         # Assert
@@ -129,11 +125,7 @@ class TestEnhancedPDFLoaderWithRealFiles:
         pdf_path = setup_test_pdf
 
         # Create loader with enhanced extraction
-        loader = EnhancedPDFLoader(
-            file_path=pdf_path,
-            extract_images=True,
-            extract_tables=True
-        )
+        loader = EnhancedPDFLoader(file_path=pdf_path, extract_images=True, extract_tables=True)
 
         # Load documents
         documents = loader.load()
