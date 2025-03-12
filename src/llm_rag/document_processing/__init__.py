@@ -27,7 +27,7 @@ class DocumentLoader(ABC):
 
     def __init__(self, *args, **kwargs):
         """Initialize the DocumentLoader with a deprecation warning.
-        
+
         This constructor is deliberately kept simple as this class is deprecated.
         """
         warnings.warn(
