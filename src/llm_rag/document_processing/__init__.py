@@ -1,57 +1,66 @@
-"""Document processing module for the RAG system.
+"""Document processing module for the LLM-RAG system.
 
-This module contains components for loading and processing documents
-for use in RAG pipelines.
+This module provides components for loading, processing, and chunking documents
+for use in retrieval-augmented generation pipelines.
 """
 
-import importlib
-from typing import Optional
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, TypeAlias, Union
 
-# Import the base loaders that don't have optional dependencies
-from llm_rag.document_processing.chunking import (
-    CharacterTextChunker,
-    RecursiveTextChunker,
-)
-from llm_rag.document_processing.loaders import (
+# Re-export from existing modules for backward compatibility
+from .chunking import CharacterTextChunker, RecursiveTextChunker
+from .processors import DocumentProcessor, TextSplitter
+
+# Type aliases to improve readability and avoid long lines
+DocumentMetadata: TypeAlias = Dict[str, Any]
+DocumentContent: TypeAlias = Union[str, DocumentMetadata]
+Document: TypeAlias = Dict[str, DocumentContent]
+Documents: TypeAlias = List[Document]
+
+
+class DocumentLoader(ABC):
+    """Abstract base class for document loaders."""
+
+    @abstractmethod
+    def load(self) -> Documents:
+        """Load documents from a source.
+
+        Returns
+        -------
+            List of documents, where each document is a dictionary with
+            'content' and 'metadata' keys.
+
+        """
+        pass
+
+
+# Import and re-export all from legacy loaders to maintain backward compatibility
+from .loaders import (  # noqa: E402
     CSVLoader,
     DirectoryLoader,
-    DocumentLoader,
+    EnhancedPDFLoader,
+    JSONLoader,
     PDFLoader,
     TextFileLoader,
-)
-from llm_rag.document_processing.processors import (
-    DocumentProcessor,
-    TextSplitter,
+    WebPageLoader,
 )
 
-# Initialize __all__ with the classes that don't have optional dependencies
+# These will be added in the new modular structure
 __all__ = [
-    "CSVLoader",
-    "DirectoryLoader",
+    "DocumentMetadata",
+    "DocumentContent",
+    "Document",
+    "Documents",
     "DocumentLoader",
-    "PDFLoader",
-    "TextFileLoader",
     "DocumentProcessor",
     "TextSplitter",
     "CharacterTextChunker",
     "RecursiveTextChunker",
+    "CSVLoader",
+    "DirectoryLoader",
+    "EnhancedPDFLoader",
+    "JSONLoader",
+    "PDFLoader",
+    "TextFileLoader",
+    "WebPageLoader",
 ]
-
-
-# Check for optional dependencies and conditionally import classes
-def _import_optional(module_name: str, class_name: str) -> Optional[type]:
-    """Import optional class if its requirements are available."""
-    try:
-        module = importlib.import_module(module_name)
-        if hasattr(module, class_name):
-            __all__.append(class_name)
-            return getattr(module, class_name)
-    except (ImportError, AttributeError):
-        pass
-    return None
-
-
-# Import optional loader classes if available
-EnhancedPDFLoader = _import_optional("llm_rag.document_processing.loaders", "EnhancedPDFLoader")
-JSONLoader = _import_optional("llm_rag.document_processing.loaders", "JSONLoader")
-WebPageLoader = _import_optional("llm_rag.document_processing.loaders", "WebPageLoader")

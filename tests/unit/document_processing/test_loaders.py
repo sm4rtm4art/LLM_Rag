@@ -8,28 +8,42 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-# Import required loaders
-from llm_rag.document_processing.loaders import (
+# Import required legacy loaders
+from llm_rag.document_processing import (
     CSVLoader,
     DirectoryLoader,
     PDFLoader,
     TextFileLoader,
 )
 
+# Import the new loader interfaces and factories - these will be used in additional tests
+from llm_rag.document_processing.loaders import (
+    FileLoader,
+    LoaderRegistry,
+    registry,
+    load_document,
+    load_documents_from_directory
+)
+
 # Try to import optional loaders
 try:
-    from llm_rag.document_processing.loaders import JSONLoader
-
+    from llm_rag.document_processing import JSONLoader
     has_json_loader = True
 except ImportError:
     has_json_loader = False
 
 try:
-    from llm_rag.document_processing.loaders import WebPageLoader
-
+    from llm_rag.document_processing import WebPageLoader
     has_webpage_loader = True
 except ImportError:
     has_webpage_loader = False
+
+# Try to import PyMuPDF for PDF tests
+try:
+    import fitz
+    has_pymupdf = True
+except ImportError:
+    has_pymupdf = False
 
 # EnhancedPDFLoader is not used in this test file, so we don't need to import it
 # Just define the flag for skipping tests
@@ -119,9 +133,7 @@ class TestPDFLoader:
     def test_load_valid_pdf(self) -> None:
         """Test loading content from a valid PDF file."""
         # Check if fitz is available
-        from llm_rag.document_processing.loaders import fitz
-
-        if fitz is None:
+        if not has_pymupdf:
             pytest.skip("PyMuPDF (fitz) not available")
 
         # Arrange
@@ -155,9 +167,7 @@ class TestPDFLoader:
     def test_load_invalid_pdf(self) -> None:
         """Test behavior when PDF loading fails."""
         # Check if fitz is available
-        from llm_rag.document_processing.loaders import fitz
-
-        if fitz is None:
+        if not has_pymupdf:
             pytest.skip("PyMuPDF (fitz) not available")
 
         # Arrange

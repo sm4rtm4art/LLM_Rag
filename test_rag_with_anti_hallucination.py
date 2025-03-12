@@ -212,7 +212,7 @@ def setup_rag_pipeline(vectorstore: ChromaVectorStore, model_name: str = "llama3
             response_raw = llm.invoke(prompt)
 
             # Handle the response format - could be string or an object with content attribute
-            if hasattr(response_raw, 'content'):
+            if hasattr(response_raw, "content"):
                 response = response_raw.content
             else:
                 response = str(response_raw)
@@ -294,8 +294,7 @@ def interactive_rag_session(rag: RAGPipeline) -> None:
 
     use_anti_hallucination = True
     config = HallucinationConfig(
-        flag_for_human_review=True, use_embeddings=True,
-        entity_threshold=0.7, embedding_threshold=0.5
+        flag_for_human_review=True, use_embeddings=True, entity_threshold=0.7, embedding_threshold=0.5
     )
 
     while True:
