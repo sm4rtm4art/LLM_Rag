@@ -22,19 +22,20 @@ except ImportError:
     logger.warning("PyMuPDF not available. PDF loading capabilities will be limited.")
 
 try:
-    from PyPDF2 import PdfReader
+    # Use pypdf instead of PyPDF2 to fix CVE-2023-36464
+    from pypdf import PdfReader
 
-    PYPDF2_AVAILABLE = True
+    PYPDF_AVAILABLE = True
 except ImportError:
-    PYPDF2_AVAILABLE = False
-    logger.warning("PyPDF2 not available. Some PDF loading capabilities may be affected.")
+    PYPDF_AVAILABLE = False
+    logger.warning("pypdf not available. Some PDF loading capabilities may be affected.")
 
 
 class PDFLoader(DocumentLoader, FileLoader):
     """Load documents from PDF files.
 
     This loader extracts text content from PDF files. It tries to use PyMuPDF (fitz)
-    first, and falls back to PyPDF2 if PyMuPDF is not available.
+    first, and falls back to pypdf if PyMuPDF is not available.
     """
 
     def __init__(
@@ -118,11 +119,11 @@ class PDFLoader(DocumentLoader, FileLoader):
             # Try to use PyMuPDF first
             if PYMUPDF_AVAILABLE:
                 return self._load_with_pymupdf(file_path)
-            # Fall back to PyPDF2
-            elif PYPDF2_AVAILABLE:
-                return self._load_with_pypdf2(file_path)
+            # Fall back to pypdf
+            elif PYPDF_AVAILABLE:
+                return self._load_with_pypdf(file_path)
             else:
-                raise ImportError("No PDF processing library available. Install PyMuPDF or PyPDF2.")
+                raise ImportError("No PDF processing library available. Install PyMuPDF or pypdf.")
         except Exception as e:
             logger.error(f"Error loading PDF file {file_path}: {e}")
             raise Exception(f"Error loading PDF file {file_path}: {str(e)}") from e
@@ -175,8 +176,8 @@ class PDFLoader(DocumentLoader, FileLoader):
 
         return documents
 
-    def _load_with_pypdf2(self, file_path: Path) -> Documents:
-        """Load PDF using PyPDF2.
+    def _load_with_pypdf(self, file_path: Path) -> Documents:
+        """Load PDF using pypdf.
 
         Parameters
         ----------
