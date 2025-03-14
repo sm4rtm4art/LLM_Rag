@@ -22,7 +22,7 @@ from llama_cpp import Llama  # type: ignore
 
 # Use relative imports
 from .document_processing.chunking import RecursiveTextChunker
-from .document_processing.loaders import DirectoryLoader
+from .document_processing.loaders.directory_loader import DirectoryLoader
 from .models.embeddings import EmbeddingModel
 from .rag.pipeline import RAGPipeline
 from .vectorstore.chroma import ChromaVectorStore

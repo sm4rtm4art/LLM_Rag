@@ -1,40 +1,62 @@
-"""Document loaders for the RAG system."""
+"""Document loaders for the LLM-RAG system.
 
-import csv
-import json
+This module provides components for loading documents from various sources
+and formats, including PDFs, text files, CSV files, JSON, and web content.
+
+Note: This file is maintained for backward compatibility. For new development,
+please use the modular components in the loaders/ directory.
+"""
+
 import logging
+import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 
-import requests
+try:
+    # First try to import from the modular implementation
+    from .loaders.base import DocumentLoader
+    from .loaders.directory_loader import DirectoryLoader as ModularDirectoryLoader
+    from .loaders.file_loaders import CSVLoader as ModularCSVLoader
+    from .loaders.file_loaders import EnhancedPDFLoader as ModularEnhancedPDFLoader
+    from .loaders.file_loaders import JSONLoader as ModularJSONLoader
+    from .loaders.file_loaders import PDFLoader as ModularPDFLoader
+    from .loaders.file_loaders import TextFileLoader as ModularTextFileLoader
+    from .loaders.file_loaders import XMLLoader as ModularXMLLoader
+    from .loaders.web_loaders import WebLoader as ModularWebLoader
+    from .loaders.web_loaders import WebPageLoader as ModularWebPageLoader
 
+    # Import successful, set up compatibility layer
+    HAS_MODULAR_LOADERS = True
+
+    # Issue deprecation warning
+    warnings.warn(
+        "The monolithic loaders.py module is deprecated and will be removed in a future version. "
+        "Please use the modular loaders from llm_rag.document_processing.loaders instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+except ImportError as e:
+    # If import fails, use stub classes
+    warnings.warn(
+        f"Failed to import modular document loader components: {e}. Using stub classes.",
+        stacklevel=2,
+    )
+    _MODULAR_IMPORT_SUCCESS = False
+
+# Get configured logger
 logger = logging.getLogger(__name__)
 
-# Optional imports for PDF processing
-try:
-    import fitz  # PyMuPDF
-except ImportError:
-    fitz = None
-
-# Optional imports for JSON processing
-try:
-    import jq
-except ImportError:
-    jq = None
-
-# Optional import for pandas
-try:
-    import pandas as pd
-except ImportError:
-    pd = None
+# Type aliases for documents
+Documents = List[Dict[str, Any]]
 
 
+# Define base Document Loader class
 class DocumentLoader(ABC):
     """Abstract base class for document loaders."""
 
     @abstractmethod
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
+    def load(self) -> Documents:
         """Load documents from a source.
 
         Returns
@@ -46,968 +68,352 @@ class DocumentLoader(ABC):
         pass
 
 
-class TextFileLoader(DocumentLoader):
-    """Load documents from a text file."""
+if _MODULAR_IMPORT_SUCCESS:
+    # Import was successful, use the new implementations with adapters
 
-    def __init__(self, file_path: Union[str, Path], encoding: str = "utf-8"):
-        """Initialize the loader.
+    class TextFileLoader(ModularTextFileLoader):
+        """Adapter for backward compatibility with TextFileLoader."""
 
-        Args:
-        ----
-            file_path: Path to the text file.
-            encoding: Text encoding to use when reading the file.
+        def __init__(self, file_path: Union[str, Path], **kwargs):
+            """Initialize the TextFileLoader.
 
-        """
-        self.file_path = Path(file_path)
-        self.file_path_str = str(file_path)  # Store original string for test assertions
-        self.encoding = encoding
+            Args:
+                file_path: Path to the text file
+                **kwargs: Additional arguments
 
-        # In unit tests, we don't want to check file existence
-        # But in core tests, we do
-        import os
+            """
+            super().__init__(file_path=file_path, **kwargs)
 
-        in_core_test = os.environ.get("PYTEST_CURRENT_TEST") and "core" in os.environ.get("PYTEST_CURRENT_TEST", "")
+    class PDFLoader(ModularPDFLoader):
+        """Adapter for backward compatibility with PDFLoader."""
 
-        if (not os.environ.get("PYTEST_CURRENT_TEST") or in_core_test) and not self.file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
+        def __init__(self, file_path: Union[str, Path], **kwargs):
+            """Initialize the PDFLoader.
 
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
-        """Load the text file and return it as a document.
+            Args:
+                file_path: Path to the PDF file
+                **kwargs: Additional arguments
 
-        Returns
-        -------
-            List containing a single document with the file content
-            and metadata.
+            """
+            super().__init__(file_path=file_path, **kwargs)
 
-        """
-        with open(self.file_path, "r", encoding=self.encoding) as f:
-            content = f.read()
+    class EnhancedPDFLoader(ModularEnhancedPDFLoader):
+        """Adapter for backward compatibility with EnhancedPDFLoader."""
 
-        metadata = {
-            "source": self.file_path_str,
-            "filename": self.file_path.name,
-            "filetype": "txt",
-        }
+        def __init__(self, file_path: Union[str, Path], **kwargs):
+            """Initialize the EnhancedPDFLoader.
 
-        return [{"content": content, "metadata": metadata}]
+            Args:
+                file_path: Path to the PDF file
+                **kwargs: Additional arguments
 
+            """
+            super().__init__(file_path=file_path, **kwargs)
 
-class PDFLoader(DocumentLoader):
-    """Load documents from a PDF file."""
+    class CSVLoader(ModularCSVLoader):
+        """Adapter for backward compatibility with CSVLoader."""
 
-    def __init__(
-        self,
-        file_path: Union[str, Path],
-        extract_images: bool = False,
-        extract_tables: bool = False,
-        use_enhanced_extraction: bool = False,
-        output_dir: Optional[str] = None,
-    ):
-        """Initialize the loader.
+        def __init__(self, file_path: Union[str, Path], **kwargs):
+            """Initialize the CSVLoader.
 
-        Args:
-        ----
-            file_path: Path to the PDF file.
-            extract_images: Whether to extract images from the PDF.
-            extract_tables: Whether to extract tables from the PDF.
-            use_enhanced_extraction: Whether to use the enhanced PDF extraction.
-            output_dir: Directory to save extracted tables and images.
+            Args:
+                file_path: Path to the CSV file
+                **kwargs: Additional arguments
 
-        """
-        self.file_path = Path(file_path)
-        self.file_path_str = str(file_path)  # Store original string for test assertions
+            """
+            super().__init__(file_path=file_path, **kwargs)
 
-        # Check if the file exists, but in tests this can be mocked
-        import os
+    class JSONLoader(ModularJSONLoader):
+        """Adapter for backward compatibility with JSONLoader."""
 
-        if not os.environ.get("PYTEST_CURRENT_TEST") and not self.file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
+        def __init__(self, file_path: Union[str, Path], **kwargs):
+            """Initialize the JSONLoader.
 
-        self.extract_images = extract_images
-        self.extract_tables = extract_tables
-        self.use_enhanced_extraction = use_enhanced_extraction
-        self.output_dir = output_dir
+            Args:
+                file_path: Path to the JSON file
+                **kwargs: Additional arguments
 
-        # Import here to allow for mock patching in tests
-        try:
-            import PyPDF2  # noqa: F401
-        except ImportError as err:
-            raise ImportError("PyPDF2 is required for PDF loading. Install it with 'pip install PyPDF2'") from err
+            """
+            super().__init__(file_path=file_path, **kwargs)
 
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
-        """Load the PDF file.
+    class WebLoader(ModularWebLoader):
+        """Adapter for backward compatibility with WebLoader."""
 
-        Returns
-        -------
-            List of documents, one per page.
+        def __init__(self, web_path: str, **kwargs):
+            """Initialize the WebLoader.
 
-        """
-        documents = []
+            Args:
+                web_path: URL to load
+                **kwargs: Additional arguments
 
-        # Try to use PyMuPDF (fitz) if available
-        if fitz:
-            try:
-                pdf = fitz.open(str(self.file_path))
-                num_pages = len(pdf)
+            """
+            super().__init__(web_path=web_path, **kwargs)
 
-                # For each page
-                for i in range(num_pages):
-                    page = pdf[i]
-                    page_text = page.get_text()
+    class WebPageLoader(ModularWebPageLoader):
+        """Adapter for backward compatibility with WebPageLoader."""
 
-                    if page_text:
-                        # Create metadata
-                        metadata = {
-                            "source": self.file_path_str,
-                            "filename": self.file_path.name,
-                            "filetype": "pdf",
-                            "page": i,  # 0-indexed for compatibility with tests
-                            "total_pages": num_pages,
-                        }
+        def __init__(self, web_path: str, **kwargs):
+            """Initialize the WebPageLoader.
 
-                        # Create a document for this page
-                        documents.append({"content": page_text, "metadata": metadata})
+            Args:
+                web_path: URL to load
+                **kwargs: Additional arguments
 
-                # If we successfully extracted documents, return them
-                if documents:
-                    return documents
-            except Exception as e:
-                logger.warning(f"PyMuPDF extraction failed: {e}")
-                # Fall back to PyPDF2
+            """
+            super().__init__(web_path=web_path, **kwargs)
 
-        # Fall back to PyPDF2 if fitz is not available or failed
-        try:
-            import PyPDF2
-        except ImportError as e:
-            if not fitz:  # Only raise if fitz is also not available
-                raise ImportError("PyPDF2 or PyMuPDF is required for PDF loading.") from e
-            else:
-                # We already tried fitz and it failed, so re-raise the original error
-                raise Exception("Error loading PDF file") from e
+    class DirectoryLoader(ModularDirectoryLoader):
+        """Adapter for backward compatibility with DirectoryLoader."""
 
-        # Extract text content from PDF pages using PyPDF2
-        try:
-            with open(self.file_path, "rb") as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                num_pages = len(pdf_reader.pages)
+        def __init__(
+            self,
+            directory_path: Union[str, Path],
+            glob_pattern: str = "*.*",
+            recursive: bool = True,
+            **kwargs,
+        ):
+            """Initialize the DirectoryLoader.
 
-                # For each page
-                for i, page in enumerate(pdf_reader.pages):
-                    page_text = page.extract_text()
-                    if page_text:
-                        # Create metadata
-                        metadata = {
-                            "source": self.file_path_str,
-                            "filename": self.file_path.name,
-                            "filetype": "pdf",
-                            "page": i,  # 0-indexed for compatibility with tests
-                            "total_pages": num_pages,
-                        }
+            Args:
+                directory_path: Path to the directory
+                glob_pattern: Pattern to match files
+                recursive: Whether to search recursively
+                **kwargs: Additional arguments
 
-                        # Create a document for this page
-                        documents.append({"content": page_text, "metadata": metadata})
-        except Exception as e:
-            logger.error(f"Failed to extract text from {self.file_path}: {e}")
-            raise Exception("Error loading PDF file") from e
-
-        # Enhanced extraction handles tables and images internally
-        if self.use_enhanced_extraction:
-            enhanced_docs = self._load_enhanced()
-            if enhanced_docs:
-                documents = enhanced_docs
-
-        # Extract tables if requested and not using enhanced extraction
-        elif self.extract_tables and not self.use_enhanced_extraction:
-            try:
-                tables = self._extract_tables()
-                for i, table in enumerate(tables):
-                    # Create metadata
-                    table_metadata = {
-                        "source": self.file_path_str,
-                        "filename": self.file_path.name,
-                        "filetype": "pdf_table",
-                        "table_index": i,
-                    }
-
-                    documents.append({"content": table, "metadata": table_metadata})
-
-                    logger.info(f"Extracted table {i} from {self.file_path.name}")
-            except Exception as e:
-                logger.warning(f"Failed to extract tables from {self.file_path.name}: {e}")
-
-        # Extract images if requested and not using enhanced extraction
-        if self.extract_images and not self.use_enhanced_extraction:
-            try:
-                image_extractions = self._extract_images()
-                for i, (image_path, image_text) in enumerate(image_extractions):
-                    # Create metadata
-                    image_metadata = {
-                        "source": self.file_path_str,
-                        "filename": self.file_path.name,
-                        "filetype": "pdf_image",
-                        "image_path": str(image_path),
-                    }
-
-                    documents.append({"content": image_text, "metadata": image_metadata})
-
-                    logger.info(f"Extracted image {i} from {self.file_path.name}")
-            except Exception as e:
-                logger.warning(f"Failed to extract images from {self.file_path.name}: {e}")
-
-        return documents
-
-    def _load_enhanced(self) -> List[Dict[str, Union[str, Dict]]]:
-        """Use enhanced PDF extraction with PyMuPDF."""
-        documents = []
-
-        # Check if fitz is available
-        if not fitz:
-            logger.warning(
-                "PyMuPDF (fitz) is required for enhanced PDF extraction. Install it with 'pip install pymupdf'"
+            """
+            super().__init__(
+                directory_path=directory_path,
+                glob_pattern=glob_pattern,
+                recursive=recursive,
+                **kwargs,
             )
+
+    class XMLLoader(ModularXMLLoader):
+        """Adapter for backward compatibility with XMLLoader."""
+
+        def __init__(self, file_path: Union[str, Path], **kwargs):
+            """Initialize the XMLLoader.
+
+            Args:
+                file_path: Path to the XML file
+                **kwargs: Additional arguments
+
+            """
+            super().__init__(file_path=file_path, **kwargs)
+
+else:
+    # Import failed, use stub classes
+    class TextFileLoader(DocumentLoader):
+        """Stub class for TextFileLoader."""
+
+        def __init__(self, file_path: Union[str, Path], **kwargs):
+            """Initialize stub TextFileLoader.
+
+            Args:
+                file_path: Path to the text file
+                **kwargs: Additional arguments
+
+            """
+            pass
+
+        def load(self) -> Documents:
+            """Load documents from text file.
+
+            Returns:
+                Empty list of documents
+
+            """
+            warnings.warn("Using stub TextFileLoader. Install required dependencies.", stacklevel=2)
             return []
 
-        try:
-            pdf = fitz.open(str(self.file_path))
-            num_pages = len(pdf)
+    class PDFLoader(DocumentLoader):
+        """Stub class for PDFLoader."""
 
-            for page_num in range(num_pages):
-                page = pdf[page_num]
+        def __init__(self, file_path: Union[str, Path], **kwargs):
+            """Initialize stub PDFLoader.
 
-                # Extract text
-                text = page.get_text()
+            Args:
+                file_path: Path to the PDF file
+                **kwargs: Additional arguments
 
-                # Extract tables if requested
-                tables = []
-                if self.extract_tables:
-                    tables = self._extract_tables_from_page(page, page_num)
+            """
+            pass
 
-                # Extract images if requested
-                images = []
-                if self.extract_images:
-                    # Get images from the page
-                    image_list = page.get_images(full=True)
-                    for img_idx, img_info in enumerate(image_list):
-                        xref = img_info[0]
-                        base_img = pdf.extract_image(xref)
-                        image_bytes = base_img["image"]
-                        image_ext = base_img["ext"]
+        def load(self) -> Documents:
+            """Load documents from PDF file.
 
-                        # Save the image
-                        output_dir = (
-                            Path(self.output_dir) if self.output_dir else self.file_path.parent / "extracted_images"
-                        )
-                        output_dir.mkdir(exist_ok=True, parents=True)
-                        image_path = output_dir / f"page{page_num + 1}_img{img_idx + 1}.{image_ext}"
+            Returns:
+                Empty list of documents
 
-                        with open(image_path, "wb") as img_file:
-                            img_file.write(image_bytes)
-
-                        # Try to perform OCR on the image
-                        try:
-                            import pytesseract
-                            from PIL import Image
-
-                            pil_image = Image.open(image_path)
-                            ocr_text = pytesseract.image_to_string(pil_image)
-                            if ocr_text.strip():
-                                images.append((str(image_path), ocr_text))
-                        except Exception as e:
-                            logger.warning(f"OCR error for {image_path}: {e}")
-
-                # Create metadata
-                metadata = {
-                    "source": self.file_path_str,
-                    "filename": self.file_path.name,
-                    "filetype": "pdf",
-                    "page": page_num + 1,
-                    "total_pages": num_pages,
-                }
-
-                # Add tables to metadata if any were found
-                if tables:
-                    metadata["tables"] = tables
-
-                # Add images to metadata if any were found
-                if images:
-                    metadata["images"] = images
-
-                # Create a document for this page
-                documents.append({"content": text, "metadata": metadata})
-
-            return documents
-        except Exception as e:
-            logger.error(f"Enhanced PDF extraction failed: {e}")
+            """
+            warnings.warn("Using stub PDFLoader. Install required dependencies.", stacklevel=2)
             return []
 
-    def _extract_tables(self) -> List[str]:
-        """Extract tables from PDF."""
-        # Import tabula-py for table extraction
-        try:
-            import tabula
+    class EnhancedPDFLoader(DocumentLoader):
+        """Stub class for EnhancedPDFLoader."""
 
-            logger.info(
-                "Successfully imported tabula-py: "
-                f"{tabula.__version__ if hasattr(tabula, '__version__') else 'unknown'}"
-            )
-        except ImportError as e:
-            logger.warning(f"tabula-py import error: {e}")
-            logger.warning("tabula-py is required for table extraction. Install it with 'pip install tabula-py'")
-            return []
-        except Exception as e:
-            logger.warning(f"Unexpected error importing tabula-py: {e}")
-            return []
+        def __init__(self, file_path: Union[str, Path], **kwargs):
+            """Initialize stub EnhancedPDFLoader.
 
-        try:
-            # Extract tables from the PDF
-            logger.info(f"Extracting tables from {self.file_path}")
-            tables = tabula.read_pdf(str(self.file_path), pages="all", multiple_tables=True)
-            logger.info(f"Found {len(tables)} tables")
+            Args:
+                file_path: Path to the PDF file
+                **kwargs: Additional arguments
 
-            # Convert tables to string representation
-            table_strings = []
-            for table in tables:
-                if isinstance(table, pd.DataFrame) and not table.empty:
-                    # Convert DataFrame to CSV string
-                    table_str = table.to_csv(index=False)
-                    table_strings.append(table_str)
+            """
+            pass
 
-            return table_strings
-        except Exception as e:
-            logger.warning(f"Error extracting tables: {e}")
+        def load(self) -> Documents:
+            """Load documents from PDF file with enhanced processing.
+
+            Returns:
+                Empty list of documents
+
+            """
+            warnings.warn("Using stub EnhancedPDFLoader. Install required dependencies.", stacklevel=2)
             return []
 
-    def _extract_images(self) -> List[tuple[Path, str]]:
-        """Extract images from PDF and perform OCR."""
-        # Import required libraries
-        try:
-            # For pdf2image and pytesseract, we need these for OCR
-            import pytesseract
-            from pdf2image import convert_from_path
-            from PIL import Image
+    class CSVLoader(DocumentLoader):
+        """Stub class for CSVLoader."""
 
-            logger.info(
-                "pdf2image version: "
-                f"{convert_from_path.__module__ if hasattr(convert_from_path, '__module__') else 'unknown'}"
-            )
-            logger.info(
-                f"pytesseract version: {pytesseract.__version__ if hasattr(pytesseract, '__version__') else 'unknown'}"
-            )
-        except ImportError as e:
-            logger.warning(f"Image extraction import error: {e}")
-            logger.warning(
-                "pdf2image, pytesseract, and Pillow are required for image extraction. "
-                "Install them with 'pip install pdf2image pytesseract Pillow'"
-            )
-            return []
-        except Exception as e:
-            logger.warning(f"Unexpected error importing image extraction libraries: {e}")
+        def __init__(self, file_path: Union[str, Path], **kwargs):
+            """Initialize stub CSVLoader.
+
+            Args:
+                file_path: Path to the CSV file
+                **kwargs: Additional arguments
+
+            """
+            pass
+
+        def load(self) -> Documents:
+            """Load documents from CSV file.
+
+            Returns:
+                Empty list of documents
+
+            """
+            warnings.warn("Using stub CSVLoader. Install required dependencies.", stacklevel=2)
             return []
 
-        try:
-            results = []
-            output_dir = Path(self.output_dir) if self.output_dir else self.file_path.parent / "extracted_images"
-            output_dir.mkdir(exist_ok=True, parents=True)
+    class JSONLoader(DocumentLoader):
+        """Stub class for JSONLoader."""
 
-            # Method 1: Use PyMuPDF (fitz) to extract images if available
-            if fitz:
-                pdf = fitz.open(str(self.file_path))
-                image_count = 0
+        def __init__(self, file_path: Union[str, Path], **kwargs):
+            """Initialize stub JSONLoader.
 
-                for page_num in range(len(pdf)):
-                    page = pdf[page_num]
-                    image_list = page.get_images(full=True)
+            Args:
+                file_path: Path to the JSON file
+                **kwargs: Additional arguments
 
-                    for img_idx, img_info in enumerate(image_list):
-                        xref = img_info[0]
-                        base_img = pdf.extract_image(xref)
-                        image_bytes = base_img["image"]
-                        image_ext = base_img["ext"]
+            """
+            pass
 
-                        # Save the image
-                        image_path = output_dir / f"page{page_num + 1}_img{img_idx + 1}.{image_ext}"
-                        with open(image_path, "wb") as img_file:
-                            img_file.write(image_bytes)
+        def load(self) -> Documents:
+            """Load documents from JSON file.
 
-                        # Perform OCR on the image
-                        try:
-                            pil_image = Image.open(image_path)
-                            ocr_text = pytesseract.image_to_string(pil_image)
-                            results.append((image_path, ocr_text))
-                            image_count += 1
-                        except Exception as e:
-                            logger.warning(f"OCR error for {image_path}: {e}")
+            Returns:
+                Empty list of documents
 
-                # If we found images with PyMuPDF, return them
-                if image_count > 0:
-                    return results
-
-            # If no fitz or no images found with PyMuPDF, try pdf2image
-            logger.info("Using pdf2image to extract images...")
-            images = convert_from_path(str(self.file_path))
-
-            for i, image in enumerate(images):
-                image_path = output_dir / f"page{i + 1}.png"
-                image.save(image_path, "PNG")
-
-                # Perform OCR on the image
-                ocr_text = pytesseract.image_to_string(image)
-                if ocr_text.strip():  # Only add if OCR found text
-                    results.append((image_path, ocr_text))
-
-            return results
-
-        except Exception as e:
-            logger.warning(f"Error extracting images: {e}")
+            """
+            warnings.warn("Using stub JSONLoader. Install required dependencies.", stacklevel=2)
             return []
 
-    def _extract_tables_from_page(self, page, page_num: int) -> List[str]:
-        """Extract tables from a PDF page using PyMuPDF.
+    class WebLoader(DocumentLoader):
+        """Stub class for WebLoader."""
 
-        Args:
-        ----
-            page: The PyMuPDF page object
-            page_num: The page number (0-indexed)
+        def __init__(self, web_path: str, **kwargs):
+            """Initialize stub WebLoader.
 
-        Returns:
-        -------
-            List of extracted tables as strings
+            Args:
+                web_path: URL to load
+                **kwargs: Additional arguments
 
-        """
-        tables = []
+            """
+            pass
 
-        try:
-            # Try to extract tables using PyMuPDF's built-in table detection
-            tab = page.find_tables()
-            if tab and tab.tables:
-                for i, table in enumerate(tab.tables):
-                    # Convert table to a DataFrame and then to a string
-                    df = table.to_pandas()
-                    if not df.empty:
-                        table_str = df.to_string(index=False)
-                        tables.append(table_str)
+        def load(self) -> Documents:
+            """Load documents from web URL.
 
-                        # Save table to CSV if output_dir is specified
-                        if self.output_dir:
-                            output_dir = Path(self.output_dir)
-                            output_dir.mkdir(exist_ok=True, parents=True)
-                            csv_path = output_dir / f"page{page_num + 1}_table{i + 1}.csv"
-                            df.to_csv(csv_path, index=False)
-        except Exception as e:
-            logger.warning(f"Error extracting tables from page {page_num + 1}: {e}")
+            Returns:
+                Empty list of documents
 
-        return tables
+            """
+            warnings.warn("Using stub WebLoader. Install required dependencies.", stacklevel=2)
+            return []
 
+    class WebPageLoader(DocumentLoader):
+        """Stub class for WebPageLoader."""
 
-class EnhancedPDFLoader(PDFLoader):
-    """Enhanced PDF loader with better extraction capabilities."""
+        def __init__(self, web_path: str, **kwargs):
+            """Initialize stub WebPageLoader.
 
-    def __init__(
-        self,
-        file_path: Union[str, Path],
-        extract_images: bool = True,
-        extract_tables: bool = True,
-        output_dir: Optional[str] = None,
-    ):
-        """Initialize the enhanced PDF loader.
+            Args:
+                web_path: URL to load
+                **kwargs: Additional arguments
 
-        Args:
-        ----
-            file_path: Path to the PDF file
-            extract_images: Whether to extract images from the PDF
-            extract_tables: Whether to extract tables from the PDF
-            output_dir: Directory to save extracted images and tables
+            """
+            pass
 
-        """
-        super().__init__(
-            file_path=file_path,
-            extract_images=extract_images,
-            extract_tables=extract_tables,
-            use_enhanced_extraction=True,
-            output_dir=output_dir,
-        )
+        def load(self) -> Documents:
+            """Load documents from web page.
 
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
-        """Load document from the PDF file with enhanced extraction.
+            Returns:
+                Empty list of documents
 
-        Returns
-        -------
-            List of documents
+            """
+            warnings.warn("Using stub WebPageLoader. Install required dependencies.", stacklevel=2)
+            return []
 
-        """
-        return self._load_enhanced()
+    class DirectoryLoader(DocumentLoader):
+        """Stub class for DirectoryLoader."""
 
+        def __init__(
+            self, directory_path: Union[str, Path], glob_pattern: str = "**/*", recursive: bool = True, **kwargs
+        ):
+            """Initialize stub DirectoryLoader.
 
-class CSVLoader(DocumentLoader):
-    """Load documents from a CSV file."""
+            Args:
+                directory_path: Path to the directory
+                glob_pattern: Pattern to match files
+                recursive: Whether to search recursively
+                **kwargs: Additional arguments
 
-    def __init__(
-        self,
-        file_path: Union[str, Path],
-        content_columns: Optional[List[str]] = None,
-        metadata_columns: Optional[List[str]] = None,
-        delimiter: str = ",",
-    ):
-        """Initialize the loader.
+            """
+            pass
 
-        Args:
-        ----
-            file_path: Path to the CSV file.
-            content_columns: List of column names to include in the content.
-                If None, all columns are included.
-            metadata_columns: List of column names to include in the metadata.
-                If None, no columns are included in metadata.
-            delimiter: CSV delimiter character (default: ",")
+        def load(self) -> Documents:
+            """Load documents from directory.
 
-        """
-        self.file_path = Path(file_path)
-        self.file_path_str = str(file_path)  # Store original string for test assertions
+            Returns:
+                Empty list of documents
 
-        # In unit tests, we don't want to check file existence
-        # But in core tests, we do
-        import os
+            """
+            warnings.warn("Using stub DirectoryLoader. Install required dependencies.", stacklevel=2)
+            return []
 
-        in_core_test = os.environ.get("PYTEST_CURRENT_TEST") and "core" in os.environ.get("PYTEST_CURRENT_TEST", "")
+    class XMLLoader(DocumentLoader):
+        """Stub class for XMLLoader."""
 
-        if (not os.environ.get("PYTEST_CURRENT_TEST") or in_core_test) and not self.file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
+        def __init__(self, file_path: Union[str, Path], **kwargs):
+            """Initialize stub XMLLoader.
 
-        self.content_columns = content_columns
-        self.metadata_columns = metadata_columns
-        self.delimiter = delimiter
+            Args:
+                file_path: Path to the XML file
+                **kwargs: Additional arguments
 
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
-        """Load documents from a CSV file.
+            """
+            pass
 
-        Returns
-        -------
-            List of documents, one per row in the CSV file.
+        def load(self) -> Documents:
+            """Load documents from XML file.
 
-        """
-        documents = []
+            Returns:
+                Empty list of documents
 
-        try:
-            with open(self.file_path, "r", newline="", encoding="utf-8") as f:
-                reader = csv.DictReader(f, delimiter=self.delimiter)
-                for row in reader:
-                    # Convert row dict to two separate dicts: content and metadata
-                    content_dict = {}
-                    metadata_dict = {
-                        "source": self.file_path_str,
-                        "filename": self.file_path.name,
-                        "filetype": "csv",
-                    }
+            """
+            warnings.warn("Using stub XMLLoader. Install required dependencies.", stacklevel=2)
+            return []
 
-                    # Add all columns to content by default, or only specified ones
-                    if self.content_columns:
-                        # Include only specified columns
-                        for col in self.content_columns:
-                            if col in row:
-                                content_dict[col] = row[col]
-                    else:
-                        # Include all columns
-                        content_dict = dict(row)
 
-                    # Add specified columns to metadata if requested
-                    if self.metadata_columns:
-                        for col in self.metadata_columns:
-                            if col in row:
-                                metadata_dict[col] = row[col]
-
-                    # Format content as a string (comma-separated format)
-                    content = ", ".join([f"{k}: {v}" for k, v in content_dict.items() if v])
-
-                    # Add document to the list
-                    documents.append({"content": content, "metadata": metadata_dict})
-
-        except Exception as e:
-            logger.error(f"Error reading CSV file {self.file_path}: {e}")
-            raise
-
-        return documents
-
-
-class JSONLoader(DocumentLoader):
-    """Load documents from JSON files."""
-
-    def __init__(
-        self,
-        file_path: Union[str, Path],
-        jq_schema: str = ".",
-        content_key: Optional[str] = None,
-    ):
-        """Initialize the JSON loader.
-
-        Args:
-        ----
-            file_path: Path to the JSON file
-            jq_schema: JQ schema to extract content (not implemented)
-            content_key: Key to extract as content
-
-        """
-        self.file_path = Path(file_path)
-        self.file_path_str = str(file_path)  # Keep original string for test assertions
-        self.jq_schema = jq_schema
-        self.content_key = content_key
-
-        # Check if the file exists, but in tests this can be mocked
-        import os
-
-        if not os.environ.get("PYTEST_CURRENT_TEST") and not self.file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
-
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
-        """Load documents from a JSON file.
-
-        Returns
-        -------
-            List of documents
-
-        Raises
-        ------
-            FileNotFoundError: If the file does not exist
-            json.JSONDecodeError: If the file is not valid JSON
-
-        """
-        try:
-            with open(self.file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            documents = []
-
-            # Apply jq schema if specified and jq is available
-            if jq and self.jq_schema != ".":
-                try:
-                    # Compile the jq pattern
-                    jq_pattern = jq.compile(self.jq_schema)
-                    # Apply the pattern to the data
-                    filtered_data = jq_pattern.input(data)
-
-                    # In tests, filtered_data might be a mock that's already a list
-                    if hasattr(filtered_data, "all"):
-                        filtered_data = filtered_data.all()
-
-                    # Process each filtered item
-                    for i, item in enumerate(filtered_data):
-                        content = json.dumps(item)
-                        documents.append(
-                            {
-                                "content": content,
-                                "metadata": {
-                                    "source": self.file_path_str,
-                                    "filename": self.file_path.name,
-                                    "filetype": "json",
-                                    "item_index": i,
-                                },
-                            }
-                        )
-
-                    return documents
-                except Exception as e:
-                    logger.warning(f"jq pattern application failed: {e}. Falling back to standard processing.")
-                    # Continue with standard processing below
-
-            # Handle different JSON structures
-            if isinstance(data, list):
-                # List of objects
-                for i, item in enumerate(data):
-                    content = self._extract_content(item)
-                    documents.append(
-                        {
-                            "content": content,
-                            "metadata": {
-                                "source": self.file_path_str,
-                                "filename": self.file_path.name,
-                                "filetype": "json",
-                                "item_index": i,
-                            },
-                        }
-                    )
-            elif isinstance(data, dict):
-                # Single object
-                content = self._extract_content(data)
-                documents.append(
-                    {
-                        "content": content,
-                        "metadata": {
-                            "source": self.file_path_str,
-                            "filename": self.file_path.name,
-                            "filetype": "json",
-                        },
-                    }
-                )
-            else:
-                # Primitive type
-                documents.append(
-                    {
-                        "content": str(data),
-                        "metadata": {
-                            "source": self.file_path_str,
-                            "filename": self.file_path.name,
-                            "filetype": "json",
-                        },
-                    }
-                )
-
-            return documents
-
-        except FileNotFoundError:
-            logger.error(f"File not found: {self.file_path}")
-            raise
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON file {self.file_path}: {e}")
-            raise
-
-    def _extract_content(self, data: Union[Dict, List, str]) -> str:
-        """Extract content from a JSON item.
-
-        Args:
-        ----
-            data: JSON data to extract content from
-
-        Returns:
-        -------
-            String content
-
-        """
-        if self.content_key and isinstance(data, dict) and self.content_key in data:
-            # Extract specific key
-            return str(data[self.content_key])
-        elif isinstance(data, dict):
-            # Convert dict to string
-            return json.dumps(data, ensure_ascii=False)
-        else:
-            # Convert any other type to string
-            return str(data)
-
-
-class WebPageLoader(DocumentLoader):
-    """Load documents from web pages."""
-
-    def __init__(
-        self,
-        url: str,
-        headers: Optional[Dict[str, str]] = None,
-        encoding: str = "utf-8",
-    ):
-        """Initialize the web page loader.
-
-        Args:
-        ----
-            url: URL of the web page
-            headers: HTTP headers to use when making requests
-            encoding: Text encoding to use for the page content
-
-        """
-        self.url = url
-        self.headers = headers or {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-        self.encoding = encoding
-
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
-        """Load documents from a web page.
-
-        Returns
-        -------
-            List of documents
-
-        Raises
-        ------
-            requests.RequestException: If the request fails
-
-        """
-        try:
-            # Import BeautifulSoup here to allow for mocking in tests
-            try:
-                from bs4 import BeautifulSoup
-            except ImportError:
-                logger.warning("BeautifulSoup not installed. Install with 'pip install beautifulsoup4'")
-                BeautifulSoup = None
-
-            response = requests.get(self.url, headers=self.headers, timeout=10)
-            response.raise_for_status()  # Raise exception for non-2xx status codes
-
-            # Get content type from headers
-            content_type = response.headers.get("Content-Type", "")
-
-            # Extract text content
-            text_content = response.text
-
-            # Use BeautifulSoup to parse HTML if available
-            if BeautifulSoup and "html" in content_type.lower():
-                soup = BeautifulSoup(text_content, "html.parser")
-                text_content = soup.get_text()
-
-            # Create document
-            document = {
-                "content": text_content,
-                "metadata": {
-                    "source": self.url,
-                    "content_type": content_type,
-                    "status_code": response.status_code,
-                    "encoding": self.encoding,
-                },
-            }
-
-            return [document]
-
-        except requests.RequestException as e:
-            logger.error(f"Failed to load web page {self.url}: {e}")
-            raise
-
-
-class DirectoryLoader(DocumentLoader):
-    """Load documents from a directory."""
-
-    def __init__(
-        self,
-        directory_path: Union[str, Path],
-        recursive: bool = False,
-        glob_pattern: Optional[str] = None,
-        extract_images: bool = False,
-        extract_tables: bool = False,
-        use_enhanced_extraction: bool = False,
-        output_dir: Optional[str] = None,
-    ):
-        """Initialize the directory loader.
-
-        Args:
-        ----
-            directory_path: Path to the directory
-            recursive: Whether to search subdirectories recursively
-            glob_pattern: Glob pattern to match files (e.g., "*.pdf")
-            extract_images: Whether to extract images from PDFs
-            extract_tables: Whether to extract tables from PDFs
-            use_enhanced_extraction: Whether to use enhanced extraction for PDFs
-            output_dir: Directory to save extracted images or tables
-
-        """
-        self.directory_path = Path(directory_path)
-        self.directory_path_str = str(directory_path)  # Store original string for test assertions
-
-        # Check if the directory exists - skip in unit tests
-        import os
-
-        in_unit_test = os.environ.get("PYTEST_CURRENT_TEST") and "unit" in os.environ.get("PYTEST_CURRENT_TEST", "")
-        in_core_test = os.environ.get("PYTEST_CURRENT_TEST") and "core" in os.environ.get("PYTEST_CURRENT_TEST", "")
-
-        # Only skip checks in unit tests, but not in core tests
-        if not in_unit_test or in_core_test:
-            if not self.directory_path.exists():
-                raise NotADirectoryError(f"Directory does not exist: {directory_path}")
-
-            # Check if it's actually a directory
-            if not self.directory_path.is_dir():
-                raise NotADirectoryError(f"Not a directory: {directory_path}")
-
-        self.recursive = recursive
-        self.glob_pattern = glob_pattern or "*.*"
-        self.extract_images = extract_images
-        self.extract_tables = extract_tables
-        self.use_enhanced_extraction = use_enhanced_extraction
-        self.output_dir = output_dir
-
-    def load(self) -> List[Dict[str, Union[str, Dict]]]:
-        """Load documents from a directory.
-
-        Returns
-        -------
-            List of documents
-
-        """
-        import glob
-
-        # Check directory existence - but skip in unit tests that aren't core tests
-        import os
-        import os.path
-
-        in_unit_test = os.environ.get("PYTEST_CURRENT_TEST") and "unit" in os.environ.get("PYTEST_CURRENT_TEST", "")
-        in_core_test = os.environ.get("PYTEST_CURRENT_TEST") and "core" in os.environ.get("PYTEST_CURRENT_TEST", "")
-
-        # For both regular runs and core tests, we should check directory existence
-        if not in_unit_test or in_core_test:
-            if not self.directory_path.exists() or not self.directory_path.is_dir():
-                raise NotADirectoryError(f"Directory not found: {self.directory_path}")
-        elif in_unit_test and not in_core_test:
-            # In unit tests (but not core tests), we need to check if the directory is valid
-            # This is to support the test_load_invalid_directory test
-            if not os.path.isdir(self.directory_path):
-                raise NotADirectoryError(f"Directory not found: {self.directory_path}")
-
-        # Build glob pattern
-        pattern = (
-            str(self.directory_path / "**" / self.glob_pattern)
-            if self.recursive
-            else str(self.directory_path / self.glob_pattern)
-        )
-
-        # Get all matching files
-        all_files = glob.glob(pattern, recursive=self.recursive)
-        logger.info(f"Found {len(all_files)} files matching pattern {pattern}")
-
-        documents = []
-
-        # Process each file
-        for file_path_str in all_files:
-            file_path = Path(file_path_str)
-
-            # Skip directories, but not in unit tests that aren't core tests
-            if (not in_unit_test or in_core_test) and os.path.isdir(file_path_str):
-                continue
-
-            try:
-                # For test files that might not have proper extensions
-                if in_unit_test:
-                    # In unit tests, determine the loader based on the filename
-                    if "txt" in file_path_str:
-                        loader = TextFileLoader(file_path)
-                    elif "pdf" in file_path_str:
-                        loader = PDFLoader(
-                            file_path,
-                            extract_images=self.extract_images,
-                            extract_tables=self.extract_tables,
-                            use_enhanced_extraction=self.use_enhanced_extraction,
-                            output_dir=self.output_dir,
-                        )
-                    elif "csv" in file_path_str:
-                        loader = CSVLoader(file_path)
-                    elif "json" in file_path_str:
-                        loader = JSONLoader(file_path)
-                    else:
-                        # Default to text loader for other file types
-                        loader = TextFileLoader(file_path)
-                else:
-                    # Choose appropriate loader based on file extension
-                    extension = file_path.suffix.lower()
-
-                    if extension in [".txt", ".md", ".py", ".java", ".js", ".html", ".css"]:
-                        loader = TextFileLoader(file_path)
-                    elif extension == ".pdf":
-                        loader = PDFLoader(
-                            file_path,
-                            extract_images=self.extract_images,
-                            extract_tables=self.extract_tables,
-                            use_enhanced_extraction=self.use_enhanced_extraction,
-                            output_dir=self.output_dir,
-                        )
-                    elif extension == ".csv":
-                        loader = CSVLoader(file_path)
-                    elif extension == ".json":
-                        loader = JSONLoader(file_path)
-                    else:
-                        # Default to text loader for other file types
-                        loader = TextFileLoader(file_path)
-
-                # Load documents
-                file_docs = loader.load()
-                documents.extend(file_docs)
-                logger.info(f"Loaded {len(file_docs)} documents from {file_path}")
-
-            except Exception as e:
-                logger.error(f"Error loading {file_path}: {e}")
-                # Add print statement for error_handling test
-                print(f"Error loading {file_path}: {e}")
-
-        return documents
+# Suppress deprecation warnings for backward compatibility
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="langchain")
