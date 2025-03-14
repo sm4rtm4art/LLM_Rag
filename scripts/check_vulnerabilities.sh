@@ -25,12 +25,12 @@ usage() {
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -h|--help)
+        -h | --help)
             usage
             exit 0
             ;;
         --key)
-            if [[ -n "$2" ]]; then
+            if [[ -n $2 ]]; then
                 SAFETY_API_KEY="$2"
                 shift 2
             else

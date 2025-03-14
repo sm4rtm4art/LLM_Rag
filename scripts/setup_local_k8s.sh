@@ -7,6 +7,32 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Display usage information
+usage() {
+    echo "Usage: $(basename "$0")"
+    echo
+    echo "Set up a local Kubernetes cluster using KIND for testing the LLM-RAG system."
+    echo "This script performs the following actions:"
+    echo "  - Creates a new KIND cluster named 'llm-rag-local'"
+    echo "  - Sets up necessary Kubernetes resources (namespace, configmap, PVC, etc.)"
+    echo "  - Builds and loads the Docker image into the cluster"
+    echo "  - Deploys the LLM-RAG application"
+    echo "  - Sets up port forwarding to access the service"
+    echo
+    echo "Prerequisites:"
+    echo "  - KIND (Kubernetes IN Docker) must be installed"
+    echo "  - kubectl must be installed"
+    echo "  - Docker must be running"
+    echo
+    echo "No options or arguments are required."
+}
+
+# Parse command line arguments
+if [[ $1 == "-h" || $1 == "--help" ]]; then
+    usage
+    exit 0
+fi
+
 echo -e "${YELLOW}Setting up local Kubernetes cluster with KIND...${NC}"
 
 # Check if KIND is installed
