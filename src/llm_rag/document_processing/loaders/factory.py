@@ -1,14 +1,25 @@
-"""Factory functions for document loaders.
+"""DEPRECATED: This module is deprecated. Use the new modular loaders instead.
 
-This module provides factory functions and utilities for creating and using document loaders.
+This module exists only to maintain backward compatibility.
 """
 
 import logging
+import warnings
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 from ..processors import Documents
 from .base import registry
+
+warnings.warn(
+    "This monolithic loaders.py module is deprecated. "
+    "Please use the modular loaders from llm_rag.document_processing.loaders "
+    "instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+# Re-export from the new modular structure
 
 logger = logging.getLogger(__name__)
 

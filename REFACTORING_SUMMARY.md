@@ -70,11 +70,39 @@ Applied various design patterns to improve code quality:
 - **Adapter Pattern**: For standardizing various document and input formats
 - **Composition over Inheritance**: For flexible pipeline construction
 
-### 4. Backward Compatibility
+### 4. Modularized Document Loaders
+
+Broke down the monolithic `loaders.py` (1013 lines) into focused modules while maintaining backward compatibility:
+
+- **Loader Directory Structure** (`src/llm_rag/document_processing/loaders/`):
+
+  - Created specialized loader modules for different document types
+  - Established clear separation of concerns
+  - Improved maintainability and extensibility
+
+- **Registry and Factory System**:
+
+  - Implemented loader registry for centralized management
+  - Created factory functions for loader instantiation
+  - Enabled dynamic discovery of available loaders
+
+- **Backward Compatibility Layer**:
+
+  - Maintained the original `loaders.py` as an entry point
+  - Added deprecation warnings to guide users to the new structure
+  - Ensured all existing code continues to work as expected
+
+- **Enhanced Documentation**:
+  - Added comprehensive docstrings for all loader classes
+  - Provided usage examples
+  - Documented extension points for custom loaders
+
+### 5. Backward Compatibility
 
 Maintained full backward compatibility through:
 
 - Preserving the original `pipeline.py` module interface
+- Preserving the original `loaders.py` module interface
 - Re-exporting all components from the new modular structure
 - Ensuring identical API behavior
 - Detailed documentation for gradual migration
@@ -114,23 +142,18 @@ Maintained full backward compatibility through:
 
 The refactoring plan is ongoing, with the following tasks still pending:
 
-1. **Loaders Refactoring**:
-
-   - Break down `loaders.py` (1013 lines) into focused modules
-   - Create loader registry and factory
-
-2. **Anti-Hallucination Refactoring**:
+1. **Anti-Hallucination Refactoring**:
 
    - Break down `anti_hallucination.py` (694 lines) into focused modules
    - Create pluggable verification strategies
 
-3. **Testing Enhancement**:
+2. **Testing Enhancement**:
 
    - Add unit tests for new modules
    - Increase code coverage
    - Add integration tests
 
-4. **Documentation**:
+3. **Documentation**:
    - Update API documentation
    - Add architecture diagrams
    - Create usage examples
