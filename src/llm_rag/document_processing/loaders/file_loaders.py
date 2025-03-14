@@ -1,17 +1,24 @@
-"""File-based document loaders.
-
-This module provides document loaders for various file types including text, CSV, and PDF files.
-"""
+"""File-based document loaders for the LLM-RAG system."""
 
 import csv
 import importlib.util
 import logging
+import warnings
 from pathlib import Path
 from typing import List, Optional, Union
 
 from ..processors import Documents
 from .base import DocumentLoader, FileLoader, registry
 
+
+# Define a security warning class
+class SecurityWarning(Warning):
+    """Warning for security-related issues."""
+
+    pass
+
+
+# Get configured logger
 logger = logging.getLogger(__name__)
 
 # Optional imports for pandas
@@ -35,11 +42,26 @@ if not PYPDF2_AVAILABLE:
 
 # Optional imports for XML processing
 try:
-    import xml.etree.ElementTree as ET
+    try:
+        # Try to use the secure defusedxml package first
+        import defusedxml.ElementTree as ET
 
-    XML_AVAILABLE = True
+        HAS_SECURE_XML = True
+    except ImportError:
+        # Fall back to standard library with a warning
+        import warnings
+        import xml.etree.ElementTree as ET  # nosec B405
+
+        warnings.warn(
+            "Using xml.etree.ElementTree for XML parsing, which is vulnerable to XML attacks. "
+            "Install defusedxml package for secure XML parsing.",
+            SecurityWarning,
+            stacklevel=2,
+        )
+        HAS_SECURE_XML = False
+    HAS_XML = True
 except ImportError:
-    XML_AVAILABLE = False
+    HAS_XML = False
     logger.warning("XML processing libraries not available. XML loading capabilities will be affected.")
 
 
@@ -350,33 +372,27 @@ class XMLLoader(DocumentLoader, FileLoader):
         Parameters
         ----------
         file_path : Union[str, Path]
-            Path to the XML file to load.
+            Path to the XML file.
 
         Returns
         -------
         Documents
-            List of documents extracted from the XML file.
-
-        Raises
-        ------
-        ImportError
-            If XML processing libraries are not available.
-        FileNotFoundError
-            If the file does not exist.
-        Exception
-            If XML parsing fails.
+            List of documents loaded from the XML file.
 
         """
-        if not XML_AVAILABLE:
-            raise ImportError("XML processing libraries not available. Install lxml for enhanced XML support.")
-
         file_path = Path(file_path)
-
         if not file_path.exists():
-            raise FileNotFoundError(f"XML file not found: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
 
         try:
-            tree = ET.parse(file_path)
+            if not HAS_SECURE_XML:
+                warnings.warn(
+                    "Using xml.etree.ElementTree for XML parsing, which is vulnerable to XML attacks. "
+                    "Install defusedxml package for secure XML parsing.",
+                    SecurityWarning,
+                    stacklevel=2,
+                )
+            tree = ET.parse(file_path)  # nosec B314
             root = tree.getroot()
 
             # Generate metadata common to all documents from this file
