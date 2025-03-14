@@ -50,6 +50,8 @@ dev = [
     "pre-commit>=4.1.0",  # Added for pre-commit hooks
     "pandas-stubs>=2.2.3",  # Added for mypy pandas type checking
     "promptfoo>=0.1.0",  # For LLM prompt testing and evaluation
+    "bandit>=1.7.5",  # For security scanning
+    "safety>=2.3.5",  # For checking package vulnerabilities
 ]
 
 # Optional OpenAI integration
