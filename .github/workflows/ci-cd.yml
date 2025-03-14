@@ -229,7 +229,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: coverage.xml
-          slug: sm4rtm4art/llm-rag
+          slug: sm4rtm4art/LLM_Rag
           fail_ci_if_error: false
           verbose: true
 
