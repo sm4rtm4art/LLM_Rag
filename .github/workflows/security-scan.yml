@@ -48,7 +48,6 @@ jobs:
       - name: Run Bandit
         run: |
           bandit -r src/ -c pyproject.toml -f json -o bandit-results.json
-        continue-on-error: true
 
       - name: Upload Bandit results
         uses: actions/upload-artifact@v4
