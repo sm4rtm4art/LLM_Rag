@@ -60,8 +60,12 @@ try:
         )
         HAS_SECURE_XML = False
     HAS_XML = True
+    # For backward compatibility with tests
+    XML_AVAILABLE = HAS_XML
 except ImportError:
     HAS_XML = False
+    # For backward compatibility with tests
+    XML_AVAILABLE = HAS_XML
     logger.warning("XML processing libraries not available. XML loading capabilities will be affected.")
 
 
@@ -379,7 +383,17 @@ class XMLLoader(DocumentLoader, FileLoader):
         Documents
             List of documents loaded from the XML file.
 
+        Raises
+        ------
+        ImportError
+            If XML processing libraries are not available.
+        FileNotFoundError
+            If the file does not exist.
+
         """
+        if not XML_AVAILABLE:
+            raise ImportError("XML processing libraries not available. Install required dependencies.")
+
         file_path = Path(file_path)
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
