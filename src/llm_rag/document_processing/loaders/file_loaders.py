@@ -35,10 +35,10 @@ PYMUPDF_AVAILABLE = importlib.util.find_spec("fitz") is not None
 if not PYMUPDF_AVAILABLE:
     logger.warning("PyMuPDF not available. PDF loading capabilities will be limited.")
 
-# Check for PyPDF2 availability
-PYPDF2_AVAILABLE = importlib.util.find_spec("PyPDF2") is not None
-if not PYPDF2_AVAILABLE:
-    logger.warning("PyPDF2 not available. PDF loading capabilities will be limited.")
+# Check for pypdf availability (formerly PyPDF2)
+PYPDF_AVAILABLE = importlib.util.find_spec("pypdf") is not None
+if not PYPDF_AVAILABLE:
+    logger.warning("pypdf not available. PDF loading capabilities will be limited.")
 
 # Optional imports for XML processing
 try:

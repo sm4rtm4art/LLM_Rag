@@ -7,6 +7,31 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Display usage information
+usage() {
+    echo "Usage: $(basename "$0")"
+    echo
+    echo "Test a local Kubernetes deployment of the LLM-RAG system."
+    echo "This script performs the following tests:"
+    echo "  - Verifies the health endpoint is working"
+    echo "  - Tests a simple query to the RAG system"
+    echo
+    echo "Prerequisites:"
+    echo "  - KIND cluster 'llm-rag-local' must be running"
+    echo "  - kubectl must be installed"
+    echo "  - LLM-RAG deployment must be running in the cluster"
+    echo
+    echo "The script will automatically set up port forwarding to access the service."
+    echo
+    echo "No options or arguments are required."
+}
+
+# Parse command line arguments
+if [[ $1 == "-h" || $1 == "--help" ]]; then
+    usage
+    exit 0
+fi
+
 echo -e "${YELLOW}Testing local Kubernetes deployment...${NC}"
 
 # Check if KIND is installed

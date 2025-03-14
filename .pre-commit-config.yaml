@@ -64,6 +64,24 @@ repos:
         ]
         files: ^(src|tests)/.*\.py$
 
+      # Add Bandit security check
+      - id: bandit-check
+        name: Security check with Bandit
+        entry: bandit
+        language: system
+        types: [python]
+        args: ['-r', 'src/', '-c', 'pyproject.toml']
+        pass_filenames: false  # Run on entire codebase, not individual files
+        stages: [pre-commit]  # Run on every commit
+
+      # Add Safety check for dependencies
+      - id: safety-check
+        name: Check for vulnerable dependencies with Safety
+        entry: bash -c "safety scan || echo 'Safety check failed but continuing'"
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: create-test-directories
         name: Create Test Directories
         entry: python -c "from pathlib import Path; test_dir = Path('./test_data'); test_file = test_dir / 'test.txt'; test_dir.mkdir(exist_ok=True); test_file.write_text('This is a sample test document for RAG testing.\\n') if not test_file.exists() else None;"

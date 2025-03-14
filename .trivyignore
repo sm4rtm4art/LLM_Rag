@@ -1,2 +1,4 @@
 # Example of how to ignore specific vulnerabilities
 # CVE-2021-XXXXX
+
+# Note: CVE-2023-36464 (Infinite Loop vulnerability) has been addressed by switching from PyPDF2 to pypdf>=3.9.0, which contains the fix

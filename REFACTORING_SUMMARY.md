@@ -97,7 +97,16 @@ Broke down the monolithic `loaders.py` (1013 lines) into focused modules while m
   - Provided usage examples
   - Documented extension points for custom loaders
 
-### 5. Backward Compatibility
+### 5. Security Improvements
+
+- **Vulnerability Remediation**:
+  - Replaced PyPDF2 with pypdf>=3.9.0 to address CVE-2023-36464 (infinite loop vulnerability in PDF parsing)
+  - Updated all PDF loading code to work with the new library while maintaining backward compatibility
+  - Created a vulnerability checking script (`scripts/check_vulnerabilities.sh`) that works with both safety auth and API key approaches
+  - Implemented modern security scanning using Safety's newer `scan` command
+  - Enhanced overall security posture of document processing components
+
+### 6. Backward Compatibility
 
 Maintained full backward compatibility through:
 
@@ -134,9 +143,15 @@ Maintained full backward compatibility through:
    - Clearer component boundaries
 
 5. **Improved Logging**:
+
    - Centralized logging configuration
    - Consistent log formatting
    - Contextual logging capabilities
+
+6. **Enhanced Security**:
+   - Addressed known vulnerabilities
+   - Improved input validation and error handling
+   - Better dependency management with explicit version constraints
 
 ## Next Steps
 

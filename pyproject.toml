@@ -16,7 +16,7 @@ dependencies = [
     "numpy>=1.26.4,<2",
     "pandas>=2.2.0",
     "pytest>=8.3.4",
-    "PyPDF2>=3.0.0",
+    "pypdf>=3.9.0",
     "scikit-learn>=1.6.1",
     "sentence-transformers>=2.2.2",
     "tiktoken>=0.9.0",
@@ -50,6 +50,8 @@ dev = [
     "pre-commit>=4.1.0",  # Added for pre-commit hooks
     "pandas-stubs>=2.2.3",  # Added for mypy pandas type checking
     "promptfoo>=0.1.0",  # For LLM prompt testing and evaluation
+    "bandit>=1.7.5",  # For security scanning
+    "safety>=2.3.5",  # For checking package vulnerabilities
 ]
 
 # Optional OpenAI integration
@@ -154,7 +156,7 @@ module = [
     "langchain.*",
     "langchain_core.*",
     "torch.*",
-    "PyPDF2.*",
+    "pypdf.*",
     "sentence_transformers.*",
     "chromadb.*",
     "llama_cpp.*"

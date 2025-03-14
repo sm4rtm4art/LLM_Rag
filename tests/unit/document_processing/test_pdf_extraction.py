@@ -136,8 +136,8 @@ class TestPDFExtraction(unittest.TestCase):
             # Create loader with image extraction
             loader = PDFLoader(file_path=self.test_pdf_path, extract_images=True)
 
-            # Mock the _load_with_pypdf2 method to test image extraction is called
-            with patch.object(PDFLoader, "_load_with_pypdf2") as mock_load:
+            # Mock the _load_with_pypdf method to test image extraction is called
+            with patch.object(PDFLoader, "_load_with_pypdf") as mock_load:
                 mock_load.return_value = [{"content": "Test content", "metadata": {}}]
 
                 # Completely bypass the load_from_file method to avoid file existence check
