@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Test script for legacy loaders.py.
 
-This script tests that the legacy loaders from loaders.py still work after refactoring.
+This script tests that the legacy loaders from loaders_old.py still work after refactoring.
 """
 
-import importlib.util
 import logging
 import sys
 from pathlib import Path
@@ -13,19 +12,22 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Import directly from the legacy loaders.py file using its absolute path
-loaders_path = Path("src/llm_rag/document_processing/loaders.py").resolve()
-spec = importlib.util.spec_from_file_location("loaders", loaders_path)
-loaders = importlib.util.module_from_spec(spec)
-sys.modules["loaders"] = loaders
-spec.loader.exec_module(loaders)
+# Get the project root directory (2 levels up from the script location)
+script_dir = Path(__file__).resolve().parent
+project_root = script_dir.parent.parent
+
+# Add the project root to the Python path
+sys.path.insert(0, str(project_root))
+
+# Import the legacy loaders
+from src.llm_rag.document_processing import loaders_old
 
 # Get the loader classes from the module
-TextFileLoader = loaders.TextFileLoader
-CSVLoader = loaders.CSVLoader
-JSONLoader = loaders.JSONLoader
-DirectoryLoader = loaders.DirectoryLoader
-WebPageLoader = loaders.WebPageLoader
+TextFileLoader = loaders_old.TextFileLoader
+CSVLoader = loaders_old.CSVLoader
+JSONLoader = loaders_old.JSONLoader
+DirectoryLoader = loaders_old.DirectoryLoader
+WebPageLoader = loaders_old.WebPageLoader
 
 
 def test_text_loader():

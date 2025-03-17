@@ -2,6 +2,11 @@
 """Script to check the project structure and identify any issues."""
 
 import os
+from pathlib import Path
+
+# Get the project root (two directories up from this script)
+script_dir = Path(__file__).resolve().parent
+project_root = script_dir.parent.parent
 
 
 def check_directory(path, indent=""):
@@ -33,11 +38,12 @@ def check_directory(path, indent=""):
 
 
 def main():
-    """Check the project structure and validate components."""
+    """Check the project structure."""
     print("\n🔍 Checking project structure...\n")
 
-    # Check the entire src directory structure
-    check_directory("./src")
+    # Use absolute paths based on project root
+    src_dir = os.path.join(project_root, "src")
+    check_directory(src_dir)
 
     print("\n✅ Check completed!")
 

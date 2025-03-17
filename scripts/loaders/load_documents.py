@@ -8,14 +8,18 @@ from various file types in the test_subset directory.
 import sys
 from pathlib import Path
 
-# Add the src directory to the Python path
-sys.path.insert(0, str(Path(__file__).parent))
+# Get the project root directory (two directories up from the script location)
+script_dir = Path(__file__).resolve().parent
+project_root = script_dir.parent.parent
+
+# Add the project root to the Python path
+sys.path.insert(0, str(project_root))
 
 # Import the loader
-from src.llm_rag.document_processing import DirectoryLoader, PDFLoader
+from src.llm_rag.document_processing.loaders import DirectoryLoader, PDFLoader
 
-# Define the path to the test_subset directory
-TEST_SUBSET_DIR = Path("data/documents/test_subset")
+# Define the path to the test_subset directory - adjust path to be relative to project root
+TEST_SUBSET_DIR = project_root / "data/documents/test_subset"
 
 
 def load_text_files():
