@@ -344,6 +344,12 @@ class TestDirectoryLoader:
 
         # Configure mock path class
         mock_path_class.return_value = mock_dir
+        mock_path_class.side_effect = lambda x: {
+            "file1.txt": mock_file1,
+            "file2.pdf": mock_file2,
+            "file3.csv": mock_file3,
+            "test_dir": mock_dir,
+        }[str(x)]
 
         # Create mock loaders
         mock_txt_loader = MagicMock()
