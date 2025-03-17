@@ -4,7 +4,7 @@ This module includes components for loading documents from various sources and f
 It provides loaders for PDFs, text files, CSV files, JSON, and web content.
 """
 
-from .base import DirectoryLoader, DocumentLoader, FileLoader
+from .base import DirectoryLoader, DocumentLoader, FileLoader, LoaderRegistry, registry
 from .file_loaders import CSVLoader, TextFileLoader, XMLLoader
 from .pdf_loaders import PDFLoader
 from .web_loader import WebLoader, WebPageLoader
@@ -26,5 +26,7 @@ __all__ = [
     "XMLLoader",
     "WebLoader",
     "WebPageLoader",
+    "LoaderRegistry",
+    "registry",
     "load_document",
 ]
