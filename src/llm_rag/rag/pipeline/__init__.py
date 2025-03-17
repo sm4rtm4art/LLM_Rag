@@ -1,103 +1,88 @@
-"""RAG pipeline components for the LLM-RAG system.
+"""Pipeline module for the RAG system.
 
-This module provides components for building retrieval-augmented generation
-pipelines. It includes classes for document retrieval, context formatting,
-query generation, and response post-processing.
-
-The original monolithic implementation has been broken down into focused
-modules while maintaining backward compatibility through this package.
+This module provides the core pipeline components for the RAG system,
+including document retrieval, context formatting, and response generation.
 """
 
 # Import and re-export all components for easy access
 # These will be available via llm_rag.rag.pipeline
-
 # Base class definitions
 # Base components
-from llm_rag.rag.pipeline.base import (
-    InMemoryChatMessageHistory,
-    MyCustomDocument,
-    RAGPipeline,
-)
-from llm_rag.rag.pipeline.base_classes import (
+from langchain_core.language_models import BaseLanguageModel
+from langchain_core.messages import BaseMessage
+from langchain_core.prompts import PromptTemplate
+from langchain_core.vectorstores import VectorStore
+
+from .base import RAGPipeline
+
+# Context formatting components
+from .base_classes import (
     DEFAULT_CONVERSATIONAL_TEMPLATE,
     DEFAULT_PROMPT_TEMPLATE,
     BaseConversationalRAGPipeline,
     BaseRAGPipeline,
 )
+from .context import BaseContextFormatter as BaseFormatter
+from .context import MarkdownContextFormatter as MarkdownFormatter
+from .context import SimpleContextFormatter as SimpleFormatter
+from .conversational import ConversationalRAGPipeline
+from .generation import BaseGenerator
+from .generation import LLMGenerator as SimpleGenerator
+from .generation import TemplatedGenerator as StreamingGenerator
+from .retrieval import BaseRetriever, HybridRetriever
+from .retrieval import VectorStoreRetriever as SimpleRetriever
 
-# Context formatting components
-from llm_rag.rag.pipeline.context import (
-    BaseContextFormatter,
-    ContextFormatter,
-    MarkdownContextFormatter,
-    SimpleContextFormatter,
-    create_formatter,
-)
+# Define HTMLFormatter as an alias for MarkdownFormatter for now
+HTMLFormatter = MarkdownFormatter
 
-# Conversational pipeline components
-from llm_rag.rag.pipeline.conversational import (
-    ConversationalRAGPipeline,
-)
 
-# Document processing components
-from llm_rag.rag.pipeline.document_processor import (
-    _process_document,
-    _process_documents,
-)
-from llm_rag.rag.pipeline.generation import (
-    DEFAULT_PROMPT_TEMPLATE as GENERATION_PROMPT_TEMPLATE,
-)
+class MessageHistory:
+    """Base class for message history."""
 
-# Generation components
-from llm_rag.rag.pipeline.generation import (
-    BaseGenerator,
-    LLMGenerator,
-    ResponseGenerator,
-    TemplatedGenerator,
-    create_generator,
-)
+    def __init__(self):
+        """Initialize an empty message history."""
+        self.messages = []
 
-# Retrieval components
-from llm_rag.rag.pipeline.retrieval import (
-    BaseRetriever,
-    DocumentRetriever,
-    HybridRetriever,
-    VectorStoreRetriever,
-    create_retriever,
-)
+    def add_message(self, message: BaseMessage) -> None:
+        """Add a message to the history."""
+        self.messages.append(message)
 
-# Define what's available when using `from llm_rag.rag.pipeline import *`
+    def get_messages(self) -> list[BaseMessage]:
+        """Get all messages in the history."""
+        return self.messages
+
+    def clear(self) -> None:
+        """Clear the message history."""
+        self.messages = []
+
+
+# Re-export all components
 __all__ = [
     # Base components
-    "DEFAULT_PROMPT_TEMPLATE",
-    "DEFAULT_CONVERSATIONAL_TEMPLATE",
     "BaseRAGPipeline",
     "BaseConversationalRAGPipeline",
-    "InMemoryChatMessageHistory",
-    "MyCustomDocument",
+    "BaseMessage",
+    "BaseMessageHistory",
+    "BaseLanguageModel",
+    "PromptTemplate",
+    "VectorStore",
+    # Pipeline implementations
     "RAGPipeline",
-    # Conversational components
     "ConversationalRAGPipeline",
-    # Document processing functions
-    "_process_document",
-    "_process_documents",
     # Retrieval components
     "BaseRetriever",
-    "DocumentRetriever",
+    "SimpleRetriever",
     "HybridRetriever",
-    "VectorStoreRetriever",
-    "create_retriever",
-    # Context formatting components
-    "BaseContextFormatter",
-    "ContextFormatter",
-    "MarkdownContextFormatter",
-    "SimpleContextFormatter",
-    "create_formatter",
     # Generation components
     "BaseGenerator",
-    "GENERATION_PROMPT_TEMPLATE",
-    "LLMGenerator",
-    "ResponseGenerator",
-    "TemplatedGenerator",
-    "create_generator",
+    "SimpleGenerator",
+    "StreamingGenerator",
+    # Context formatting components
+    "BaseFormatter",
+    "SimpleFormatter",
+    "MarkdownFormatter",
+    "HTMLFormatter",
+    # Templates
+    "DEFAULT_PROMPT_TEMPLATE",
+    "DEFAULT_CONVERSATIONAL_TEMPLATE",
 ]

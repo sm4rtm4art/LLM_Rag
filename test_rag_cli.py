@@ -238,6 +238,7 @@ def interactive_rag_session(rag: RAGPipeline, use_anti_hallucination: bool = Tru
 
 
 def main():
+    """Run the RAG system with anti-hallucination features and evaluate its performance."""
     parser = argparse.ArgumentParser(description="Test the RAG system with anti-hallucination features")
     parser.add_argument("--vector-db", type=str, required=True, help="Path to the vector database")
     parser.add_argument("--api-key", type=str, help="OpenAI API key (uses env var if not provided)")

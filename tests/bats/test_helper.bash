@@ -16,6 +16,7 @@ fi
 
 # Assert that a command succeeds
 assert_success() {
+    # shellcheck disable=SC2154
     [ "$status" -eq 0 ]
 }
 
@@ -32,6 +33,7 @@ assert_output() {
     else
         expected="$1"
     fi
+    # shellcheck disable=SC2154
     [ "$output" = "$expected" ]
 }
 

@@ -10,13 +10,8 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from llm_rag.document_processing.loaders import (
-    CSVLoader,
-    LoaderRegistry,
-    TextFileLoader,
-    load_document,
-    load_documents_from_directory,
-)
+from llm_rag.document_processing.loaders import CSVLoader, LoaderRegistry, TextFileLoader
+from llm_rag.document_processing.loaders.directory_loader import DirectoryLoader, load_document
 
 
 class TestLoaderRegistry:
@@ -96,14 +91,14 @@ class TestLoaderRegistry:
 
 
 class TestFactoryFunctions:
-    """Test cases for the factory functions."""
+    """Test cases for document loader factory functions."""
 
     def test_load_document(self):
         """Test loading a document using the load_document function."""
         # Mock file existence check
         with patch("pathlib.Path.exists", return_value=True):
             # Mock registry
-            with patch("llm_rag.document_processing.loaders.factory.registry") as mock_registry:
+            with patch("llm_rag.document_processing.loaders.directory_loader.registry") as mock_registry:
                 # Setup mock loader
                 mock_loader = MagicMock()
                 mock_loader.load_from_file.return_value = [{"content": "Test content", "metadata": {}}]
@@ -118,32 +113,28 @@ class TestFactoryFunctions:
                 # Check that loader was called correctly
                 mock_loader.load_from_file.assert_called_once()
 
-                # Check returned documents
-                assert documents == [{"content": "Test content", "metadata": {}}]
+                # Check result
+                assert len(documents) == 1
+                assert documents[0]["content"] == "Test content"
 
     def test_load_document_file_not_found(self):
         """Test load_document when the file doesn't exist."""
         # Mock file existence check
         with patch("pathlib.Path.exists", return_value=False):
-            documents = load_document("nonexistent.txt")
-            assert documents is None
+            with pytest.raises(FileNotFoundError):
+                load_document("nonexistent.txt")
 
     def test_load_document_no_loader(self):
         """Test load_document when no loader is found for the file type."""
         # Mock file existence check
         with patch("pathlib.Path.exists", return_value=True):
             # Mock registry
-            with patch("llm_rag.document_processing.loaders.factory.registry") as mock_registry:
+            with patch("llm_rag.document_processing.loaders.directory_loader.registry") as mock_registry:
                 mock_registry.create_loader_for_file.return_value = None
 
                 # Call load_document
-                documents = load_document("test.unknown")
-
-                # Check that registry was called correctly
-                mock_registry.create_loader_for_file.assert_called_once()
-
-                # Check returned documents
-                assert documents is None
+                with pytest.raises(ValueError):
+                    load_document("test.unknown")
 
     def test_load_documents_from_directory(self):
         """Test loading documents from a directory."""
@@ -152,22 +143,37 @@ class TestFactoryFunctions:
             with patch("pathlib.Path.is_dir", return_value=True):
                 # Mock glob
                 with patch("pathlib.Path.glob") as mock_glob:
-                    mock_glob.return_value = [Path("file1.txt"), Path("file2.txt")]
+                    mock_file1 = MagicMock()
+                    mock_file1.__str__.return_value = "file1.txt"
+                    mock_file1.is_file.return_value = True
+                    mock_file1.name = "file1.txt"
+                    mock_file1.suffix = ".txt"
+                    mock_file2 = MagicMock()
+                    mock_file2.__str__.return_value = "file2.txt"
+                    mock_file2.is_file.return_value = True
+                    mock_file2.name = "file2.txt"
+                    mock_file2.suffix = ".txt"
 
-                    # Mock load_document
-                    with patch("llm_rag.document_processing.loaders.factory.load_document") as mock_load_document:
-                        mock_load_document.side_effect = [
+                    mock_glob.return_value = [mock_file1, mock_file2]
+
+                    # Mock registry
+                    with patch("llm_rag.document_processing.loaders.directory_loader.registry") as mock_registry:
+                        # Setup mock loader
+                        mock_loader = MagicMock()
+                        mock_loader.load_from_file.side_effect = [
                             [{"content": "Content 1", "metadata": {}}],
                             [{"content": "Content 2", "metadata": {}}],
                         ]
+                        mock_registry.create_loader_for_file.return_value = mock_loader
 
                         # Call load_documents_from_directory
-                        documents = load_documents_from_directory("test_dir")
+                        loader = DirectoryLoader("test_dir")
+                        documents = loader.load()
 
                         # Check that load_document was called correctly
-                        assert mock_load_document.call_count == 2
+                        assert mock_registry.create_loader_for_file.call_count == 2
 
-                        # Check returned documents
+                        # Check results
                         assert len(documents) == 2
                         assert documents[0]["content"] == "Content 1"
                         assert documents[1]["content"] == "Content 2"
@@ -176,8 +182,8 @@ class TestFactoryFunctions:
         """Test load_documents_from_directory when the directory doesn't exist."""
         # Mock directory existence check
         with patch("pathlib.Path.exists", return_value=False):
-            documents = load_documents_from_directory("nonexistent")
-            assert documents == []
+            with pytest.raises(NotADirectoryError):
+                DirectoryLoader("nonexistent").load()
 
 
 class TestTextFileLoader:

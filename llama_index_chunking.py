@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""LlamaIndex Chunking for RAG System
+"""LlamaIndex Chunking for RAG System.
 
 This script demonstrates sophisticated document chunking
 and integration with the existing RAG system.
@@ -208,7 +208,7 @@ def integrate_with_existing_rag(index, query: str, similarity_top_k: int = 5):
 
 
 def main():
-    """Main function to demonstrate LlamaIndex chunking."""
+    """Run LlamaIndex chunking demonstration."""
     parser = argparse.ArgumentParser(description="Demonstrate LlamaIndex chunking for RAG system")
     parser.add_argument(
         "--docs-dir", type=str, default="data/documents/test_subset", help="Directory containing documents to process"

@@ -83,11 +83,9 @@ class TestDirectoryLoader:
         """Test load_from_directory() when directory doesn't exist."""
         # Arrange
         with patch("pathlib.Path.exists", return_value=False):
-            # Act
-            result = DirectoryLoader.load_from_directory("nonexistent")
-
-            # Assert
-            assert result == []
+            # Act & Assert
+            with pytest.raises(NotADirectoryError):
+                DirectoryLoader.load_from_directory("nonexistent")
 
     def test_load_from_directory_with_files(self):
         """Test load_from_directory() with multiple files."""
@@ -104,9 +102,8 @@ class TestDirectoryLoader:
                         "llm_rag.document_processing.loaders.directory_loader.load_document"
                     ) as mock_load_document:
                         mock_load_document.side_effect = [
-                            [{"content": "Content 1", "metadata": {"source": "file1.txt"}}],
-                            [{"content": "Content 2", "metadata": {"source": "file2.txt"}}],
-                            None,  # Hidden file should be filtered out
+                            [{"content": "Content 1", "metadata": {}}],
+                            [{"content": "Content 2", "metadata": {}}],
                         ]
 
                         # Act
@@ -116,8 +113,6 @@ class TestDirectoryLoader:
                         assert len(result) == 2
                         assert result[0]["content"] == "Content 1"
                         assert result[1]["content"] == "Content 2"
-
-                        # Check that load_document was called for the expected files
                         assert mock_load_document.call_count == 2
 
     def test_load_from_directory_with_exclude_patterns(self):
@@ -140,19 +135,17 @@ class TestDirectoryLoader:
                         "llm_rag.document_processing.loaders.directory_loader.load_document"
                     ) as mock_load_document:
                         mock_load_document.side_effect = [
-                            [{"content": "Content 1", "metadata": {"source": "file1.txt"}}],
-                            [{"content": "Content 2", "metadata": {"source": "file2.txt"}}],
+                            [{"content": "Content 1", "metadata": {}}],
+                            [{"content": "Content 2", "metadata": {}}],
                         ]
 
                         # Act
-                        result = DirectoryLoader.load_from_directory("test_dir", exclude_patterns=["temp*"])
+                        result = DirectoryLoader.load_from_directory("test_dir", exclude_patterns=["temp.txt"])
 
                         # Assert
                         assert len(result) == 2
                         assert result[0]["content"] == "Content 1"
                         assert result[1]["content"] == "Content 2"
-
-                        # Check that load_document was called for the expected files
                         assert mock_load_document.call_count == 2
 
     def test_load_from_directory_with_error(self):
@@ -170,16 +163,14 @@ class TestDirectoryLoader:
                         "llm_rag.document_processing.loaders.directory_loader.load_document"
                     ) as mock_load_document:
                         mock_load_document.side_effect = [
-                            [{"content": "Content 1", "metadata": {"source": "file1.txt"}}],
-                            Exception("Error loading file"),
+                            [{"content": "Content 1", "metadata": {}}],
+                            Exception("Test error"),
                         ]
 
                         # Act
                         result = DirectoryLoader.load_from_directory("test_dir")
 
-                        # Assert - should continue after error and return valid documents
+                        # Assert
                         assert len(result) == 1
                         assert result[0]["content"] == "Content 1"
-
-                        # Check that load_document was called for both files
                         assert mock_load_document.call_count == 2

@@ -9,9 +9,33 @@ from typing import Dict, List, Optional, Union
 
 from ..processors import Documents
 from .base import DocumentLoader, registry
-from .factory import load_document
 
 logger = logging.getLogger(__name__)
+
+
+def load_document(file_path: str) -> List[dict]:
+    """Load a document using the appropriate loader based on the file path.
+
+    Args:
+        file_path: Path to the document to load
+
+    Returns:
+        List of documents loaded from the file
+
+    Raises:
+        FileNotFoundError: If the file does not exist
+        ValueError: If no loader is found for the file type
+
+    """
+    path = Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    loader = registry.create_loader_for_file(path)
+    if loader is None:
+        raise ValueError(f"No loader found for file type: {path.suffix}")
+
+    return loader.load_from_file(path)
 
 
 class DirectoryLoader(DocumentLoader):
@@ -95,7 +119,7 @@ class DirectoryLoader(DocumentLoader):
         Parameters
         ----------
         directory_path : Union[str, Path]
-            Path to the directory.
+            Path to the directory to load files from.
         glob_pattern : str, optional
             Pattern to match files, by default "*.*"
         recursive : bool, optional
@@ -112,54 +136,43 @@ class DirectoryLoader(DocumentLoader):
         Documents
             List of documents loaded from all files.
 
+        Raises
+        ------
+        NotADirectoryError
+            If the directory path is not a valid directory.
+
         """
         directory_path = Path(directory_path)
+        if not directory_path.exists() or not directory_path.is_dir():
+            raise NotADirectoryError(f"Directory not found: {directory_path}")
+
         exclude_patterns = exclude_patterns or []
         loader_kwargs = loader_kwargs or {}
 
-        if not directory_path.exists() or not directory_path.is_dir():
-            logger.error(f"Directory not found: {directory_path}")
-            return []
-
-        # Get all files matching the pattern
+        # Get all files matching the glob pattern
         if recursive:
-            files = list(directory_path.glob(f"**/{glob_pattern}"))
+            files = list(directory_path.rglob(glob_pattern))
         else:
             files = list(directory_path.glob(glob_pattern))
 
-        # Apply exclusion patterns if any
+        # Filter out directories and hidden files
+        files = [f for f in files if f.is_file() and (not exclude_hidden or not f.name.startswith("."))]
+
+        # Apply exclude patterns
         for pattern in exclude_patterns:
-            exclude_files = set()
-            if recursive:
-                exclude_files.update(directory_path.glob(f"**/{pattern}"))
-            else:
-                exclude_files.update(directory_path.glob(pattern))
-
-            files = [f for f in files if f not in exclude_files]
-
-        # Filter out directories
-        files = [f for f in files if f.is_file()]
-
-        # Filter out hidden files if requested
-        if exclude_hidden:
-            files = [f for f in files if not f.name.startswith(".")]
+            files = [f for f in files if not f.match(pattern)]
 
         # Load documents from each file
-        all_documents = []
+        documents = []
         for file_path in files:
             try:
-                # Check if we have a registered loader for this file type
-                documents = load_document(file_path, **loader_kwargs)
-
-                if documents:
-                    all_documents.extend(documents)
-                else:
-                    logger.warning(f"No loader found for file: {file_path}")
+                file_docs = load_document(str(file_path))
+                documents.extend(file_docs)
             except Exception as e:
-                logger.error(f"Error loading file {file_path}: {e}")
-                # Continue with other files
+                logger.error(f"Error loading file {file_path}: {str(e)}")
+                continue
 
-        return all_documents
+        return documents
 
 
 # Register the loader

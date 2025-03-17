@@ -33,10 +33,7 @@ def check_directory(path, indent=""):
 
 
 def main():
-    """Main entry point for the script."""
-    # Check the pipeline module structure
-    pipeline_path = "./src/llm_rag/rag/pipeline"
-
+    """Check the project structure and validate components."""
     print("\n🔍 Checking project structure...\n")
 
     # Check the entire src directory structure

@@ -140,10 +140,13 @@ class SimpleContextFormatter(BaseContextFormatter):
 
             for i, doc in enumerate(documents):
                 # Extract content and metadata
-                content = doc.get("content", "")
-
-                if not content and "page_content" in doc:
-                    content = doc["page_content"]
+                content = ""
+                if hasattr(doc, "content"):
+                    content = doc.content
+                elif hasattr(doc, "page_content"):
+                    content = doc.page_content
+                elif isinstance(doc, dict):
+                    content = doc.get("content", "") or doc.get("page_content", "")
 
                 # Skip if no content
                 if not content:
@@ -257,10 +260,13 @@ class MarkdownContextFormatter(BaseContextFormatter):
 
             for i, doc in enumerate(documents):
                 # Extract content and metadata
-                content = doc.get("content", "")
-
-                if not content and "page_content" in doc:
-                    content = doc["page_content"]
+                content = ""
+                if hasattr(doc, "content"):
+                    content = doc.content
+                elif hasattr(doc, "page_content"):
+                    content = doc.page_content
+                elif isinstance(doc, dict):
+                    content = doc.get("content", "") or doc.get("page_content", "")
 
                 # Skip if no content
                 if not content:

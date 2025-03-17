@@ -221,7 +221,7 @@ def find_python_files(base_path: str) -> List[str]:
 
 
 def main():
-    """Main entry point for the script."""
+    """Check variable naming consistency across the codebase."""
     parser = argparse.ArgumentParser(description="Check variable naming consistency across the codebase")
     parser.add_argument(
         "--path",

@@ -76,6 +76,9 @@ class ConversationalRAGPipeline(RAGPipeline):
             history_size=history_size,
         )
 
+        # Initialize conversation history
+        self.conversation_history = {}
+
         # Create modular components (override base class components)
         self._retriever = create_retriever(source=vectorstore, top_k=top_k)
         self._formatter = create_formatter(format_type="simple", include_metadata=True)
