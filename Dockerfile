@@ -1,83 +1,79 @@
-# Stage 1: Build Stage
+# === Stage: UV ===
+# Pull the official UV image to get the pre-built binaries.
+FROM ghcr.io/astral-sh/uv:0.6.6 AS uv
+
+# === Stage 1: Builder ===
 FROM python:3.12-slim AS builder
 
-# Set environment variables for building
+# Set environment variables for performance and timeouts.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_DEFAULT_TIMEOUT=600
 
-# Set working directory
-WORKDIR /build
+WORKDIR /app
 
-# Install required system dependencies in one layer and clean up afterward
+# Install build and system dependencies.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
+    pkg-config \
     git \
     curl \
-    pkg-config \
-    python3-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip and install UV (used for dependency management)
-RUN pip install --no-cache-dir --upgrade pip \
-    && curl -LsSf https://astral.sh/uv/install.sh | sh
+# Copy UV binaries from the UV stage into /usr/local/bin so that "uv" is in PATH.
+COPY --from=uv /uv /usr/local/bin/uv
+COPY --from=uv /uvx /usr/local/bin/uvx
 
-# Copy only the files needed for dependency installation
+# Verify UV installation and print version
+RUN echo "UV location: $(which uv)" && echo "UV version: $(uv --version)"
+
+# Copy dependency files first for better caching
 COPY pyproject.toml ./
 
-# Generate requirements file and install dependencies in two parts:
-# 1. Core dependencies (excluding heavy ML ones)
-# 2. ML dependencies (if any, installed separately)
-RUN python -c "import tomllib; f = open('pyproject.toml', 'rb'); data = tomllib.load(f); deps = data.get('project', {}).get('dependencies', []); print('\n'.join(deps))" > requirements.txt \
-    && grep -v -E "llama-cpp-python|torch|transformers|sentence-transformers|accelerate|safetensors|bitsandbytes|optimum" requirements.txt > requirements_core.txt \
-    && /root/.cargo/bin/uv pip install --system --no-cache-dir -r requirements_core.txt \
-    && grep -E "torch|transformers|sentence-transformers|accelerate|safetensors|bitsandbytes|optimum" requirements.txt > requirements_ml.txt || true \
-    && if [ -s requirements_ml.txt ]; then /root/.cargo/bin/uv pip install --system --no-cache-dir -r requirements_ml.txt; fi \
-    && rm -rf requirements.txt requirements_core.txt requirements_ml.txt /root/.cache/* /tmp/*
+# Install dependencies using UV
+RUN uv pip install --system -e .
 
-# Copy only the application source code
-COPY src/ /build/src/
+# Now copy the rest of your application code
+COPY . .
 
-# Stage 2: Runtime Stage
-FROM python:3.12-slim
+# Create a non‑root user and adjust file ownership.
+RUN useradd --create-home appuser && \
+    chown -R appuser:appuser /app
 
-# Set runtime environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    DEBIAN_FRONTEND=noninteractive
+# Create an entrypoint script that uses UV (or uvicorn) to run your tasks.
+RUN echo '#!/bin/bash\nif [ "$1" = "api" ]; then\n  exec uvicorn llm_rag.api.main:app --host 0.0.0.0 --port 8000\nelse\n  exec "$@"\nfi' > /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
 
-# Set working directory
+# === Stage 2: Final Runtime Image ===
+FROM python:3.12-slim AS final
+
 WORKDIR /app
 
-# Install minimal runtime dependencies and clean up afterward
+# Install only the minimal runtime dependencies.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy installed packages and application code from builder stage
-COPY --from=builder /usr/local/lib/python3.12 /usr/local/lib/python3.12
+# Copy UV from the UV stage
+COPY --from=uv /uv /usr/local/bin/uv
+COPY --from=uv /uvx /usr/local/bin/uvx
+
+# Copy installed Python packages and application from builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /build/src /app/src
+COPY --from=builder /app /app
 
-# Create symbolic link for the package to be importable
-RUN ln -s /app/src/llm_rag /usr/local/lib/python3.12/site-packages/llm_rag
+# Install the package in development mode in the final stage
+RUN uv pip install --system -e /app
 
-# Expose the API port
+# Ensure proper ownership and switch to a non‑root user.
+RUN useradd --create-home appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 8000
 
-# Create an entrypoint script for both API and CLI modes
-RUN echo '#!/bin/bash\n\
-    if [ "$1" = "api" ]; then\n\
-    exec uvicorn llm_rag.api.main:app --host 0.0.0.0 --port 8000\n\
-    else\n\
-    exec python -m llm_rag "$@"\n\
-    fi' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
-
-# Set the entrypoint and default command
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD []
+CMD ["api"]

@@ -80,15 +80,20 @@ jobs:
         with:
           python-version: "${{ env.PYTHON_VERSION }}"
 
-      - name: Cache UV & pip packages
+      - name: Cache Python dependencies
         uses: actions/cache@v4
         with:
           path: |
             ~/.cache/uv
             ~/.cache/pip
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+            ~/.cache/pre-commit
+            .pytest_cache
+            ~/.cache/torch
+            ~/.cache/huggingface
+          key: ${{ runner.os }}-python-${{ hashFiles('pyproject.toml') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-uv-
+            ${{ runner.os }}-python-${{ hashFiles('pyproject.toml') }}-
+            ${{ runner.os }}-python-
 
       - name: Install UV
         run: |
@@ -152,16 +157,20 @@ jobs:
         with:
           python-version: "${{ env.PYTHON_VERSION }}"
 
-      - name: Cache lint dependencies
+      - name: Cache Python dependencies
         uses: actions/cache@v4
         with:
           path: |
             ~/.cache/uv
             ~/.cache/pip
             ~/.cache/pre-commit
-          key: ${{ runner.os }}-uv-lint-${{ hashFiles('pyproject.toml') }}
+            .pytest_cache
+            ~/.cache/torch
+            ~/.cache/huggingface
+          key: ${{ runner.os }}-python-${{ hashFiles('pyproject.toml') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-uv-lint-
+            ${{ runner.os }}-python-${{ hashFiles('pyproject.toml') }}-
+            ${{ runner.os }}-python-
 
       - name: Install UV
         run: |
@@ -198,16 +207,19 @@ jobs:
         with:
           python-version: "${{ env.PYTHON_VERSION }}"
 
-      - name: Cache test dependencies
+      - name: Cache Python dependencies
         uses: actions/cache@v4
         with:
           path: |
             ~/.cache/uv
             ~/.cache/pip
             .pytest_cache
-          key: ${{ runner.os }}-uv-test-${{ hashFiles('pyproject.toml') }}
+            ~/.cache/torch
+            ~/.cache/huggingface
+          key: ${{ runner.os }}-python-${{ hashFiles('pyproject.toml') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-uv-test-
+            ${{ runner.os }}-python-${{ hashFiles('pyproject.toml') }}-
+            ${{ runner.os }}-python-
 
       - name: Install UV
         run: |
@@ -297,15 +309,19 @@ jobs:
         with:
           python-version: "${{ env.PYTHON_VERSION }}"
 
-      - name: Cache UV & pip packages
+      - name: Cache Python dependencies
         uses: actions/cache@v4
         with:
           path: |
             ~/.cache/uv
             ~/.cache/pip
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+            .pytest_cache
+            ~/.cache/torch
+            ~/.cache/huggingface
+          key: ${{ runner.os }}-python-${{ hashFiles('pyproject.toml') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-uv-
+            ${{ runner.os }}-python-${{ hashFiles('pyproject.toml') }}-
+            ${{ runner.os }}-python-
 
       - name: Install UV
         run: |
