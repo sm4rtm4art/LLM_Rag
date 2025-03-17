@@ -16,6 +16,20 @@ def load_document(file_path: str) -> str:
     pass
 
 
+def load_documents_from_directory(directory_path: str) -> list[str]:
+    """Load all documents from a directory using appropriate loaders.
+
+    Args:
+        directory_path: Path to the directory containing documents
+
+    Returns:
+        List of loaded document contents
+
+    """
+    loader = DirectoryLoader(directory_path)
+    return loader.load()
+
+
 __all__ = [
     "DocumentLoader",
     "FileLoader",
@@ -29,4 +43,5 @@ __all__ = [
     "LoaderRegistry",
     "registry",
     "load_document",
+    "load_documents_from_directory",
 ]
