@@ -94,7 +94,7 @@ class DirectoryLoader(DocumentLoader):
         Parameters
         ----------
         directory_path : Union[str, Path]
-            Path to the directory.
+            Path to the directory to load files from.
         glob_pattern : str, optional
             Pattern to match files, by default "*.*"
         recursive : bool, optional
@@ -111,61 +111,47 @@ class DirectoryLoader(DocumentLoader):
         Documents
             List of documents loaded from all files.
 
+        Raises
+        ------
+        NotADirectoryError
+            If the directory path is not a valid directory.
+
         """
         directory_path = Path(directory_path)
+        if not directory_path.exists() or not directory_path.is_dir():
+            raise NotADirectoryError(f"Directory not found: {directory_path}")
+
         exclude_patterns = exclude_patterns or []
         loader_kwargs = loader_kwargs or {}
 
-        if not directory_path.exists() or not directory_path.is_dir():
-            logger.error(f"Directory not found: {directory_path}")
-            return []
-
-        # Get all files matching the pattern
+        # Get all files matching the glob pattern
         if recursive:
-            files = list(directory_path.glob(f"**/{glob_pattern}"))
+            files = list(directory_path.rglob(glob_pattern))
         else:
             files = list(directory_path.glob(glob_pattern))
 
-        # Apply exclusion patterns if any
+        # Filter out directories and hidden files
+        files = [f for f in files if f.is_file() and (not exclude_hidden or not f.name.startswith("."))]
+
+        # Apply exclude patterns
         for pattern in exclude_patterns:
-            exclude_files = set()
-            if recursive:
-                exclude_files.update(directory_path.glob(f"**/{pattern}"))
-            else:
-                exclude_files.update(directory_path.glob(pattern))
-
-            files = [f for f in files if f not in exclude_files]
-
-        # Filter out directories
-        files = [f for f in files if f.is_file()]
-
-        # Filter out hidden files if requested
-        if exclude_hidden:
-            files = [f for f in files if not f.name.startswith(".")]
+            files = [f for f in files if not f.match(pattern)]
 
         # Load documents from each file
-        all_documents = []
+        documents = []
         for file_path in files:
             try:
-                # Get an appropriate loader from the registry
-                loader = registry.create_loader_for_file(file_path, **loader_kwargs)
-                if loader is None:
-                    logger.warning(f"No loader found for file: {file_path}")
-                    continue
-
-                # Load documents using the loader
-                if hasattr(loader, "load_from_file"):
-                    documents = loader.load_from_file(file_path)
+                loader = registry.create_loader_for_file(file_path)
+                if loader is not None:
+                    file_docs = loader.load_from_file(file_path, **loader_kwargs)
+                    documents.extend(file_docs)
                 else:
-                    documents = loader.load()
-
-                if documents:
-                    all_documents.extend(documents)
+                    logger.warning(f"No loader found for file: {file_path}")
             except Exception as e:
-                logger.error(f"Error loading file {file_path}: {e}")
-                # Continue with other files
+                logger.error(f"Error loading file {file_path}: {str(e)}")
+                continue
 
-        return all_documents
+        return documents
 
 
 # Register the loader
