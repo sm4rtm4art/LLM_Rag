@@ -126,6 +126,13 @@ def test_main_output(capsys):
         mock_llm._call.return_value = "Test response"
         mock_llm.callbacks = []
 
+        # Mock ingest_documents function
+        def mock_ingest(*args, **kwargs):
+            print("\n" + "=" * 40)
+            print("Ingesting documents...")
+            print("=" * 40)
+            return mock_vector_store
+
         # Determine which patches to apply based on environment
         patches = [
             patch("chromadb.PersistentClient", return_value=mock_client),
@@ -168,6 +175,11 @@ def test_main_output(capsys):
             patch(
                 "llm_rag.main.RAGPipeline",
                 MockRAGPipeline,
+            ),
+            # Add patch for ingest_documents
+            patch(
+                "llm_rag.main.ingest_documents",
+                side_effect=mock_ingest,
             ),
         ]
 
