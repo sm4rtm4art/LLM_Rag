@@ -13,6 +13,31 @@ from .base import DocumentLoader, registry
 logger = logging.getLogger(__name__)
 
 
+def load_document(file_path: str) -> List[dict]:
+    """Load a document using the appropriate loader based on the file path.
+
+    Args:
+        file_path: Path to the document to load
+
+    Returns:
+        List of documents loaded from the file
+
+    Raises:
+        FileNotFoundError: If the file does not exist
+        ValueError: If no loader is found for the file type
+
+    """
+    path = Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    loader = registry.create_loader_for_file(path)
+    if loader is None:
+        raise ValueError(f"No loader found for file type: {path.suffix}")
+
+    return loader.load_from_file(path)
+
+
 class DirectoryLoader(DocumentLoader):
     """Load documents from all files in a directory.
 
@@ -141,12 +166,8 @@ class DirectoryLoader(DocumentLoader):
         documents = []
         for file_path in files:
             try:
-                loader = registry.create_loader_for_file(file_path)
-                if loader is not None:
-                    file_docs = loader.load_from_file(file_path, **loader_kwargs)
-                    documents.extend(file_docs)
-                else:
-                    logger.warning(f"No loader found for file: {file_path}")
+                file_docs = load_document(str(file_path))
+                documents.extend(file_docs)
             except Exception as e:
                 logger.error(f"Error loading file {file_path}: {str(e)}")
                 continue
