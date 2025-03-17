@@ -319,14 +319,17 @@ class TestDirectoryLoader:
         mock_file1.__str__.return_value = "file1.txt"
         mock_file1.is_file.return_value = True
         mock_file1.name = "file1.txt"
+        mock_file1.suffix = ".txt"
         mock_file2 = MagicMock()
         mock_file2.__str__.return_value = "file2.pdf"
         mock_file2.is_file.return_value = True
         mock_file2.name = "file2.pdf"
+        mock_file2.suffix = ".pdf"
         mock_file3 = MagicMock()
         mock_file3.__str__.return_value = "file3.csv"
         mock_file3.is_file.return_value = True
         mock_file3.name = "file3.csv"
+        mock_file3.suffix = ".csv"
 
         # Create mock directory path
         mock_dir = MagicMock()
@@ -370,7 +373,9 @@ class TestDirectoryLoader:
 
         # Assert
         assert len(documents) == 3
-        assert all(isinstance(doc, Document) for doc in documents)
+        assert documents[0].page_content == "text content"
+        assert documents[1].page_content == "pdf content"
+        assert documents[2].page_content == "csv content"
 
     def test_load_invalid_directory(self) -> None:
         """Test behavior when directory is not found."""

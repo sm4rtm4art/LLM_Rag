@@ -143,23 +143,35 @@ class TestFactoryFunctions:
             with patch("pathlib.Path.is_dir", return_value=True):
                 # Mock glob
                 with patch("pathlib.Path.glob") as mock_glob:
-                    mock_glob.return_value = [Path("file1.txt"), Path("file2.txt")]
+                    mock_file1 = MagicMock()
+                    mock_file1.__str__.return_value = "file1.txt"
+                    mock_file1.is_file.return_value = True
+                    mock_file1.name = "file1.txt"
+                    mock_file1.suffix = ".txt"
+                    mock_file2 = MagicMock()
+                    mock_file2.__str__.return_value = "file2.txt"
+                    mock_file2.is_file.return_value = True
+                    mock_file2.name = "file2.txt"
+                    mock_file2.suffix = ".txt"
 
-                    # Mock load_document
-                    with patch(
-                        "llm_rag.document_processing.loaders.directory_loader.load_document"
-                    ) as mock_load_document:
-                        mock_load_document.side_effect = [
+                    mock_glob.return_value = [mock_file1, mock_file2]
+
+                    # Mock registry
+                    with patch("llm_rag.document_processing.loaders.directory_loader.registry") as mock_registry:
+                        # Setup mock loader
+                        mock_loader = MagicMock()
+                        mock_loader.load_from_file.side_effect = [
                             [{"content": "Content 1", "metadata": {}}],
                             [{"content": "Content 2", "metadata": {}}],
                         ]
+                        mock_registry.create_loader_for_file.return_value = mock_loader
 
                         # Call load_documents_from_directory
                         loader = DirectoryLoader("test_dir")
                         documents = loader.load()
 
                         # Check that load_document was called correctly
-                        assert mock_load_document.call_count == 2
+                        assert mock_registry.create_loader_for_file.call_count == 2
 
                         # Check results
                         assert len(documents) == 2
