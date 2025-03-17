@@ -327,7 +327,7 @@ def test_conversational_pipeline(vectorstore: Chroma, llm: Any) -> None:
 
 
 def main():
-    """Main function for real-world testing of the RAG pipeline."""
+    """Test the RAG pipeline with real-world data."""
     try:
         # Set up the vector database
         vectorstore = setup_vectorstore()

@@ -84,9 +84,6 @@ def load_documents(docs_dir: str) -> List[Dict[str, Any]]:
     loader = DirectoryLoader(
         directory_path=docs_dir,
         recursive=False,
-        use_enhanced_extraction=True,
-        extract_images=False,
-        extract_tables=False,
     )
 
     documents = loader.load()
@@ -133,7 +130,15 @@ def build_vectorstore(
 
     for doc in documents:
         texts.append(doc["content"])
-        metadatas.append(doc["metadata"])
+        # Ensure all metadata values are valid types
+        metadata = {}
+        for key, value in doc.get("metadata", {}).items():
+            if value is not None and isinstance(value, (str, int, float, bool)):
+                metadata[key] = value
+            else:
+                # Convert None or invalid types to string
+                metadata[key] = str(value) if value is not None else ""
+        metadatas.append(metadata)  # Append the processed metadata to the list
 
     vectorstore.add_documents(texts, metadatas=metadatas)
     vectorstore.persist()

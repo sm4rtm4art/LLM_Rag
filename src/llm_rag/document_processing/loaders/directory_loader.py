@@ -9,7 +9,6 @@ from typing import Dict, List, Optional, Union
 
 from ..processors import Documents
 from .base import DocumentLoader, registry
-from .factory import load_document
 
 logger = logging.getLogger(__name__)
 
@@ -148,13 +147,20 @@ class DirectoryLoader(DocumentLoader):
         all_documents = []
         for file_path in files:
             try:
-                # Check if we have a registered loader for this file type
-                documents = load_document(file_path, **loader_kwargs)
+                # Get an appropriate loader from the registry
+                loader = registry.create_loader_for_file(file_path, **loader_kwargs)
+                if loader is None:
+                    logger.warning(f"No loader found for file: {file_path}")
+                    continue
+
+                # Load documents using the loader
+                if hasattr(loader, "load_from_file"):
+                    documents = loader.load_from_file(file_path)
+                else:
+                    documents = loader.load()
 
                 if documents:
                     all_documents.extend(documents)
-                else:
-                    logger.warning(f"No loader found for file: {file_path}")
             except Exception as e:
                 logger.error(f"Error loading file {file_path}: {e}")
                 # Continue with other files

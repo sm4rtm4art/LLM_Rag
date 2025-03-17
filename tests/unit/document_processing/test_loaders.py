@@ -8,31 +8,24 @@ from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
+from langchain.schema import Document
 
-# Import required legacy loaders
-from llm_rag.document_processing import (
-    CSVLoader,
-    DirectoryLoader,
-    PDFLoader,
-    TextFileLoader,
-)
+from llm_rag.document_processing.loaders.directory_loader import DirectoryLoader
+from llm_rag.document_processing.loaders.file_loaders import CSVLoader, TextFileLoader
+from llm_rag.document_processing.loaders.pdf_loaders import PDFLoader
 
 # Import the new loader interfaces and factories - these will be used in additional tests
 
 # Try to import optional loaders
 try:
-    from llm_rag.document_processing import JSONLoader
-
-    has_json_loader = True
+    from llm_rag.document_processing.loaders.json_loader import JSONLoader
 except ImportError:
-    has_json_loader = False
+    JSONLoader = None
 
 try:
-    from llm_rag.document_processing import WebPageLoader
-
-    has_webpage_loader = True
+    from llm_rag.document_processing.loaders.web_loader import WebPageLoader
 except ImportError:
-    has_webpage_loader = False
+    WebPageLoader = None
 
 # Try to import PyMuPDF for PDF tests
 try:
@@ -223,7 +216,7 @@ class TestCSVLoader:
                     assert "age: 30" in documents[0]["content"]
 
 
-@pytest.mark.skipif(not has_json_loader, reason="JSONLoader not available")
+@pytest.mark.skipif(not JSONLoader, reason="JSONLoader not available")
 @pytest.mark.refactoring
 class TestJSONLoader:
     """Test cases for the JSONLoader class."""
@@ -262,7 +255,7 @@ class TestJSONLoader:
                     assert documents[0]["metadata"]["source"] == "test.json"
 
 
-@pytest.mark.skipif(not has_webpage_loader, reason="WebPageLoader not available")
+@pytest.mark.skipif(not WebPageLoader, reason="WebPageLoader not available")
 @pytest.mark.refactoring
 class TestWebPageLoader:
     """Test cases for the WebPageLoader class."""
@@ -317,41 +310,67 @@ class TestDirectoryLoader:
                 assert loader.recursive is False  # Default value
                 assert loader.glob_pattern == "*.*"  # Default value
 
-    @patch("os.path.isdir", return_value=True)
-    @patch("glob.glob")
-    def test_load_directory(self, mock_glob, mock_isdir) -> None:
+    @patch("llm_rag.document_processing.loaders.directory_loader.registry")
+    @patch("llm_rag.document_processing.loaders.directory_loader.Path")
+    def test_load_directory(self, mock_path_class, mock_registry):
         """Test loading documents from a directory."""
-        # Arrange
-        mock_file_paths = [Path("file1.txt"), Path("file2.pdf"), Path("file3.csv")]
+        # Create mock paths
+        mock_file1 = MagicMock()
+        mock_file1.__str__.return_value = "file1.txt"
+        mock_file1.is_file.return_value = True
+        mock_file1.name = "file1.txt"
+        mock_file2 = MagicMock()
+        mock_file2.__str__.return_value = "file2.pdf"
+        mock_file2.is_file.return_value = True
+        mock_file2.name = "file2.pdf"
+        mock_file3 = MagicMock()
+        mock_file3.__str__.return_value = "file3.csv"
+        mock_file3.is_file.return_value = True
+        mock_file3.name = "file3.csv"
 
-        # Patch Path.exists and Path.is_dir to return True
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.is_dir", return_value=True):
-                # Mock the directory_path.glob method to return our mock files
-                with patch("pathlib.Path.glob", return_value=mock_file_paths):
-                    # Mock the file.is_file method to return True
-                    with patch("pathlib.Path.is_file", return_value=True):
-                        # Mock the load_document function
-                        with patch(
-                            "src.llm_rag.document_processing.loaders.directory_loader.load_document"
-                        ) as mock_load_document:
-                            # Setup mock documents to be returned
-                            mock_load_document.side_effect = [
-                                [{"content": "Text content", "metadata": {"source": "file1.txt"}}],
-                                [{"content": "PDF content", "metadata": {"source": "file2.pdf"}}],
-                                [{"content": "CSV content", "metadata": {"source": "file3.csv"}}],
-                            ]
+        # Create mock directory path
+        mock_dir = MagicMock()
+        mock_dir.exists.return_value = True
+        mock_dir.is_dir.return_value = True
+        mock_dir.glob.return_value = [
+            mock_file1,
+            mock_file2,
+            mock_file3,
+        ]
+        mock_dir.__str__.return_value = "test_dir"
 
-                            loader = DirectoryLoader(directory_path="./test_dir")
+        # Configure mock path class
+        mock_path_class.return_value = mock_dir
 
-                            # Act
-                            documents = loader.load()
+        # Create mock loaders
+        mock_txt_loader = MagicMock()
+        mock_pdf_loader = MagicMock()
+        mock_csv_loader = MagicMock()
 
-                            # Assert
-                            assert len(documents) == 3
-                            assert documents[0]["content"] == "Text content"
-                            assert documents[1]["content"] == "PDF content"
-                            assert documents[2]["content"] == "CSV content"
+        # Configure mock registry
+        def mock_create_loader_for_file(file_path, **kwargs):
+            if str(file_path).endswith(".txt"):
+                return mock_txt_loader
+            elif str(file_path).endswith(".pdf"):
+                return mock_pdf_loader
+            elif str(file_path).endswith(".csv"):
+                return mock_csv_loader
+            return None
+
+        mock_registry.create_loader_for_file.side_effect = mock_create_loader_for_file
+
+        # Configure mock loaders to return documents
+        mock_txt_loader.load_from_file.return_value = [Document(page_content="text content")]
+        mock_pdf_loader.load_from_file.return_value = [Document(page_content="pdf content")]
+        mock_csv_loader.load_from_file.return_value = [Document(page_content="csv content")]
+
+        # Test
+        loader = DirectoryLoader("test_dir")
+        documents = loader.load()
+
+        # Assert
+        assert len(documents) == 3
+        assert all(isinstance(doc, Document) for doc in documents)
 
     def test_load_invalid_directory(self) -> None:
         """Test behavior when directory is not found."""

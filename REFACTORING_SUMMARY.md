@@ -86,6 +86,17 @@ Broke down the monolithic `loaders.py` (1013 lines) into focused modules while m
   - Created factory functions for loader instantiation
   - Enabled dynamic discovery of available loaders
 
+- **Enhanced Web Loaders**:
+
+  - Implemented robust HTML parsing with BeautifulSoup support
+  - Added comprehensive metadata extraction (title, description, author)
+  - Supported multiple output formats (text, HTML, markdown)
+  - Included image URL extraction capabilities
+  - Implemented graceful fallbacks for missing dependencies
+  - Added extensive error handling for network issues
+  - Maintained backward compatibility through WebPageLoader alias
+  - Added comprehensive test coverage for all features
+
 - **Backward Compatibility Layer**:
 
   - Maintained the original `loaders.py` as an entry point

@@ -33,10 +33,19 @@ class MockEmbeddingModel:
 class MockRAGPipeline:
     """Mock implementation of RAGPipeline for testing."""
 
-    def __init__(self, vectorstore=None, llm=None, top_k=None):
+    def __init__(
+        self,
+        vectorstore=None,
+        llm=None,
+        top_k=None,
+        prompt_template=None,
+        history_size=10,
+    ):
         self.vectorstore = vectorstore
         self.llm = llm
         self.top_k = top_k
+        self.prompt_template = prompt_template
+        self.history_size = history_size
 
         # Add attributes for the new modular implementation
         self._retriever = MagicMock()
@@ -48,6 +57,9 @@ class MockRAGPipeline:
         self._formatter.format_context.return_value = "Formatted context: test content"
         self._generator.generate.return_value = "Test response"
 
+        # Initialize conversation history
+        self.conversation_history = {}
+
     def query(self, query, conversation_id=None):
         """Mock query method that returns predefined response for test query."""
         docs = [{"content": "test content", "metadata": {"source": "test.txt"}}]
@@ -58,6 +70,18 @@ class MockRAGPipeline:
             "conversation_id": conversation_id or "test-id",
             "query": query,
         }
+
+    def add_to_history(self, query_or_id: str, response: str, query: str = None) -> None:
+        """Mock implementation of add_to_history."""
+        pass
+
+    def format_history(self, conversation_id: str = None) -> str:
+        """Mock implementation of format_history."""
+        return ""
+
+    def reset_history(self, conversation_id: str = None) -> None:
+        """Mock implementation of reset_history."""
+        pass
 
 
 # Now patch the EmbeddingModel before importing main

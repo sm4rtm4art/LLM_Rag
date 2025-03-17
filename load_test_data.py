@@ -177,7 +177,7 @@ def load_documents_to_chroma(
 
 
 def main():
-    """Main function to load test data into Chroma."""
+    """Load test data into ChromaDB."""
     import argparse
 
     parser = argparse.ArgumentParser(description="Load test data into Chroma database")

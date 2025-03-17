@@ -186,9 +186,15 @@ class LLMGenerator(BaseGenerator):
             logger.debug(f"Generating response for query: {query}")
             try:
                 if generation_kwargs:
-                    response = self.llm.invoke(prompt, **generation_kwargs).content
+                    response = self.llm.invoke(prompt, **generation_kwargs)
                 else:
-                    response = self.llm.invoke(prompt).content
+                    response = self.llm.invoke(prompt)
+
+                # Handle both string responses and object responses with content attribute
+                if isinstance(response, str):
+                    response_text = response
+                else:
+                    response_text = response.content
             except Exception as e:
                 raise ModelError(
                     f"Language model failed to generate response: {str(e)}",
@@ -200,13 +206,13 @@ class LLMGenerator(BaseGenerator):
             # Apply post-processing to reduce hallucinations if requested
             if apply_anti_hallucination:
                 processed_response = post_process_response(
-                    response=response,
+                    response=response_text,
                     context=context,
-                    query=query,
+                    return_metadata=True,
                 )
                 return processed_response
             else:
-                return response
+                return response_text
 
         except Exception as e:
             # Re-raise specific errors
