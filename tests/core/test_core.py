@@ -62,10 +62,7 @@ with patch("llm_rag.models.embeddings.EmbeddingModel", MockEmbeddingModel):
     try:
         # Import main directly from the module
         from llm_rag.main import main
-        from llm_rag.utils.test_utils import (
-            create_test_data_directory,
-            is_ci_environment,
-        )
+        from llm_rag.utils.test_utils import create_test_data_directory, is_ci_environment
     except ImportError:
         # For linter, define dummy functions
         def main():
@@ -215,8 +212,10 @@ def test_main_output(capsys):
         # Get captured output
         captured = capsys.readouterr()
         # Check for expected output patterns
-        assert "QUERY: test query" in captured.out
+        assert "=" * 40 in captured.out
+        assert f"QUERY: {argv[4]}" in captured.out
         assert "ANSWER:" in captured.out
+        assert "Retrieved" in captured.out
 
 
 def nested_patch(*patches):
