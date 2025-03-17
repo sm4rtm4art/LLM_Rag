@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List
 
 from .base import DocumentLoader, FileLoader, LoaderRegistry, registry
-from .directory_loader import DirectoryLoader, load_document
+from .directory_loader import DirectoryLoader
 from .file_loaders import CSVLoader, TextFileLoader, XMLLoader
 from .pdf_loaders import PDFLoader
 from .web_loader import WebLoader, WebPageLoader
@@ -47,6 +47,5 @@ __all__ = [
     "WebPageLoader",
     "LoaderRegistry",
     "registry",
-    "load_document",
     "load_documents_from_directory",
 ]
