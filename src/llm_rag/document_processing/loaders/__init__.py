@@ -11,8 +11,23 @@ from .base import WebLoader as BaseWebLoader
 
 # Import concrete loader implementations
 from .directory_loader import DirectoryLoader
-from .file_loaders import CSVLoader, TextFileLoader, XMLLoader
+from .file_loaders import CSVLoader, PDFLoader, TextFileLoader, XMLLoader
 from .web_loader import WebLoader, WebPageLoader
+
+
+def load_document(file_path: str, **kwargs) -> DocumentLoader:
+    """Load a document using the appropriate loader.
+
+    Args:
+        file_path: Path to the document to load
+        **kwargs: Additional arguments to pass to the loader
+
+    Returns:
+        A DocumentLoader instance for the document
+
+    """
+    return registry.get_loader(file_path)(file_path, **kwargs)
+
 
 # Re-export all components
 __all__ = [
@@ -26,8 +41,11 @@ __all__ = [
     # Concrete implementations
     "DirectoryLoader",
     "CSVLoader",
+    "PDFLoader",
     "TextFileLoader",
     "XMLLoader",
     "WebLoader",
     "WebPageLoader",
+    # Utility functions
+    "load_document",
 ]
