@@ -7,7 +7,7 @@ timeout=60
 counter=0
 ENDPOINT="http://llm-rag/health"
 
-until $(curl --output /dev/null --silent --fail $ENDPOINT); do
+until curl --output /dev/null --silent --fail "$ENDPOINT"; do
     if [ $counter -eq $timeout ]; then
         echo "Timed out waiting for service to be ready"
         exit 1
