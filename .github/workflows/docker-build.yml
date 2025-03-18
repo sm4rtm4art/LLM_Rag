@@ -5,6 +5,9 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
+    paths-ignore:
+      - ".github/workflows/ci-cd.yml"
+      - ".safety-policy.yml"
 
 env:
   REGISTRY: ghcr.io
@@ -13,6 +16,8 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # Skip this job if the PR is from house_keeping branch
+    if: github.head_ref != 'house_keeping'
     permissions:
       contents: read
       packages: write
