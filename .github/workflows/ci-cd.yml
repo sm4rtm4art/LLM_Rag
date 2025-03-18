@@ -115,7 +115,7 @@ jobs:
       - name: Run Safety check
         env:
           SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
-        run: safety scan --policy-file .safety-policy.yml --non-interactive
+        run: echo "y" | safety scan --policy-file .safety-policy.yml
 
       - name: Cache Trivy DB
         uses: actions/cache@v4
