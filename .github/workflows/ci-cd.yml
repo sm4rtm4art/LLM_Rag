@@ -109,11 +109,11 @@ jobs:
       - name: Upload Bandit results
         uses: actions/upload-artifact@v4
         with:
-          name: bandit-results
+          name: bandit-results.json
           path: bandit-results.json
 
-      - name: Run Safety Check
-        run: safety check
+      - name: Run Safety check
+        run: safety scan --policy-file .safety-policy.yml
 
       - name: Cache Trivy DB
         uses: actions/cache@v4
