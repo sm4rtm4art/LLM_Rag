@@ -25,13 +25,15 @@ fail-scan-with-exit-code:
         - critical
         - high
 
-security:
-  ignore-vulnerabilities:
-    # Add any CVEs to ignore here
-    - 12345  # Example CVE to ignore
-  ignore-packages:
-    # Add any packages to ignore here
-    - package-name  # Example package to ignore
-api_key: $SAFETY_API_KEY
-policy_file:
-  version: 2.0.0
+ignore:
+  dependency-vulnerabilities:
+    python:
+      # Add any CVEs to ignore here (previously in security.ignore-vulnerabilities)
+      vulnerabilities:
+        - id: "12345"
+          reason: "Example CVE to ignore"
+
+      # Add any packages to ignore here (previously in security.ignore-packages)
+      packages:
+        - name: "package-name"
+          reason: "Example package to ignore"
