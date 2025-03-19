@@ -106,16 +106,22 @@ jobs:
             for dir in $CHANGED_DIRS; do
               if [ -d "$dir" ]; then
                 echo "Scanning directory: $dir"
-                trivy fs --format sarif --output "trivy-$dir.sarif" --severity CRITICAL,HIGH "$dir"
+                # Sanitize directory name for the output file (replace / with _)
+                safe_name=$(echo "$dir" | tr '/' '_')
+                trivy fs --format sarif --output "trivy-${safe_name}.sarif" --severity CRITICAL,HIGH "$dir"
               fi
             done
             # Combine SARIF reports if multiple exist
             if [ $(ls -1 trivy-*.sarif 2>/dev/null | wc -l) -gt 1 ]; then
-              jq -s 'reduce .[] as $item ({}; . * $item)' trivy-*.sarif > trivy-results.sarif
+              echo "Combining multiple SARIF reports"
+              # Properly combine SARIF files - this merges the 'runs' arrays from all files
+              jq -s '{ $schema: .[0].$schema, version: .[0].version, runs: [ .[].runs[] ] }' trivy-*.sarif > trivy-results.sarif
             elif [ $(ls -1 trivy-*.sarif 2>/dev/null | wc -l) -eq 1 ]; then
+              echo "Using single SARIF report"
               mv trivy-*.sarif trivy-results.sarif
             else
               # Create an empty SARIF report if no scans were performed
+              echo "No SARIF reports generated, creating empty template"
               echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}' > trivy-results.sarif
             fi
           else
