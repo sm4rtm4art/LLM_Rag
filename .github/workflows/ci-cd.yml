@@ -115,7 +115,11 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install Python dependencies
-        run: uv pip install -e .[dev]
+        run: |
+          uv venv .venv
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+          uv pip install -e .[dev]
 
       - name: Install security tools
         run: |
@@ -183,8 +187,18 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
 
+      - name: Create and use virtual environment
+        run: |
+          uv venv .venv
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+
       - name: Install Python dependencies
-        run: uv pip install -e .[dev]
+        run: |
+          uv venv .venv
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+          uv pip install -e .[dev]
 
       - name: Run Ruff format check
         run: ruff format "src/" "tests/"
@@ -231,8 +245,17 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
 
+      - name: Create and use virtual environment
+        run: |
+          uv venv .venv
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+
       - name: Install test dependencies
         run: |
+          uv venv .venv
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
           uv pip install pytest pytest-cov pytest-asyncio
           uv pip install sentence-transformers chromadb
           uv pip install -e ".[dev]"
@@ -283,6 +306,12 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
+
+      - name: Create and use virtual environment
+        run: |
+          uv venv .venv
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
 
       - name: Install semantic-release
         run: |
