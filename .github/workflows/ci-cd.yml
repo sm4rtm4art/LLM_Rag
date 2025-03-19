@@ -28,7 +28,6 @@ on:
 env:
   PYTHON_VERSION: "3.12"
   UV_LINK_MODE: copy
-  UV_SYSTEM_PYTHON: 1
 
 defaults:
   run:
@@ -114,19 +113,22 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
 
-      - name: Install Python dependencies
+      - name: Create and use virtual environment
         run: |
-          uv venv .venv
+          python -m venv .venv
           echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
           echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-          uv pip install -e .[dev]
+
+      - name: Install Python dependencies
+        run: |
+          .venv/bin/python -m pip install -e .[dev]
 
       - name: Install security tools
         run: |
-          uv pip install bandit safety
+          .venv/bin/python -m pip install bandit safety
 
       - name: Run Bandit scan
-        run: bandit -r src/ -c pyproject.toml -f json -o bandit-results.json
+        run: .venv/bin/bandit -r src/ -c pyproject.toml -f json -o bandit-results.json
 
       - name: Upload Bandit results
         uses: actions/upload-artifact@v4
@@ -137,7 +139,7 @@ jobs:
       - name: Run Safety check
         env:
           SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
-        run: echo "y" | safety scan --policy-file .safety-policy.yml
+        run: echo "y" | .venv/bin/safety scan --policy-file .safety-policy.yml
 
       - name: Cache Trivy DB
         uses: actions/cache@v4
@@ -189,25 +191,22 @@ jobs:
 
       - name: Create and use virtual environment
         run: |
-          uv venv .venv
+          python -m venv .venv
           echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
           echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
 
       - name: Install Python dependencies
         run: |
-          uv venv .venv
-          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
-          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-          uv pip install -e .[dev]
+          .venv/bin/python -m pip install -e .[dev]
 
       - name: Run Ruff format check
-        run: ruff format "src/" "tests/"
+        run: .venv/bin/ruff format "src/" "tests/"
 
       - name: Run Ruff linting
-        run: ruff check "src/" "tests/"
+        run: .venv/bin/ruff check "src/" "tests/"
 
       - name: Run mypy type checks
-        run: mypy src tests
+        run: .venv/bin/mypy src tests
 
   ##################################
   # Job: Testing with Coverage
@@ -247,22 +246,19 @@ jobs:
 
       - name: Create and use virtual environment
         run: |
-          uv venv .venv
+          python -m venv .venv
           echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
           echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
 
       - name: Install test dependencies
         run: |
-          uv venv .venv
-          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
-          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-          uv pip install pytest pytest-cov pytest-asyncio
-          uv pip install sentence-transformers chromadb
-          uv pip install -e ".[dev]"
+          .venv/bin/python -m pip install pytest pytest-cov pytest-asyncio
+          .venv/bin/python -m pip install sentence-transformers chromadb
+          .venv/bin/python -m pip install -e ".[dev]"
 
       - name: Run tests with coverage and generate JUnit report
         run: |
-          python -m pytest --cov=src/llm_rag --cov-report=xml --junitxml=junit.xml -o junit_family=legacy -v
+          .venv/bin/python -m pytest --cov=src/llm_rag --cov-report=xml --junitxml=junit.xml -o junit_family=legacy -v
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v3
@@ -309,13 +305,13 @@ jobs:
 
       - name: Create and use virtual environment
         run: |
-          uv venv .venv
+          python -m venv .venv
           echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
           echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
 
       - name: Install semantic-release
         run: |
-          uv pip install python-semantic-release
+          .venv/bin/python -m pip install python-semantic-release
 
       - name: Configure Git
         run: |
@@ -326,7 +322,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: semantic-release publish
+        run: .venv/bin/semantic-release publish
 
   ##################################
   # Job: Build (Docker Image) - Optional
@@ -368,17 +364,24 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
 
+      - name: Create and use virtual environment
+        run: |
+          python -m venv .venv
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+
       - name: Install Python dependencies
-        run: uv pip install -e .[dev]
+        run: |
+          .venv/bin/python -m pip install -e .[dev]
 
       - name: Run Ruff format check
-        run: ruff format "src/" "tests/"
+        run: .venv/bin/ruff format "src/" "tests/"
 
       - name: Run Ruff linting
-        run: ruff check "src/" "tests/"
+        run: .venv/bin/ruff check "src/" "tests/"
 
       - name: Run mypy type checks
-        run: mypy src tests
+        run: .venv/bin/mypy src tests
 
       - name: Check Docker availability
         id: check-docker
