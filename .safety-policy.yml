@@ -24,3 +24,14 @@ fail-scan-with-exit-code:
       cvss-severity:
         - critical
         - high
+
+security:
+  ignore-vulnerabilities:
+    # Add any CVEs to ignore here
+    - 12345  # Example CVE to ignore
+  ignore-packages:
+    # Add any packages to ignore here
+    - package-name  # Example package to ignore
+api_key: $SAFETY_API_KEY
+policy_file:
+  version: 2.0.0

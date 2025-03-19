@@ -63,7 +63,10 @@ jobs:
         with:
           name: bandit-results
           path: bandit.json
-      - run: safety check --policy-file .safety-policy.yml
+      - name: Install and run Safety with support for v3 policies
+        run: |
+          uv pip install safety==3.0.0  # Or the latest version
+          python -m safety check --policy-file .safety-policy.yml
 
       # Trivy filesystem scan
       - name: Cache Trivy DB
