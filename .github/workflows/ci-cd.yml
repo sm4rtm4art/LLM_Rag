@@ -47,6 +47,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Fetch at least one commit of history
       - name: Safety vulnerability scan
         uses: pyupio/safety-action@v1
         with:
@@ -87,8 +89,13 @@ jobs:
             # For PRs, scan only changed files
             CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }} ${{ github.sha }} | tr '\n' ' ')
           else
-            # For pushes, scan only changed files in the last commit
-            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT HEAD^ HEAD | tr '\n' ' ')
+            # For pushes, try to get changed files in the last commit, fallback to minimal scan if it fails
+            if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+              CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT HEAD^ HEAD | tr '\n' ' ')
+            else
+              echo "Unable to determine changed files (possibly first commit or shallow clone)"
+              CHANGED_FILES=""
+            fi
           fi
 
           if [ -n "$CHANGED_FILES" ]; then
