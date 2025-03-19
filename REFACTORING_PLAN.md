@@ -83,6 +83,10 @@ This document outlines the incremental refactoring plan for the LLM-RAG codebase
   - [ ] Add unit tests for all new modules
   - [ ] Ensure test coverage for all code paths
   - [ ] Add integration tests for end-to-end scenarios
+  - [ ] Address deprecation warnings in tests:
+    - [ ] Fix SwigPyObject/SwigPyPacked module attribute warnings
+    - [ ] Update deprecated import paths from llm_rag.document_processing
+    - [ ] Replace any other deprecated functionality with current alternatives
 - Improve documentation:
   - [ ] Update all docstrings with comprehensive information
   - [ ] Create high-level architecture documentation
