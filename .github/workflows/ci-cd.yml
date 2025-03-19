@@ -78,6 +78,8 @@ jobs:
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
+          # Install jq for combining SARIF reports
+          sudo apt-get update && sudo apt-get install -y jq
       - name: Run Trivy filesystem scan
         env:
           TRIVY_NO_PROGRESS: true
@@ -86,23 +88,44 @@ jobs:
           trivy --cache-dir ~/.cache/trivy image --download-db-only
           # Only scan changed files in PRs and pushes
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            # For PRs, scan only changed files
-            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }} ${{ github.sha }} | tr '\n' ' ')
+            # For PRs, scan only changed directories
+            CHANGED_DIRS=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }} ${{ github.sha }} | xargs -n1 dirname 2>/dev/null | sort -u | tr '\n' ' ')
           else
-            # For pushes, try to get changed files in the last commit, fallback to minimal scan if it fails
+            # For pushes, try to get changed directories in the last commit
             if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
-              CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT HEAD^ HEAD | tr '\n' ' ')
+              CHANGED_DIRS=$(git diff --name-only --diff-filter=ACMRT HEAD^ HEAD | xargs -n1 dirname 2>/dev/null | sort -u | tr '\n' ' ')
             else
               echo "Unable to determine changed files (possibly first commit or shallow clone)"
-              CHANGED_FILES=""
+              CHANGED_DIRS=""
             fi
           fi
 
-          if [ -n "$CHANGED_FILES" ]; then
-            echo "Scanning changed files: $CHANGED_FILES"
-            trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH $CHANGED_FILES
+          if [ -n "$CHANGED_DIRS" ]; then
+            echo "Scanning directories with changes: $CHANGED_DIRS"
+            # For each changed directory, run a separate scan
+            for dir in $CHANGED_DIRS; do
+              if [ -d "$dir" ]; then
+                echo "Scanning directory: $dir"
+                # Sanitize directory name for the output file (replace / with _)
+                safe_name=$(echo "$dir" | tr '/' '_')
+                trivy fs --format sarif --output "trivy-${safe_name}.sarif" --severity CRITICAL,HIGH "$dir"
+              fi
+            done
+            # Combine SARIF reports if multiple exist
+            if [ $(ls -1 trivy-*.sarif 2>/dev/null | wc -l) -gt 1 ]; then
+              echo "Combining multiple SARIF reports"
+              # Properly combine SARIF files - this merges the 'runs' arrays from all files
+              jq -s '{ $schema: .[0].$schema, version: .[0].version, runs: [ .[].runs[] ] }' trivy-*.sarif > trivy-results.sarif
+            elif [ $(ls -1 trivy-*.sarif 2>/dev/null | wc -l) -eq 1 ]; then
+              echo "Using single SARIF report"
+              mv trivy-*.sarif trivy-results.sarif
+            else
+              # Create an empty SARIF report if no scans were performed
+              echo "No SARIF reports generated, creating empty template"
+              echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}' > trivy-results.sarif
+            fi
           else
-            echo "No relevant files changed, performing minimal scan"
+            echo "No relevant directories changed, performing minimal scan"
             trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH --skip-dirs="tests/" --skip-dirs=".github/" .
           fi
       - name: Upload Trivy SARIF results
