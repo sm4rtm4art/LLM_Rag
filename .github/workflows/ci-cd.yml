@@ -122,7 +122,7 @@ jobs:
             if [ $(ls -1 trivy-*.sarif 2>/dev/null | wc -l) -gt 1 ]; then
               echo "Combining multiple SARIF reports"
               # Properly combine SARIF files - this merges the 'runs' arrays from all files
-              jq -s '{ $schema: .[0].$schema, version: .[0].version, runs: [ .[].runs[] ] }' trivy-*.sarif > trivy-results.sarif
+              jq -s '{ "\$schema": .[0]["\$schema"], version: .[0].version, runs: [ .[].runs[] ] }' trivy-*.sarif > trivy-results.sarif
             elif [ $(ls -1 trivy-*.sarif 2>/dev/null | wc -l) -eq 1 ]; then
               echo "Using single SARIF report"
               mv trivy-*.sarif trivy-results.sarif
