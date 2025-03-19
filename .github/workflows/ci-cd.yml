@@ -56,19 +56,23 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
       - run: uv pip install -e .[dev] pytest pytest-cov mypy ruff bandit safety
-      - run: ruff format src tests && ruff check src tests && mypy src tests
-      - run: pytest --cov=src/llm_rag --cov-report=xml -v
+
+      # Run security checks first for faster failures
+      - name: Safety vulnerability scan
+        uses: pyupio/safety-action@v1
+        with:
+          api-key: ${{ secrets.SAFETY_API_KEY }}
+          args: --full-report
+
       - run: bandit -r src -c pyproject.toml -f json -o bandit.json
       - uses: actions/upload-artifact@v4
         with:
           name: bandit-results
           path: bandit.json
 
-      # Safety Check - use proper CI command
-      - name: Run Safety Check
-        run: |
-          uv pip install safety --upgrade
-          python -m safety ci --policy-file .safety-policy.yml
+      # Now run lint and tests
+      - run: ruff format src tests && ruff check src tests && mypy src tests
+      - run: pytest --cov=src/llm_rag --cov-report=xml -v
 
       # Trivy filesystem scan
       - name: Cache Trivy DB
