@@ -121,7 +121,7 @@ jobs:
 
       - name: Install security tools
         run: |
-          uv pip install bandit safety
+          .venv/bin/uv pip install bandit safety
 
       - name: Run Bandit scan
         run: bandit -r src/ -c pyproject.toml -f json -o bandit-results.json
@@ -202,8 +202,8 @@ jobs:
 
       - name: Install lint tools
         run: |
-          uv pip install ruff mypy
-          uv pip install ".[dev]"
+          .venv/bin/uv pip install ruff mypy
+          .venv/bin/uv pip install ".[dev]"
 
       - name: Run Ruff format check
         run: ruff format "src/" "tests/"
@@ -257,9 +257,9 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          uv pip install pytest pytest-cov pytest-asyncio
-          uv pip install sentence-transformers chromadb
-          uv pip install ".[dev]"
+          .venv/bin/uv pip install pytest pytest-cov pytest-asyncio
+          .venv/bin/uv pip install sentence-transformers chromadb
+          .venv/bin/uv pip install ".[dev]"
 
       - name: Run tests with coverage and generate JUnit report
         run: |
