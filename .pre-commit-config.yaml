@@ -77,10 +77,10 @@ repos:
       # Add Safety check for dependencies
       - id: safety-check
         name: Check for vulnerable dependencies with Safety
-        entry: bash -c "safety scan || echo 'Safety check failed but continuing'"
+        entry: bash -c "echo 'y' | SAFETY_API_KEY=${SAFETY_API_KEY:-} safety scan --policy-file .safety-policy.yml || echo 'Safety check failed but continuing'"
         language: system
         pass_filenames: false
-        stages: [pre-commit]
+        stages: [pre-push]  # Changed from pre-commit to pre-push to run only when pushing
 
       - id: create-test-directories
         name: Create Test Directories

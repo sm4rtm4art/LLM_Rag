@@ -113,8 +113,14 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      - name: Create virtual environment
+        run: |
+          uv venv .venv
+          echo "$PWD/.venv/bin" >> $GITHUB_PATH
+
       - name: Install security tools
-        run: uv pip install --system bandit safety
+        run: |
+          uv pip install bandit safety
 
       - name: Run Bandit scan
         run: bandit -r src/ -c pyproject.toml -f json -o bandit-results.json
@@ -192,10 +198,15 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      - name: Create virtual environment
+        run: |
+          uv venv .venv
+          echo "$PWD/.venv/bin" >> $GITHUB_PATH
+
       - name: Install lint tools
         run: |
-          uv pip install --system ruff mypy
-          uv pip install --system ".[dev]"
+          uv pip install ruff mypy
+          uv pip install ".[dev]"
 
       - name: Run Ruff format check
         run: ruff format "src/" "tests/"
@@ -243,9 +254,9 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          uv pip install --system pytest pytest-cov pytest-asyncio
-          uv pip install --system sentence-transformers chromadb
-          uv pip install --system ".[dev]"
+          uv pip install pytest pytest-cov pytest-asyncio
+          uv pip install sentence-transformers chromadb
+          uv pip install ".[dev]"
 
       - name: Run tests with coverage and generate JUnit report
         run: |
@@ -342,6 +353,11 @@ jobs:
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Create virtual environment
+        run: |
+          uv venv .venv
+          echo "$PWD/.venv/bin" >> $GITHUB_PATH
 
       - name: Check Docker availability
         id: check-docker
