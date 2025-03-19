@@ -45,42 +45,52 @@ This document outlines the incremental refactoring plan for the LLM-RAG codebase
 ## Phase 4: Loaders Refactoring (Completed)
 
 - Break down `loaders.py` (1013 lines) into focused modules:
-  - [x] Create `src/llm_rag/document_processing/loaders/` directory
-  - [x] Extract file-based loaders to separate modules
-  - [x] Extract web-based loaders to separate modules
-  - [x] Extract database loaders to separate modules
+  - ✅ Create `src/llm_rag/document_processing/loaders/` directory
+  - ✅ Extract file-based loaders to separate modules
+  - ✅ Extract web-based loaders to separate modules
+  - ✅ Extract database loaders to separate modules
 - Implement a loader factory and registry:
-  - [x] Create a central registry for loaders
-  - [x] Add automatic discovery of loaders
-  - [x] Provide a factory function for loader instantiation
+  - ✅ Create a central registry for loaders
+  - ✅ Add automatic discovery of loaders
+  - ✅ Provide a factory function for loader instantiation
 - Enhanced web loaders implementation:
-  - [x] Added robust HTML parsing with BeautifulSoup support
-  - [x] Implemented metadata extraction (title, description, author)
-  - [x] Added support for multiple output formats (text, HTML, markdown)
-  - [x] Included image URL extraction capabilities
-  - [x] Added comprehensive error handling and fallbacks
-  - [x] Implemented extensive test coverage
-  - [x] Maintained backward compatibility with WebPageLoader alias
+  - ✅ Added robust HTML parsing with BeautifulSoup support
+  - ✅ Implemented metadata extraction (title, description, author)
+  - ✅ Added support for multiple output formats (text, HTML, markdown)
+  - ✅ Included image URL extraction capabilities
+  - ✅ Added comprehensive error handling and fallbacks
+  - ✅ Implemented extensive test coverage
+  - ✅ Maintained backward compatibility with WebPageLoader alias
 
 ## Phase 5: Anti-Hallucination Refactoring (Completed)
 
 - Break down `anti_hallucination.py` (694 lines) into focused modules:
-  - [x] Create `src/llm_rag/rag/anti_hallucination/` directory
-  - [x] Extract entity verification to a separate module
-  - [x] Extract similarity-checking to a separate module
-  - [x] Extract post-processing to a separate module
-  - [x] Maintain backward compatibility through stub implementations
+  - ✅ Create `src/llm_rag/rag/anti_hallucination/` directory
+  - ✅ Extract entity verification to a separate module
+  - ✅ Extract similarity-checking to a separate module
+  - ✅ Extract post-processing to a separate module
+  - ✅ Maintain backward compatibility through stub implementations
 - Improve configurability and extensibility:
-  - [x] Make verification strategies pluggable
-  - [x] Enable runtime selection of strategies
-  - [x] Add configuration validation
-  - [x] Implement configurable model loading and caching
-  - [x] Create clear separation between verification components
+  - ✅ Make verification strategies pluggable
+  - ✅ Enable runtime selection of strategies
+  - ✅ Add configuration validation
+  - ✅ Implement configurable model loading and caching
+  - ✅ Create clear separation between verification components
 
 ## Phase 6: Testing and Documentation
 
 - Enhance testing:
-  - [ ] Add unit tests for all new modules
+  - ✅ Add comprehensive tests for error handling module (`utils/errors.py`)
+  - ✅ Add tests for pipeline components:
+    - ✅ Context formatters (`rag/pipeline/context.py`)
+    - ✅ Generators (`rag/pipeline/generation.py`)
+    - ✅ Retrievers (`rag/pipeline/retrieval.py`)
+  - [ ] Fix test failures due to architectural changes:
+    - [ ] Update RAGPipeline constructor arguments
+    - [ ] Check for context formatter max_length implementation
+    - [ ] Adjust MarkdownContextFormatter tests for new metadata format
+    - [ ] Update TemplatedGenerator interface tests
+    - [ ] Fix create_retriever and create_generator factory methods
   - [ ] Ensure test coverage for all code paths
   - [ ] Add integration tests for end-to-end scenarios
 - Improve documentation:
@@ -88,11 +98,16 @@ This document outlines the incremental refactoring plan for the LLM-RAG codebase
   - [ ] Create high-level architecture documentation
   - [ ] Add usage examples for all components
 - Code Quality Tools:
-  - [x] Implement variable naming consistency checker
+  - ✅ Implement variable naming consistency checker
   - [ ] Add pre-commit hook for variable consistency checks
   - [ ] Configure CI/CD pipeline to run consistency checks
   - [ ] Document variable naming conventions and patterns
   - [ ] Create guidelines for handling similar-meaning variables
+- Fix warnings and deprecation issues:
+  - ✅ Add configuration to handle SWIG-related warnings from C/C++ extensions
+  - ✅ Fix deprecated import paths in document_processing module
+  - [ ] Ensure proper docstrings for all classes and functions
+  - [ ] Add type annotations to improve static type checking
 
 ## Phase 7: Deprecation Strategy
 
