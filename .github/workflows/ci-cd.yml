@@ -276,9 +276,11 @@ jobs:
         id: kubeconfig
         run: |
           mkdir -p $HOME/.kube
+          CONFIG_EXISTS="false"
           if [ "${{ steps.config-env.outputs.config_secret }}" == "KUBE_CONFIG_STAGING" ]; then
             if [ -n "${{ secrets.KUBE_CONFIG_STAGING }}" ]; then
               echo "${{ secrets.KUBE_CONFIG_STAGING }}" > $HOME/.kube/config
+              CONFIG_EXISTS="true"
               echo "config_exists=true" >> $GITHUB_OUTPUT
             else
               echo "config_exists=false" >> $GITHUB_OUTPUT
@@ -287,6 +289,7 @@ jobs:
           else
             if [ -n "${{ secrets.KUBE_CONFIG_DEV }}" ]; then
               echo "${{ secrets.KUBE_CONFIG_DEV }}" > $HOME/.kube/config
+              CONFIG_EXISTS="true"
               echo "config_exists=true" >> $GITHUB_OUTPUT
             else
               echo "config_exists=false" >> $GITHUB_OUTPUT
@@ -294,7 +297,7 @@ jobs:
             fi
           fi
 
-          if [ "${{ steps.kubeconfig.outputs.config_exists }}" == "true" ]; then
+          if [ "$CONFIG_EXISTS" == "true" ]; then
             chmod 600 $HOME/.kube/config
           fi
 

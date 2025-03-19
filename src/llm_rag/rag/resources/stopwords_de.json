@@ -1,18 +1,1 @@
-[
-  "der", "die", "das", "den", "dem", "des", "ein", "eine", "einer",
-  "eines", "einem", "einen", "ist", "sind", "war", "waren", "wird",
-  "werden", "wurde", "wurden", "hat", "haben", "hatte", "hatten",
-  "kann", "können", "konnte", "konnten", "muss", "müssen", "musste",
-  "mussten", "soll", "sollen", "sollte", "sollten", "wollen",
-  "wollte", "wollten", "darf", "dürfen", "durfte", "durften", "mag",
-  "mögen", "mochte", "mochten", "und", "oder", "aber", "denn",
-  "weil", "wenn", "als", "ob", "damit", "obwohl", "während",
-  "nachdem", "bevor", "sobald", "seit", "bis", "indem", "ohne",
-  "außer", "gegen", "für", "mit", "zu", "von", "bei", "nach", "aus",
-  "über", "unter", "neben", "zwischen", "vor", "hinter", "auf", "um",
-  "herum", "durch", "entlang", "ich", "du", "er", "sie", "es", "wir",
-  "ihr", "mich", "dich", "ihn", "uns", "euch", "ihnen", "mein",
-  "dein", "sein", "unser", "euer", "ihre", "ihres", "ihrem", "ihren",
-  "nicht", "auch", "schon", "noch", "nur", "jetzt", "immer", "dann",
-  "so", "da", "dort", "hier", "hin", "her", "mal", "doch", "ja", "nein"
-]
+["der", "die", "das", "den", "dem", "des", "ein", "eine", "einer", "eines", "einem", "einen", "ist", "sind", "war", "waren", "wird", "werden", "wurde", "wurden", "hat", "haben", "hatte", "hatten", "kann", "können", "konnte", "konnten", "muss", "müssen", "musste", "mussten", "soll", "sollen", "sollte", "sollten", "wollen", "wollte", "wollten", "darf", "dürfen", "durfte", "durften", "mag", "mögen", "mochte", "mochten", "und", "oder", "aber", "denn", "weil", "wenn", "als", "ob", "damit", "obwohl", "während", "nachdem", "bevor", "sobald", "seit", "bis", "indem", "ohne", "außer", "gegen", "für", "mit", "zu", "von", "bei", "nach", "aus", "über", "unter", "neben", "zwischen", "vor", "hinter", "auf", "um", "herum", "durch", "entlang", "ich", "du", "er", "sie", "es", "wir", "ihr", "mich", "dich", "ihn", "uns", "euch", "ihnen", "mein", "dein", "sein", "unser", "euer", "ihre", "ihres", "ihrem", "ihren"]
