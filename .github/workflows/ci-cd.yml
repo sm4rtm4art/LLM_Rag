@@ -7,9 +7,13 @@ permissions:
 
 on:
   push:
-    branches: [main, KIND_cluster_running]
+    branches: ["*"] # All pushes to any branch get validation
   pull_request:
+    # We could remove this entirely, but keeping it with path filters for certain files
     branches: [main]
+    paths:
+      - ".github/workflows/**" # Only trigger on workflow file changes
+      - "k8s/**" # Or Kubernetes config changes
   workflow_dispatch:
     inputs:
       deploy_target:
@@ -20,10 +24,6 @@ on:
         options:
           - dev
           - staging
-      build_docker:
-        description: "Perform Docker build (true/false)"
-        required: false
-        default: "true"
 
 env:
   PYTHON_VERSION: "3.12"
@@ -79,6 +79,19 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "${{ env.PYTHON_VERSION }}"
+
+      - name: Free disk space
+        run: |
+          echo "Freeing disk space..."
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          docker system prune -af
+          df -h
 
       - name: Cache Python dependencies
         uses: actions/cache@v4
@@ -380,31 +393,29 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
           cache-from: |
-            type=local,src=/tmp/.buildx-cache
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:buildcache
           cache-to: |
-            type=local,dest=/tmp/.buildx-cache-new,mode=max
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:buildcache,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
           platforms: linux/amd64
           provenance: false
+          outputs: type=registry,compression=estargz
 
-      - name: Move Docker cache
-        if: steps.check-docker.outputs.docker_available == 'true'
+      - name: Clean up Docker resources
+        if: always() && steps.check-docker.outputs.docker_available == 'true'
         run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          echo "Cleaning up Docker resources..."
+          docker system prune -af
+          docker builder prune -af
+          docker image prune -af
+          df -h
 
       - name: Check Docker Hub Repository
         if: steps.check-docker.outputs.docker_available == 'true'
         run: |
           echo "Checking images on Docker Hub..."
           curl -s -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/llm-rag/tags/" | jq .
-
-      - name: Clean up Docker resources
-        if: steps.check-docker.outputs.docker_available == 'true'
-        run: docker system prune -af
 
       - name: Create build artifact (if Docker skipped)
         if: steps.check-docker.outputs.docker_available != 'true'
