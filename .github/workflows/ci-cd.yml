@@ -28,6 +28,7 @@ on:
 env:
   PYTHON_VERSION: "3.12"
   UV_LINK_MODE: copy
+  UV_SYSTEM_PYTHON: 1
 
 defaults:
   run:
