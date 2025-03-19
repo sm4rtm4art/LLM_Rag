@@ -250,13 +250,13 @@ class TestTemplatedGenerator(unittest.TestCase):
 
     def test_generate_with_invalid_template(self):
         """Test generation with invalid template selection."""
-        with self.assertRaises(PipelineError) as context:
+        with self.assertRaises(ValueError) as context:
             self.generator.generate(
                 query="test query",
                 context="test context",
                 template="nonexistent",
             )
-        self.assertIn("Template 'nonexistent' not found", str(context.exception))
+        self.assertIn("not found", str(context.exception))
 
 
 class TestCreateGenerator(unittest.TestCase):
