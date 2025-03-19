@@ -64,12 +64,11 @@ jobs:
           name: bandit-results
           path: bandit.json
 
-      # Safety Check - bypass policy file completely
-      - name: Basic safety check
+      # Safety Check - use proper CI command
+      - name: Run Safety Check
         run: |
-          uv pip install safety
-          echo "Running safety check with explicit ignore..."
-          python -m safety check --ignore-vulns all
+          uv pip install safety --upgrade
+          python -m safety ci --policy-file .safety-policy.yml
 
       # Trivy filesystem scan
       - name: Cache Trivy DB
