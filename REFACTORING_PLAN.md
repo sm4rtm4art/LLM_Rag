@@ -69,10 +69,13 @@ This document outlines the incremental refactoring plan for the LLM-RAG codebase
   - [x] Extract entity verification to a separate module
   - [x] Extract similarity-checking to a separate module
   - [x] Extract post-processing to a separate module
+  - [x] Maintain backward compatibility through stub implementations
 - Improve configurability and extensibility:
   - [x] Make verification strategies pluggable
   - [x] Enable runtime selection of strategies
   - [x] Add configuration validation
+  - [x] Implement configurable model loading and caching
+  - [x] Create clear separation between verification components
 
 ## Phase 6: Testing and Documentation
 
