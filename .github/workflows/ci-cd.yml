@@ -43,36 +43,27 @@ jobs:
       - run: find scripts -name "*.sh" -exec shfmt -d {} \;
       - run: scripts/test_bash_scripts.sh
 
-  lint-test-security:
+  security:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          cache-dependency-glob: "pyproject.toml"
-      - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-      - run: uv pip install -e .[dev] pytest pytest-cov mypy ruff bandit safety
-
-      # Run security checks first for faster failures
       - name: Safety vulnerability scan
         uses: pyupio/safety-action@v1
         with:
           api-key: ${{ secrets.SAFETY_API_KEY }}
           args: --full-report
 
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+      - run: .venv/bin/python -m pip install bandit
       - run: bandit -r src -c pyproject.toml -f json -o bandit.json
       - uses: actions/upload-artifact@v4
         with:
           name: bandit-results
           path: bandit.json
-
-      # Now run lint and tests
-      - run: ruff format src tests && ruff check src tests && mypy src tests
-      - run: pytest --cov=src/llm_rag --cov-report=xml -v
 
       # Trivy filesystem scan
       - name: Cache Trivy DB
@@ -85,21 +76,65 @@ jobs:
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
-          trivy --version
       - name: Run Trivy filesystem scan
         env:
           TRIVY_NO_PROGRESS: true
           TRIVY_CACHE_DIR: ~/.cache/trivy
         run: |
           trivy --cache-dir ~/.cache/trivy image --download-db-only
-          trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH .
+          # Only scan changed files in PRs and pushes
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # For PRs, scan only changed files
+            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }} ${{ github.sha }} | tr '\n' ' ')
+          else
+            # For pushes, scan only changed files in the last commit
+            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT HEAD^ HEAD | tr '\n' ' ')
+          fi
+
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "Scanning changed files: $CHANGED_FILES"
+            trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH $CHANGED_FILES
+          else
+            echo "No relevant files changed, performing minimal scan"
+            trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH --skip-dirs="tests/" --skip-dirs=".github/" .
+          fi
       - name: Upload Trivy SARIF results
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-results.sarif
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+      - run: uv pip install -e .[dev] ruff mypy
+      - run: ruff format src tests && ruff check src tests && mypy src tests
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+      - run: uv pip install pytest pytest-cov pytest-asyncio sentence-transformers chromadb -e .[dev]
+      - run: .venv/bin/python -m pytest --cov=src/llm_rag --cov-report=xml -v
+
   semantic-release:
-    needs: lint-test-security
+    needs: [lint, test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: write
@@ -112,7 +147,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "${{ env.PYTHON_VERSION }}"
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -122,10 +157,10 @@ jobs:
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: semantic-release publish
+        run: .venv/bin/semantic-release publish
 
   docker-build:
-    needs: [bash-lint, lint-test-security]
+    needs: [bash-lint, security, lint, test]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:

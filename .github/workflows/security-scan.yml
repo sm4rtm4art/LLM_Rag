@@ -1,110 +1,95 @@
-name: Scheduled Security Scan
+name: Comprehensive Security Scan
 
-on:
-  schedule:
-    - cron: "0 0 * * 0" # Run weekly on Sunday at midnight
-  workflow_dispatch: # Allow manual triggering
-
-# Add permissions required for security scanning
 permissions:
   actions: read
   contents: read
-  security-events: write # Required for uploading SARIF results
+  security-events: write
+
+on:
+  schedule:
+    # Run weekly on Sunday at 1:00 AM UTC
+    - cron: "0 1 * * 0"
+  workflow_dispatch:
+    # Allow manual triggering of the workflow
+
+env:
+  PYTHON_VERSION: "3.12"
 
 jobs:
-  security-scan:
-    name: Run Security Scans
+  full-security-scan:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Safety vulnerability scan
+        uses: pyupio/safety-action@v1
         with:
-          python-version: "3.12"
+          api-key: ${{ secrets.SAFETY_API_KEY }}
+          args: --full-report
 
-      # Add cache for UV
-      - name: Cache UV packages
-        uses: actions/cache@v4
+      - uses: actions/setup-python@v4
         with:
-          path: |
-            ~/.cache/uv
-            ~/.cache/pip
-          key: ${{ runner.os }}-uv-security-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-security-
+          python-version: "${{ env.PYTHON_VERSION }}"
 
-      - name: Install UV
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install security tools
-        run: uv pip install --system bandit safety
-
-      - name: Run Bandit
-        run: |
-          bandit -r src/ -c pyproject.toml -f json -o bandit-results.json
-
-      - name: Upload Bandit results
-        uses: actions/upload-artifact@v4
+      - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+      - run: .venv/bin/python -m pip install bandit
+      - run: bandit -r src -c pyproject.toml -f json -o bandit.json
+      - uses: actions/upload-artifact@v4
         with:
           name: bandit-results
-          path: bandit-results.json
+          path: bandit.json
 
-      - name: Run Safety Check
-        run: safety check
-
-      # Add cache for Trivy
-      - name: Cache Trivy vulnerability database
+      # Comprehensive Trivy filesystem scan
+      - name: Cache Trivy DB
         uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
-          key: cache-trivy-${{ github.run_id }}
+          key: ${{ runner.os }}-trivy-${{ github.sha }}
           restore-keys: |
-            cache-trivy-
+            ${{ runner.os }}-trivy-
 
-      # Install Trivy directly instead of using the action
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
-          trivy --version
 
-      # Run Trivy with direct command
-      - name: Run Trivy vulnerability scanner
+      - name: Run comprehensive Trivy filesystem scan
         env:
           TRIVY_NO_PROGRESS: true
           TRIVY_CACHE_DIR: ~/.cache/trivy
         run: |
-          # First update the database explicitly
           trivy --cache-dir ~/.cache/trivy image --download-db-only
-          # Then run the scan
-          trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH .
+          # Comprehensive scan with all scanners and checking for all severity levels
+          trivy fs --format sarif --output trivy-full-results.sarif --severity CRITICAL,HIGH,MEDIUM,LOW .
 
-      - name: Upload Trivy scan results
+      - name: Upload comprehensive Trivy SARIF results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: "trivy-results.sarif"
+          sarif_file: trivy-full-results.sarif
+          category: trivy-comprehensive
 
-      - name: Generate timestamp for report
-        id: timestamp
-        run: echo "timestamp=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+      # Additional security scans could be added here:
+      # - Secret scanning
+      # - SAST analysis
+      # - Dependency scanning
 
-      - name: Create security report
+      - name: Generate security summary
         run: |
-          echo "# Security Scan Report - ${{ steps.timestamp.outputs.timestamp }}" > security-report.md
-          echo "" >> security-report.md
-          echo "## Bandit Results" >> security-report.md
-          echo "See attached artifact for detailed Bandit results." >> security-report.md
-          echo "" >> security-report.md
-          echo "## Trivy Results" >> security-report.md
-          echo "See SARIF upload for detailed Trivy results." >> security-report.md
+          echo "# Security Scan Results" > security-summary.md
+          echo "## Timestamp: $(date)" >> security-summary.md
+          echo "## Repository: ${{ github.repository }}" >> security-summary.md
+          echo "## Branch: ${{ github.ref }}" >> security-summary.md
+          echo "" >> security-summary.md
 
-      - name: Upload security report
+          # Add basic statistics from scan results
+          echo "Run ID: ${{ github.run_id }}" >> security-summary.md
+          echo "Scan URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> security-summary.md
+
+          # If we wanted to extract actual vulnerability counts, we would need to parse the SARIF files here
+
+      - name: Upload security summary
         uses: actions/upload-artifact@v4
         with:
-          name: security-report-${{ steps.timestamp.outputs.timestamp }}
-          path: security-report.md
+          name: security-summary
+          path: security-summary.md
