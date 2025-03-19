@@ -24,6 +24,10 @@ class TestBaseContextFormatter(unittest.TestCase):
 
         # Create a concrete implementation for testing
         class TestFormatter(BaseContextFormatter):
+            def __init__(self, include_metadata=True, max_length=None):
+                self.include_metadata = include_metadata
+                self.max_length = max_length
+
             def format_context(self, documents, **kwargs):
                 results = []
                 for i, doc in enumerate(documents, 1):
@@ -51,6 +55,10 @@ class TestBaseContextFormatter(unittest.TestCase):
         """Test initialization with custom parameters."""
 
         class TestFormatter(BaseContextFormatter):
+            def __init__(self, include_metadata=True, max_length=None):
+                self.include_metadata = include_metadata
+                self.max_length = max_length
+
             def format_context(self, documents, **kwargs):
                 return "test"
 
