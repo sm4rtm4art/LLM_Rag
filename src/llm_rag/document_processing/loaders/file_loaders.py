@@ -580,6 +580,7 @@ class PDFLoader(DocumentLoader, FileLoader):
         file_path: Optional[Union[str, Path]] = None,
         extract_images: bool = False,
         password: Optional[str] = None,
+        extract_tables: bool = False,
     ):
         """Initialize the PDF loader.
 
@@ -591,11 +592,14 @@ class PDFLoader(DocumentLoader, FileLoader):
             Whether to extract images from the PDF, by default False
         password : Optional[str], optional
             Password to decrypt the PDF, by default None
+        extract_tables : bool, optional
+            Whether to extract tables from the PDF, by default False
 
         """
         self.file_path = Path(file_path) if file_path else None
         self.extract_images = extract_images
         self.password = password
+        self.extract_tables = extract_tables
 
     def load(self) -> Documents:
         """Load documents from the PDF file specified during initialization.
@@ -752,10 +756,12 @@ class EnhancedPDFLoader(PDFLoader):
     def __init__(
         self,
         file_path: Optional[Union[str, Path]] = None,
-        extract_images: bool = False,
-        extract_tables: bool = False,
+        extract_images: bool = True,
+        extract_tables: bool = True,
         password: Optional[str] = None,
         combine_pages: bool = False,
+        use_ocr: bool = False,
+        ocr_languages: str = "eng",
     ):
         """Initialize the enhanced PDF loader.
 
@@ -764,18 +770,23 @@ class EnhancedPDFLoader(PDFLoader):
         file_path : Optional[Union[str, Path]], optional
             Path to the PDF file, by default None
         extract_images : bool, optional
-            Whether to extract images from the PDF, by default False
+            Whether to extract images from the PDF, by default True
         extract_tables : bool, optional
-            Whether to extract tables from the PDF, by default False
+            Whether to extract tables from the PDF, by default True
         password : Optional[str], optional
             Password to decrypt the PDF, by default None
         combine_pages : bool, optional
             Whether to combine all pages into a single document, by default False
+        use_ocr : bool, optional
+            Whether to use OCR on images for text extraction, by default False
+        ocr_languages : str, optional
+            Language code(s) for OCR, by default "eng"
 
         """
-        super().__init__(file_path, extract_images, password)
-        self.extract_tables = extract_tables
+        super().__init__(file_path, extract_images, password, extract_tables)
         self.combine_pages = combine_pages
+        self.use_ocr = use_ocr
+        self.ocr_languages = ocr_languages
 
     def load_from_file(self, file_path: Union[str, Path]) -> Documents:
         """Load documents from a PDF file with enhanced processing.
