@@ -1,16 +1,22 @@
-"""Base classes and interfaces for document loaders.
+"""Base classes for document loaders.
 
-This module defines the foundational classes and interfaces for document loaders in the LLM-RAG system.
+This module provides the base DocumentLoader class that all loaders should inherit from,
+along with common utilities and type definitions for document loading.
 """
 
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Optional, Protocol, TypeVar, Union, runtime_checkable
+from typing import Any, Dict, List, Optional, Protocol, TypeAlias, TypeVar, Union, runtime_checkable
 
 from ..processors import Documents
 
 logger = logging.getLogger(__name__)
+
+# Type aliases for readability
+DocumentMetadata: TypeAlias = Dict[str, Any]
+DocumentContent: TypeAlias = str
+Document: TypeAlias = Dict[str, Union[DocumentContent, DocumentMetadata]]
 
 
 class DocumentLoader(ABC):
