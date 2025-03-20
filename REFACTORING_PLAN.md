@@ -62,6 +62,33 @@ This document outlines the incremental refactoring plan for the LLM-RAG codebase
   - ✅ Implemented extensive test coverage
   - ✅ Maintained backward compatibility with WebPageLoader alias
 
+## Phase 4B: Loaders Centralization and Error Handling (Completed)
+
+- Enhance the central `loaders.py` file:
+  - [✅] Implement a consistent try/import pattern like pipeline.py and anti_hallucination.py
+  - [✅] Provide functional fallbacks that actually work when modular components aren't available
+  - [✅] Centralize error handling with proper logging and warnings
+  - [✅] Follow the same backward compatibility pattern used in pipeline.py
+- Complete the modular directory structure implementation:
+  - [✅] Ensure `loaders/` directory has all necessary components:
+    - [✅] `base.py`: DocumentLoader base class
+    - [✅] `directory_loader.py`: Directory traversal and file loading
+    - [✅] `file_loaders.py`: Text, PDF, CSV, JSON, and XML loaders
+    - [✅] `web_loaders.py`: Web content retrieval and processing
+    - [✅] `__init__.py`: Re-exports for clean imports
+- Current structure and challenges:
+
+  - [✅] New structure created in `src/llm_rag/document_processing/loaders/`
+  - [✅] Main `loaders.py` updated to try importing from modular implementation
+  - [✅] Functional stubs created within `loaders.py` to handle import failures
+  - [✅] Fixed missing module files in the loaders directory structure
+  - [✅] Resolved import errors
+
+- Testing for loaders:
+  - [✅] Create unit tests for each loader type
+  - [✅] Create integration tests for backward compatibility
+  - [✅] Test pipeline integration with document loaders
+
 ## Phase 5: Anti-Hallucination Refactoring (Completed)
 
 - Break down `anti_hallucination.py` (694 lines) into focused modules:
@@ -80,12 +107,14 @@ This document outlines the incremental refactoring plan for the LLM-RAG codebase
 ## Phase 6: Testing and Documentation
 
 - Enhance testing:
-  - ✅ Add comprehensive tests for error handling module (`utils/errors.py`)
-  - ✅ Add tests for pipeline components:
-    - ✅ Context formatters (`rag/pipeline/context.py`)
-    - ✅ Generators (`rag/pipeline/generation.py`)
-    - ✅ Retrievers (`rag/pipeline/retrieval.py`)
-  - [ ] Fix test failures due to architectural changes:
+  - [✅] Add comprehensive tests for error handling module (`utils/errors.py`)
+  - [✅] Add tests for pipeline components:
+    - [✅] Context formatters (`rag/pipeline/context.py`)
+    - [✅] Generators (`rag/pipeline/generation.py`)
+    - [✅] Retrievers (`rag/pipeline/retrieval.py`)
+  - [✅] Add comprehensive tests for document loaders
+  - [✅] Create end-to-end tests for the full pipeline
+  - [ ] Fix remaining test failures due to architectural changes:
     - [ ] Update RAGPipeline constructor arguments
     - [ ] Check for context formatter max_length implementation
     - [ ] Adjust MarkdownContextFormatter tests for new metadata format
@@ -109,6 +138,114 @@ This document outlines the incremental refactoring plan for the LLM-RAG codebase
   - [ ] Ensure proper docstrings for all classes and functions
   - [ ] Add type annotations to improve static type checking
 
+## Phase 6B: Test Strategy
+
+To address the low test coverage (~26%) and ensure reliable, maintainable code, we'll implement a comprehensive testing strategy:
+
+### Testing Approach
+
+1. **Multi-Level Testing**:
+
+   - Unit Tests: Test individual components in isolation
+   - Integration Tests: Test interactions between components
+   - End-to-End Tests: Test the entire pipeline with real-world scenarios
+
+2. **TDD for New Components**:
+
+   - Write tests before implementing new features
+   - Use tests to validate requirements are met
+   - Refactor with confidence once tests pass
+
+3. **Targeted Coverage Improvement**:
+   - Focus first on critical path components
+   - Prioritize code with complex logic
+   - Cover error handling and edge cases
+
+### Component Test Priorities
+
+1. **Core Pipeline (Highest Priority)**:
+
+   - RAGPipeline and ConversationalRAGPipeline classes
+   - Document retrieval mechanisms
+   - Context formatting logic
+   - LLM integration points
+
+2. **Document Processing (High Priority)**:
+
+   - Loaders for different document types
+   - Chunking and splitting algorithms
+   - Metadata extraction and handling
+
+3. **Anti-Hallucination (Medium-High Priority)**:
+
+   - Entity verification mechanisms
+   - Similarity checking algorithms
+   - Response post-processing
+
+4. **Vector Stores and Models (Medium Priority)**:
+
+   - Vector store integration
+   - Model factory and different backends
+   - Embedding generation and handling
+
+5. **Utilities and Configuration (Medium-Low Priority)**:
+   - Logging mechanisms
+   - Configuration handling
+   - Error types and propagation
+
+### Coverage Targets
+
+- **Short-term (2 weeks)**: Increase overall coverage to 50%
+
+  - Focus on core pipeline and document processing
+  - Fix test collection issues
+
+- **Medium-term (1 month)**: Increase overall coverage to 65%
+
+  - Add tests for anti-hallucination
+  - Cover vector stores and models
+
+- **Long-term (2 months)**: Increase overall coverage to 80%+
+  - Complete edge case testing
+  - Add performance and stress tests
+  - Implement property-based testing for complex algorithms
+
+### Implementation Plan
+
+1. **Immediate Actions**:
+
+   - Fix test collection errors in document processing tests
+   - Create fixtures and mock objects for common testing scenarios
+   - Implement basic coverage for untested components
+
+2. **Week 1-2**:
+
+   - Focus on RAGPipeline and core functionality
+   - Add tests for document loaders and processors
+   - Fix failing tests from architectural changes
+
+3. **Week 3-4**:
+
+   - Add tests for anti-hallucination components
+   - Implement vector store and model factory tests
+   - Create more end-to-end test scenarios
+
+4. **Ongoing**:
+   - Monitor coverage metrics
+   - Add tests for new features as they're developed
+   - Refine existing tests to cover edge cases
+
+### Testing Tools and Techniques
+
+- **Framework**: pytest with pytest-cov for coverage analysis
+- **Mocking**: unittest.mock for isolating components
+- **Fixtures**: Common test data, configurations, and mock objects
+- **Parameterization**: Test multiple scenarios efficiently
+- **Property-Based Testing**: Hypothesis for complex algorithms
+- **CI Integration**: Run tests on each commit, enforce coverage thresholds
+
+This strategy will ensure systematic improvement of test coverage while prioritizing the most critical components of the system.
+
 ## Phase 7: Deprecation Strategy
 
 - Only after thorough testing and validation:
@@ -128,3 +265,26 @@ Throughout this refactoring, we will:
 5. **Document Changes**: Keep documentation in sync with code changes
 
 The goal is to improve the codebase's maintainability and extensibility while ensuring it remains fully functional throughout the process.
+
+### Test Infrastructure Improvements (2023-06-01)
+
+We've made significant improvements to the testing infrastructure:
+
+1. **Fixed loader implementation**:
+
+   - Created missing module files in the loaders directory
+   - Ensured consistency with pipeline.py and anti_hallucination.py patterns
+   - Added comprehensive error handling and fallbacks
+
+2. **Improved test structure**:
+
+   - Consolidated test data directories
+   - Added test fixtures for commonly used components
+   - Created mock implementations for external dependencies
+
+3. **Implemented test strategy**:
+   - Developed a comprehensive approach to testing
+   - Prioritized components by importance
+   - Set clear coverage targets with timeline
+
+These improvements have resolved immediate issues with test execution and provide a foundation for systematically improving test coverage across the codebase.
