@@ -56,7 +56,7 @@ class DocumentLoader(ABC):
 
 # Import the new modular loaders with error handling in case they're not available
 try:
-    from .loaders import (  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402
+    from .loader_api import (  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402
         CSVLoader,
         DirectoryLoader,
         EnhancedPDFLoader,
@@ -68,7 +68,7 @@ try:
         XMLLoader,
         load_documents_from_directory,
     )
-    from .loaders import DocumentLoader as ModularDocumentLoader
+    from .loader_api import DocumentLoader as ModularDocumentLoader
 
     # Create aliases to avoid name conflicts
     DocumentLoader_Original = DocumentLoader
@@ -87,7 +87,7 @@ except ImportError as e:
 warnings.warn(
     "Importing loaders directly from llm_rag.document_processing "
     "is deprecated. Please import them from "
-    "llm_rag.document_processing.loaders instead.",
+    "llm_rag.document_processing.loader_api instead.",
     DeprecationWarning,
     stacklevel=2,
 )
