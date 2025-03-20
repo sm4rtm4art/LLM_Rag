@@ -56,7 +56,7 @@ class DocumentLoader(ABC):
 
 # Import the new modular loaders with error handling in case they're not available
 try:
-    from .loaders import (  # noqa: E402
+    from .loaders import (  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402
         CSVLoader,
         DirectoryLoader,
         EnhancedPDFLoader,
@@ -66,7 +66,13 @@ try:
         WebLoader,
         WebPageLoader,
         XMLLoader,
+        load_documents_from_directory,
     )
+    from .loaders import DocumentLoader as ModularDocumentLoader
+
+    # Create aliases to avoid name conflicts
+    DocumentLoader_Original = DocumentLoader
+    DocumentLoader = ModularDocumentLoader
 
     _has_loaders = True
 except ImportError as e:
@@ -110,6 +116,7 @@ if _has_loaders:
         "WebLoader",
         "WebPageLoader",
         "XMLLoader",
+        "load_documents_from_directory",
     ]
 else:
     __all__ = _common_exports
