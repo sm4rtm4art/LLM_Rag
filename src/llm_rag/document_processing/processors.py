@@ -19,6 +19,7 @@ class TextSplitter:
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
         separators: Optional[List[str]] = None,
+        separator: Optional[str] = None,
     ):
         """Initialize the text splitter.
 
@@ -27,8 +28,22 @@ class TextSplitter:
             chunk_size: Maximum size of chunks to return
             chunk_overlap: Overlap in characters between chunks
             separators: List of separators to use for splitting text
+            separator: Single separator to use for splitting text (deprecated)
+                       If provided, it will be used to create a single-item list for separators
 
         """
+        # Handle both separators and separator parameters for backward compatibility
+        if separator is not None and separators is None:
+            # Support the old interface with a single separator
+            separators = [separator]
+            import warnings
+
+            warnings.warn(
+                "The 'separator' parameter is deprecated. Use 'separators' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         if separators is None:
             separators = ["\n\n", "\n", " ", ""]
 
@@ -37,6 +52,20 @@ class TextSplitter:
             chunk_overlap=chunk_overlap,
             separators=separators,
         )
+
+        # Store separators for testing purposes
+        self._separators = separators
+
+    @property
+    def separators(self) -> List[str]:
+        """Get the separators used by this splitter.
+
+        Returns
+        -------
+            List of separators
+
+        """
+        return self._separators
 
     def split_text(self, text: str) -> List[str]:
         """Split text into chunks.

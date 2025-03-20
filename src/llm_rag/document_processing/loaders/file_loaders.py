@@ -5,7 +5,7 @@ import importlib.util
 import logging
 import warnings
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from ..processors import Documents
 from .base import DocumentLoader, FileLoader, registry
@@ -572,7 +572,452 @@ class XMLLoader(DocumentLoader, FileLoader):
                 return "\n".join(filter(None, text_parts))
 
 
+class PDFLoader(DocumentLoader, FileLoader):
+    """Load documents from PDF files."""
+
+    def __init__(
+        self,
+        file_path: Optional[Union[str, Path]] = None,
+        extract_images: bool = False,
+        password: Optional[str] = None,
+        extract_tables: bool = False,
+    ):
+        """Initialize the PDF loader.
+
+        Parameters
+        ----------
+        file_path : Optional[Union[str, Path]], optional
+            Path to the PDF file, by default None
+        extract_images : bool, optional
+            Whether to extract images from the PDF, by default False
+        password : Optional[str], optional
+            Password to decrypt the PDF, by default None
+        extract_tables : bool, optional
+            Whether to extract tables from the PDF, by default False
+
+        """
+        self.file_path = Path(file_path) if file_path else None
+        self.extract_images = extract_images
+        self.password = password
+        self.extract_tables = extract_tables
+
+    def load(self) -> Documents:
+        """Load documents from the PDF file specified during initialization.
+
+        Returns
+        -------
+        Documents
+            List of documents extracted from the PDF.
+
+        Raises
+        ------
+        ValueError
+            If file_path was not provided during initialization.
+
+        """
+        if not self.file_path:
+            raise ValueError("No file path provided. Either initialize with a file path or use load_from_file.")
+
+        return self.load_from_file(self.file_path)
+
+    def load_from_file(self, file_path: Union[str, Path]) -> Documents:
+        """Load documents from a PDF file.
+
+        Parameters
+        ----------
+        file_path : Union[str, Path]
+            Path to the PDF file.
+
+        Returns
+        -------
+        Documents
+            List of documents, typically one per page.
+
+        """
+        file_path = Path(file_path)
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        try:
+            if PYPDF_AVAILABLE:
+                return self._load_with_pypdf(file_path)
+            elif PYMUPDF_AVAILABLE:
+                return self._load_with_pymupdf(file_path)
+            else:
+                raise ImportError("No PDF processing libraries available. Install pypdf or PyMuPDF.")
+        except Exception as e:
+            logger.error(f"Error loading PDF file {file_path}: {e}")
+            raise
+
+    def _load_with_pypdf(self, file_path: Path) -> Documents:
+        """Load PDF using pypdf.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the PDF file.
+
+        Returns
+        -------
+        Documents
+            List of documents, one per page.
+
+        """
+        import pypdf
+
+        with open(file_path, "rb") as f:
+            pdf = pypdf.PdfReader(f)
+            if self.password:
+                pdf.decrypt(self.password)
+
+            documents = []
+            metadata = {
+                "source": str(file_path),
+                "filename": file_path.name,
+                "filetype": "pdf",
+                "total_pages": len(pdf.pages),
+            }
+
+            # Add PDF metadata if available
+            if pdf.metadata:
+                for key, value in pdf.metadata.items():
+                    if key.startswith("/"):
+                        key = key[1:]  # Remove leading slash from keys
+                    metadata[f"pdf_{key.lower()}"] = str(value)
+
+            # Process each page
+            for i, page in enumerate(pdf.pages):
+                text = page.extract_text()
+                if not text:
+                    text = f"[No extractable text on page {i + 1}]"
+
+                page_metadata = metadata.copy()
+                page_metadata["page_number"] = i + 1
+
+                documents.append({"content": text, "metadata": page_metadata})
+
+            return documents
+
+    def _load_with_pymupdf(self, file_path: Path) -> Documents:
+        """Load PDF using PyMuPDF.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the PDF file.
+
+        Returns
+        -------
+        Documents
+            List of documents, one per page.
+
+        """
+        import fitz  # PyMuPDF
+
+        documents = []
+        pdf = fitz.open(file_path)
+
+        if self.password:
+            if pdf.authenticate(self.password) != 0:
+                raise ValueError("Invalid PDF password")
+
+        metadata = {
+            "source": str(file_path),
+            "filename": file_path.name,
+            "filetype": "pdf",
+            "total_pages": len(pdf),
+        }
+
+        # Add PDF metadata if available
+        pdf_metadata = pdf.metadata
+        if pdf_metadata:
+            for key, value in pdf_metadata.items():
+                if value:
+                    metadata[f"pdf_{key.lower()}"] = str(value)
+
+        # Process each page
+        for i in range(len(pdf)):
+            page = pdf[i]
+            text = page.get_text()
+            if not text:
+                text = f"[No extractable text on page {i + 1}]"
+
+            page_metadata = metadata.copy()
+            page_metadata["page_number"] = i + 1
+
+            documents.append({"content": text, "metadata": page_metadata})
+
+        return documents
+
+
+class EnhancedPDFLoader(PDFLoader):
+    """Enhanced PDF loader with additional extraction capabilities."""
+
+    def __init__(
+        self,
+        file_path: Optional[Union[str, Path]] = None,
+        extract_images: bool = True,
+        extract_tables: bool = True,
+        password: Optional[str] = None,
+        combine_pages: bool = False,
+        use_ocr: bool = False,
+        ocr_languages: str = "eng",
+    ):
+        """Initialize the enhanced PDF loader.
+
+        Parameters
+        ----------
+        file_path : Optional[Union[str, Path]], optional
+            Path to the PDF file, by default None
+        extract_images : bool, optional
+            Whether to extract images from the PDF, by default True
+        extract_tables : bool, optional
+            Whether to extract tables from the PDF, by default True
+        password : Optional[str], optional
+            Password to decrypt the PDF, by default None
+        combine_pages : bool, optional
+            Whether to combine all pages into a single document, by default False
+        use_ocr : bool, optional
+            Whether to use OCR on images for text extraction, by default False
+        ocr_languages : str, optional
+            Language code(s) for OCR, by default "eng"
+
+        """
+        super().__init__(file_path, extract_images, password, extract_tables)
+        self.combine_pages = combine_pages
+        self.use_ocr = use_ocr
+        self.ocr_languages = ocr_languages
+
+    def load_from_file(self, file_path: Union[str, Path]) -> Documents:
+        """Load documents from a PDF file with enhanced processing.
+
+        Parameters
+        ----------
+        file_path : Union[str, Path]
+            Path to the PDF file.
+
+        Returns
+        -------
+        Documents
+            List of documents from the PDF.
+
+        """
+        # First, get the basic documents using the parent class
+        documents = super().load_from_file(file_path)
+
+        # If combining pages, merge all content into a single document
+        if self.combine_pages:
+            combined_content = "\n\n".join(doc["content"] for doc in documents)
+            combined_metadata = documents[0]["metadata"].copy()
+            combined_metadata.pop("page_number", None)
+            return [{"content": combined_content, "metadata": combined_metadata}]
+
+        # If extracting tables and PyMuPDF is available, add table information
+        if self.extract_tables and PYMUPDF_AVAILABLE:
+            try:
+                import fitz
+
+                file_path = Path(file_path)
+                pdf = fitz.open(file_path)
+
+                if self.password:
+                    if pdf.authenticate(self.password) != 0:
+                        raise ValueError("Invalid PDF password")
+
+                for i, doc in enumerate(documents):
+                    if i < len(pdf):
+                        page = pdf[i]
+                        # Extract tables (basic implementation)
+                        tables = page.find_tables()
+                        if tables and tables.tables:
+                            table_texts = []
+                            for table in tables:
+                                table_text = []
+                                for row in table.rows:
+                                    row_text = []
+                                    for cell in row:
+                                        if cell.text:
+                                            row_text.append(cell.text)
+                                    if row_text:
+                                        table_text.append(" | ".join(row_text))
+                                if table_text:
+                                    table_texts.append("\n".join(table_text))
+
+                            if table_texts:
+                                doc["content"] += "\n\nTables:\n" + "\n\n".join(table_texts)
+                                doc["metadata"]["has_tables"] = True
+                                doc["metadata"]["table_count"] = len(table_texts)
+
+            except Exception as e:
+                logger.warning(f"Error extracting tables: {e}")
+
+        return documents
+
+
+class JSONLoader(DocumentLoader, FileLoader):
+    """Load documents from JSON files."""
+
+    def __init__(
+        self,
+        file_path: Optional[Union[str, Path]] = None,
+        jq_schema: str = ".",
+        content_key: Optional[str] = None,
+        metadata_keys: Optional[List[str]] = None,
+        text_content: bool = True,
+    ):
+        """Initialize the JSON loader.
+
+        Parameters
+        ----------
+        file_path : Optional[Union[str, Path]], optional
+            Path to the JSON file, by default None
+        jq_schema : str, optional
+            JQ-like schema for extracting content, by default "." (entire document)
+        content_key : Optional[str], optional
+            Key to use for document content, by default None
+        metadata_keys : Optional[List[str]], optional
+            Keys to include as metadata, by default None
+        text_content : bool, optional
+            Whether to convert content to text, by default True
+
+        """
+        self.file_path = Path(file_path) if file_path else None
+        self.jq_schema = jq_schema
+        self.content_key = content_key
+        self.metadata_keys = metadata_keys
+        self.text_content = text_content
+
+    def load(self) -> Documents:
+        """Load documents from the JSON file specified during initialization.
+
+        Returns
+        -------
+        Documents
+            List of documents extracted from the JSON file.
+
+        Raises
+        ------
+        ValueError
+            If file_path was not provided during initialization.
+
+        """
+        if not self.file_path:
+            raise ValueError("No file path provided. Either initialize with a file path or use load_from_file.")
+
+        return self.load_from_file(self.file_path)
+
+    def load_from_file(self, file_path: Union[str, Path]) -> Documents:
+        """Load documents from a JSON file.
+
+        Parameters
+        ----------
+        file_path : Union[str, Path]
+            Path to the JSON file.
+
+        Returns
+        -------
+        Documents
+            List of documents extracted from the JSON file.
+
+        """
+        file_path = Path(file_path)
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        try:
+            import json
+
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            # Apply jq-like schema (basic implementation)
+            if self.jq_schema != ".":
+                # Split by dots and apply each key
+                keys = self.jq_schema.strip(".").split(".")
+                current_data = data
+                for key in keys:
+                    if key in current_data:
+                        current_data = current_data[key]
+                    else:
+                        raise ValueError(f"Key '{key}' not found in JSON structure")
+                data = current_data
+
+            documents = []
+
+            # Handle different JSON structures
+            if isinstance(data, list):
+                # Process each item in the list
+                for i, item in enumerate(data):
+                    doc = self._process_item(item, i, file_path)
+                    if doc:
+                        documents.append(doc)
+            else:
+                # Process the single item
+                doc = self._process_item(data, 0, file_path)
+                if doc:
+                    documents.append(doc)
+
+            return documents
+
+        except Exception as e:
+            logger.error(f"Error loading JSON file {file_path}: {e}")
+            raise
+
+    def _process_item(self, item: Any, index: int, file_path: Path) -> Optional[Dict[str, Any]]:
+        """Process a single JSON item into a document.
+
+        Parameters
+        ----------
+        item : Any
+            The JSON item to process.
+        index : int
+            Index of the item (for lists).
+        file_path : Path
+            Path to the source file.
+
+        Returns
+        -------
+        Optional[Dict[str, Any]]
+            Document dictionary or None if item couldn't be processed.
+
+        """
+        # Extract content based on content_key if specified
+        if self.content_key and isinstance(item, dict):
+            if self.content_key in item:
+                content = item[self.content_key]
+            else:
+                logger.warning(f"Content key '{self.content_key}' not found in item {index}")
+                return None
+        else:
+            content = item
+
+        # Convert content to string if needed
+        if self.text_content and not isinstance(content, str):
+            import json
+
+            content = json.dumps(content)
+
+        # Prepare metadata
+        metadata = {
+            "source": str(file_path),
+            "filename": file_path.name,
+            "filetype": "json",
+            "index": index,
+        }
+
+        # Add specific metadata if requested
+        if self.metadata_keys and isinstance(item, dict):
+            for key in self.metadata_keys:
+                if key in item:
+                    metadata[key] = item[key]
+
+        return {"content": content, "metadata": metadata}
+
+
 # Register the loaders
 registry.register(TextFileLoader, extensions=["txt", "text", "md", "rst", "log"])
 registry.register(CSVLoader, extensions=["csv", "tsv"])
 registry.register(XMLLoader, extensions=["xml"])
+registry.register(PDFLoader, extensions=["pdf"])
+registry.register(EnhancedPDFLoader, extensions=["pdf"])
+registry.register(JSONLoader, extensions=["json"])

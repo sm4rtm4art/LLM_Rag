@@ -20,6 +20,7 @@ class ModelBackend(str, Enum):
 
     LLAMA_CPP = "llama_cpp"
     HUGGINGFACE = "huggingface"
+    OLLAMA = "ollama"
 
 
 class ModelFactory:
@@ -67,6 +68,15 @@ class ModelFactory:
             return ModelFactory._create_huggingface_model(
                 model_name=model_path_or_name,
                 device=device,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                repetition_penalty=repetition_penalty,
+                **kwargs,
+            )
+        elif backend_enum == ModelBackend.OLLAMA:
+            return ModelFactory._create_ollama_model(
+                model_name=model_path_or_name,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 top_p=top_p,
@@ -182,4 +192,76 @@ class ModelFactory:
             logger.error(f"top_p: {top_p}")
             logger.error(f"repetition_penalty: {repetition_penalty}")
             logger.error(f"kwargs: {kwargs}")
+            raise
+
+    @staticmethod
+    def _create_ollama_model(
+        model_name: str,
+        max_tokens: int = 512,
+        temperature: float = 0.7,
+        top_p: float = 0.95,
+        repetition_penalty: float = 1.1,
+        **kwargs: Any,
+    ) -> LLM:
+        """Create an Ollama model.
+
+        Args:
+            model_name: Name of the Ollama model to use (e.g., 'llama3')
+            max_tokens: Maximum number of tokens to generate
+            temperature: Temperature for sampling
+            top_p: Top p for nucleus sampling
+            repetition_penalty: Repetition penalty for generation
+            **kwargs: Additional kwargs to pass to the LLM
+
+        Returns:
+            An Ollama LLM instance
+
+        """
+        logger.info(f"Creating Ollama model: {model_name}")
+        logger.info(f"Parameters: max_tokens={max_tokens}, temperature={temperature}")
+        logger.info(f"Additional kwargs: {kwargs}")
+
+        try:
+            # Try importing from langchain_ollama first (preferred)
+            try:
+                from langchain_ollama import OllamaLLM
+
+                logger.info("Using langchain_ollama.OllamaLLM")
+                return OllamaLLM(
+                    model=model_name,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                    repeat_penalty=repetition_penalty,
+                    **kwargs,
+                )
+            except ImportError:
+                # Fallback to langchain_community
+                try:
+                    from langchain_community.llms.ollama import OllamaLLM
+
+                    logger.info("Using langchain_community.llms.ollama.OllamaLLM")
+                    return OllamaLLM(
+                        model=model_name,
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                        top_p=top_p,
+                        repeat_penalty=repetition_penalty,
+                        **kwargs,
+                    )
+                except ImportError:
+                    # Final fallback to older API
+                    from langchain_community.llms import Ollama
+
+                    logger.info("Using langchain_community.llms.Ollama")
+                    return Ollama(
+                        model=model_name,
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                        top_p=top_p,
+                        repeat_penalty=repetition_penalty,
+                        **kwargs,
+                    )
+        except Exception as e:
+            logger.error(f"Error creating Ollama model: {e}")
             raise

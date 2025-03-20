@@ -23,6 +23,7 @@ dependencies = [
     "torch>=2.1.0",
     "transformers>=4.49.0",
     "uvicorn>=0.34.0",
+    "defusedxml>=0.7.1",  # For secure XML parsing
     # Temporarily commented out to handle separately in Dockerfile
     # "llama-cpp-python>=0.2.56",
     # Hugging Face dependencies
@@ -73,6 +74,8 @@ minversion = "6.0"
 addopts = "-ra -q"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 pythonpath = [".", "src"]
 asyncio_default_fixture_loop_scope = "function"
 markers = [
@@ -144,8 +147,7 @@ warn_redundant_casts = true
 warn_unused_ignores = false
 warn_no_return = true
 warn_unreachable = false
-exclude = ["scripts"]
-ignore_missing_imports = true
+exclude = ["scripts"]  # Exclude scripts directory
 namespace_packages = true
 explicit_package_bases = true
 error_summary = false
