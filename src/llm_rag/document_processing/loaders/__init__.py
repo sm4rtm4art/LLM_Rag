@@ -1,7 +1,7 @@
-"""Document loaders for various file formats.
+"""Document loaders for the LLM-RAG system.
 
-This module includes components for loading documents from various sources and formats.
-It provides loaders for PDFs, text files, CSV files, JSON, and web content.
+This module provides components for loading documents from various sources
+and formats, including PDFs, text files, CSV files, JSON, and web content.
 """
 
 from pathlib import Path
@@ -9,9 +9,8 @@ from typing import List
 
 from .base import DocumentLoader, FileLoader, LoaderRegistry, registry
 from .directory_loader import DirectoryLoader
-from .file_loaders import CSVLoader, TextFileLoader, XMLLoader
-from .pdf_loaders import PDFLoader
-from .web_loader import WebLoader, WebPageLoader
+from .file_loaders import CSVLoader, EnhancedPDFLoader, JSONLoader, PDFLoader, TextFileLoader, XMLLoader
+from .web_loaders import WebLoader, WebPageLoader
 
 
 def load_documents_from_directory(directory_path: str) -> List[dict]:
@@ -40,11 +39,13 @@ __all__ = [
     "FileLoader",
     "DirectoryLoader",
     "CSVLoader",
+    "EnhancedPDFLoader",
+    "JSONLoader",
     "PDFLoader",
     "TextFileLoader",
-    "XMLLoader",
     "WebLoader",
     "WebPageLoader",
+    "XMLLoader",
     "LoaderRegistry",
     "registry",
     "load_documents_from_directory",

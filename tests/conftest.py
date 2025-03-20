@@ -48,7 +48,7 @@ if "CURSOR_SESSION" in os.environ:
         sys.modules[mod_name] = MagicMock()
 
 
-# Fixtures for accessing test data
+# Test fixtures for accessing test data
 @pytest.fixture
 def test_data_dir():
     """Return the path to the test data directory."""
@@ -70,7 +70,7 @@ def sample_documents():
     ]
 
 
-# Mock fixtures for common components
+# Create mock fixtures for commonly used components
 @pytest.fixture
 def mock_vectorstore():
     """Create a mock vector store for testing."""

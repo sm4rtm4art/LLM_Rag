@@ -2,10 +2,7 @@
 
 from typing import Dict, List, Optional, Union
 
-from langchain.text_splitter import (
-    CharacterTextSplitter,
-    RecursiveCharacterTextSplitter,
-)
+from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 
@@ -158,6 +155,7 @@ class RecursiveTextChunker:
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
         separators: Optional[List[str]] = None,
+        separator: Optional[str] = None,
     ):
         """Initialize the text chunker.
 
@@ -166,6 +164,9 @@ class RecursiveTextChunker:
             chunk_size: Maximum size of chunks to return
             chunk_overlap: Overlap in characters between chunks
             separators: List of separators to use for splitting text
+            separator: Single separator to use for splitting text (deprecated)
+                      If provided and separators is None, it will be used
+                      to create a single-item separators list
 
         Raises:
         ------
@@ -182,6 +183,18 @@ class RecursiveTextChunker:
 
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+
+        # Handle both separators and separator parameters for backward compatibility
+        if separator is not None and separators is None:
+            # Support the old interface with a single separator
+            separators = [separator]
+            import warnings
+
+            warnings.warn(
+                "The 'separator' parameter is deprecated. Use 'separators' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         if separators is None:
             # Make sure we split on sentence boundaries first

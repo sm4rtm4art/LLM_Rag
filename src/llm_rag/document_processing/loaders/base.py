@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 DocumentMetadata: TypeAlias = Dict[str, Any]
 DocumentContent: TypeAlias = str
 Document: TypeAlias = Dict[str, Union[DocumentContent, DocumentMetadata]]
+# Documents TypeAlias is already imported from processors module
 
 
 class DocumentLoader(ABC):
