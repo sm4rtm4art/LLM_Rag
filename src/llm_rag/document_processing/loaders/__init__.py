@@ -1,17 +1,28 @@
 """Document loaders implementation modules.
 
-This package contains the implementation of various document loaders.
-The main entry point for using these loaders is through
-the parent module: llm_rag.document_processing.loaders
+This package contains the implementation of document loaders
+for different document types.
 """
 
-# Import this to make the registry available
-from .base import LoaderRegistry, registry
+# Import components from submodules
+from .base import DocumentLoader, FileLoader, LoaderRegistry, registry
+from .directory_loader import DirectoryLoader
+from .file_loaders import CSVLoader, EnhancedPDFLoader, JSONLoader, PDFLoader, TextFileLoader, XMLLoader
+from .web_loaders import WebLoader, WebPageLoader
 
-# No direct re-exports to avoid namespace collision
-# with llm_rag.document_processing.loaders
-
+# Re-export all components
 __all__ = [
-    "registry",
+    "DocumentLoader",
+    "FileLoader",
+    "DirectoryLoader",
+    "CSVLoader",
+    "EnhancedPDFLoader",
+    "JSONLoader",
+    "PDFLoader",
+    "TextFileLoader",
+    "WebLoader",
+    "WebPageLoader",
+    "XMLLoader",
     "LoaderRegistry",
+    "registry",
 ]
