@@ -195,17 +195,17 @@ To address the low test coverage (~26%) and ensure reliable, maintainable code, 
 
 ### Coverage Targets
 
-- **Short-term (2 weeks)**: Increase overall coverage to 50%
+- **Short-term (1 day)**: Increase overall coverage to 50%
 
   - Focus on core pipeline and document processing
   - Fix test collection issues
 
-- **Medium-term (1 month)**: Increase overall coverage to 65%
+- **Medium-term (2 days)**: Increase overall coverage to 65%
 
   - Add tests for anti-hallucination
   - Cover vector stores and models
 
-- **Long-term (2 months)**: Increase overall coverage to 80%+
+- **Long-term (1 week)**: Increase overall coverage to 80%+
   - Complete edge case testing
   - Add performance and stress tests
   - Implement property-based testing for complex algorithms
@@ -218,13 +218,13 @@ To address the low test coverage (~26%) and ensure reliable, maintainable code, 
    - Create fixtures and mock objects for common testing scenarios
    - Implement basic coverage for untested components
 
-2. **Week 1-2**:
+2. **Week 1**:
 
    - Focus on RAGPipeline and core functionality
    - Add tests for document loaders and processors
    - Fix failing tests from architectural changes
 
-3. **Week 3-4**:
+3. **Week 1.5**:
 
    - Add tests for anti-hallucination components
    - Implement vector store and model factory tests
@@ -266,7 +266,7 @@ Throughout this refactoring, we will:
 
 The goal is to improve the codebase's maintainability and extensibility while ensuring it remains fully functional throughout the process.
 
-### Test Infrastructure Improvements (2023-06-01)
+### Test Infrastructure Improvements (2025-03-20)
 
 We've made significant improvements to the testing infrastructure:
 
@@ -289,7 +289,7 @@ We've made significant improvements to the testing infrastructure:
 
 These improvements have resolved immediate issues with test execution and provide a foundation for systematically improving test coverage across the codebase.
 
-### Security Improvements (2023-06-02)
+### Security Improvements (2025-03-21)
 
 1. **Enhanced XML parsing security**:
 
