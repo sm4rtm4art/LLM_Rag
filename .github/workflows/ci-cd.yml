@@ -169,6 +169,15 @@ jobs:
       - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
       - run: uv pip install pytest pytest-cov pytest-asyncio sentence-transformers chromadb -e .[dev]
       - run: .venv/bin/python -m pytest --cov=src/llm_rag --cov-report=xml -v
+      # Add Codecov upload step
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: sm4rtm4art/LLM_Rag
+          files: ./coverage.xml
+          fail_ci_if_error: false
+          verbose: true
 
   semantic-release:
     needs: [lint, test]
