@@ -19,6 +19,7 @@ from llm_rag.utils.logging import get_logger
 # Use relative import paths to avoid the module/package name collision
 from .loaders.base import DocumentLoader, FileLoader, LoaderRegistry, registry
 from .loaders.directory_loader import DirectoryLoader, load_documents_from_directory
+from .loaders.factory import get_available_loader_extensions, load_document
 from .loaders.file_loaders import CSVLoader, EnhancedPDFLoader, JSONLoader, PDFLoader, TextFileLoader, XMLLoader
 from .loaders.web_loaders import WebLoader, WebPageLoader
 
@@ -44,6 +45,8 @@ __all__ = [
     "LoaderRegistry",
     "registry",
     "load_documents_from_directory",
+    "load_document",
+    "get_available_loader_extensions",
 ]
 
 # Suppress deprecation warnings for backward compatibility
