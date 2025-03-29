@@ -2,7 +2,8 @@
 
 [![CI/CD Pipeline](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/ci-cd.yml)
 [![Kubernetes Tests](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/k8s-test.yaml/badge.svg)](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/k8s-test.yaml)
-[![codecov](https://codecov.io/gh/sm4rtm4art/LLM_Rag/graph/badge.svg?token=2JTK64VC0Y)](https://codecov.io/gh/sm4rtm4art/LLM_Rag)[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![codecov](https://codecov.io/gh/sm4rtm4art/LLM_Rag/graph/badge.svg?token=2JTK64VC0Y)](https://codecov.io/gh/sm4rtm4art/LLM_Rag)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A powerful multi-modal Retrieval-Augmented Generation (RAG) system that processes standardized technical documents (PDFs) by extracting both text and visual content. The system combines specialized document parsing, intelligent chunking, a sharded vector store for embeddings (using ChromaDB), and flexible LLM integration (Hugging Face, Llama.cpp, or OpenAI) to deliver accurate, context-rich answers to user queries.
