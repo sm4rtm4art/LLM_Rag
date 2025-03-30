@@ -275,6 +275,13 @@ jobs:
           # Create the directory before mounting
           sudo mkdir -p /mnt/docker
 
+          # Mount tmpfs first
+          sudo mount -t tmpfs -o size=8G tmpfs /mnt/docker
+
+          # Set proper permissions
+          sudo chmod 777 /mnt/docker
+
+          # Update Docker daemon settings
           echo '{
             "experimental": true,
             "storage-driver": "overlay2",
@@ -285,9 +292,23 @@ jobs:
               "max-file": "3"
             }
           }' | sudo tee /etc/docker/daemon.json
-          sudo systemctl restart docker || true
-          sudo mount -t tmpfs -o size=8G tmpfs /mnt/docker || true
-          docker info
+
+          # Restart Docker to apply settings
+          sudo systemctl restart docker
+
+          # Wait for Docker to initialize
+          echo "Waiting for Docker to restart..."
+          sleep 5
+
+          # Verify Docker is running with new settings
+          docker info | grep "Docker Root Dir"
+
+          # Create the tmp directory explicitly
+          sudo mkdir -p /mnt/docker/tmp
+          sudo chmod 777 /mnt/docker/tmp
+
+          # Show directory structure for debugging
+          ls -la /mnt/docker
 
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
