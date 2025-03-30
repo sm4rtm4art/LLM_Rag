@@ -170,15 +170,19 @@ class TestWebLoader(unittest.TestCase):
         mock_response = MagicMock()
 
         # Set up the mock to properly simulate an HTTP error
-        http_error = requests.exceptions.HTTPError("404 Not Found")  # Use specific exception type
+        http_error = requests.exceptions.HTTPError("404 Not Found")
         mock_response.raise_for_status.side_effect = http_error
         mock_get.return_value = mock_response
 
         loader = WebLoader()
 
         # Act & Assert
-        with self.assertRaises(requests.exceptions.HTTPError):  # Use specific exception type
+        # The loader converts HTTPError to ValueError with the same message
+        with self.assertRaises(ValueError) as context:
             loader.load_from_url(self.test_url)
+
+        # Verify the error message contains the HTTP error
+        self.assertIn("404 Not Found", str(context.exception))
 
         # Verify error was properly logged
         mock_get.assert_called_once()

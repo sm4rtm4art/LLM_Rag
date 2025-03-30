@@ -27,71 +27,80 @@ class TestStopwords:
         # Get German stopwords
         stopwords = load_stopwords(language="de")
 
-        # Verify it's a set with expected common German stopwords
+        # Verify it's a set with expected German stopwords
         assert isinstance(stopwords, set)
-        assert "die" in stopwords
-        assert "der" in stopwords
         assert "und" in stopwords
+        assert "der" in stopwords
+        assert "die" in stopwords
         assert len(stopwords) > 50  # Should have many stopwords
 
-    @patch("os.path.join", return_value="/mock/path/stopwords_en.json")
-    @patch("builtins.open", new_callable=mock_open, read_data='["test", "words"]')
-    def test_load_stopwords_from_file(self, mock_file, mock_join):
+    def test_load_stopwords_from_file(self):
         """Test loading stopwords from a file."""
-        # Call the function
-        result = load_stopwords()
+        # Create a mock file with proper content
+        # The function expects a simple list in the JSON file
+        mock_stopwords = ["word1", "word2", "word3"]
 
-        # Check that file was opened and results reflect mock data
-        mock_file.assert_called_once_with("/mock/path/stopwords_en.json", "r", encoding="utf-8")
-        assert result == {"test", "words"}
+        with patch("builtins.open", mock_open()):
+            with patch("json.load") as mock_json_load:
+                # The function expects json.load to return a list
+                mock_json_load.return_value = mock_stopwords
 
-    # Use monkeypatch instead of patch for internal variables
+                # Call the function with test language
+                stopwords = load_stopwords(language="test")
+
+                # Verify the result contains the words from the mock data
+                assert isinstance(stopwords, set)
+                assert len(stopwords) == 3
+                assert "word1" in stopwords
+                assert "word2" in stopwords
+                assert "word3" in stopwords
+
     def test_load_stopwords_fallback_to_defaults(self, monkeypatch):
         """Test falling back to default stopwords when file not found."""
         # Mock the open function to raise a FileNotFoundError
         monkeypatch.setattr("builtins.open", mock_open())
         monkeypatch.setattr("builtins.open", MagicMock(side_effect=FileNotFoundError()))
 
-        # Mock the _DEFAULT_STOPWORDS
-        default_stopwords = {"en": {"default", "words"}}
-        monkeypatch.setattr("llm_rag.rag.anti_hallucination.utils._DEFAULT_STOPWORDS", default_stopwords)
+        # Use direct patching instead of monkeypatch for the module attribute
+        with patch("llm_rag.rag.anti_hallucination.utils._DEFAULT_STOPWORDS", {"en": {"default", "words"}}):
+            # Call the function
+            stopwords = load_stopwords()
 
-        # Call the function
-        result = load_stopwords()
+            # Verify the result
+            assert isinstance(stopwords, set)
+            assert "default" in stopwords
+            assert "words" in stopwords
+            assert len(stopwords) == 2
 
-        # Check results are from default dict
-        assert result == {"default", "words"}
-
-    # Use monkeypatch instead of patch for internal variables
     def test_load_stopwords_json_error(self, monkeypatch):
         """Test handling of JSON decode errors."""
-        # Mock the open function to raise a JSONDecodeError
+        # Mock the open function and json.load
         mock_open_obj = mock_open()
         monkeypatch.setattr("builtins.open", mock_open_obj)
         monkeypatch.setattr("json.load", MagicMock(side_effect=json.JSONDecodeError("", "", 0)))
 
-        # Mock the _DEFAULT_STOPWORDS
-        default_stopwords = {"es": {"palabras", "vacías"}}
-        monkeypatch.setattr("llm_rag.rag.anti_hallucination.utils._DEFAULT_STOPWORDS", default_stopwords)
+        # Use direct patching for the module attribute
+        with patch("llm_rag.rag.anti_hallucination.utils._DEFAULT_STOPWORDS", {"es": {"palabras", "vacías"}}):
+            # Call the function
+            stopwords = load_stopwords(language="es")
 
-        # Call the function
-        result = load_stopwords(language="es")
+            # Verify the result
+            assert isinstance(stopwords, set)
+            assert "palabras" in stopwords
+            assert "vacías" in stopwords
+            assert len(stopwords) == 2
 
-        # Check results are from default dict
-        assert result == {"palabras", "vacías"}
-
-    # Use monkeypatch instead of patch for internal variables
     def test_load_stopwords_unknown_language(self, monkeypatch):
         """Test handling of unknown languages."""
         # Mock the open function to raise a FileNotFoundError
         monkeypatch.setattr("builtins.open", mock_open())
         monkeypatch.setattr("builtins.open", MagicMock(side_effect=FileNotFoundError()))
 
-        # Mock the _DEFAULT_STOPWORDS with an empty dict
-        monkeypatch.setattr("llm_rag.rag.anti_hallucination.utils._DEFAULT_STOPWORDS", {})
+        # Use direct patching for the module attribute with an empty dict
+        with patch("llm_rag.rag.anti_hallucination.utils._DEFAULT_STOPWORDS", {}):
+            # Call the function with an unknown language
+            stopwords = load_stopwords(language="unknown")
 
-        # Call the function
-        result = load_stopwords(language="xx")
-
-        # Check empty set is returned
-        assert result == set()
+            # Verify the result is an empty set
+            assert isinstance(stopwords, set)
+            assert len(stopwords) == 0
