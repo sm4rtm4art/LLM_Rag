@@ -78,14 +78,16 @@ repos:
         pass_filenames: false # Run on entire codebase, not individual files
         stages: [pre-commit] # Run on every commit
 
-  # Use a dedicated safety check hook instead of local implementation
-  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
-    rev: v1.4.0
+  # Add Safety check as a local hook compatible with our project structure
+  - repo: local
     hooks:
-      - id: python-safety-dependencies-check
-        files: pyproject.toml
-        args: ["--short-report"]
-        stages: [pre-push]  # Run only during push operations
+      - id: safety-check
+        name: Check for vulnerable dependencies with Safety
+        entry: safety check -r pyproject.toml --full-report
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
 
   - repo: local
     hooks:
