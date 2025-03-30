@@ -62,7 +62,8 @@ class TestStopwords:
         monkeypatch.setattr("builtins.open", MagicMock(side_effect=FileNotFoundError()))
 
         # Use direct patching instead of monkeypatch for the module attribute
-        with patch("llm_rag.rag.anti_hallucination.utils._DEFAULT_STOPWORDS", {"en": {"default", "words"}}):
+        default_stopwords = {"en": {"default", "words"}}
+        with patch("llm_rag.rag.anti_hallucination.utils._DEFAULT_STOPWORDS", default_stopwords):
             # Call the function
             stopwords = load_stopwords()
 
@@ -80,7 +81,8 @@ class TestStopwords:
         monkeypatch.setattr("json.load", MagicMock(side_effect=json.JSONDecodeError("", "", 0)))
 
         # Use direct patching for the module attribute
-        with patch("llm_rag.rag.anti_hallucination.utils._DEFAULT_STOPWORDS", {"es": {"palabras", "vacías"}}):
+        spanish_stopwords = {"es": {"palabras", "vacías"}}
+        with patch("llm_rag.rag.anti_hallucination.utils._DEFAULT_STOPWORDS", spanish_stopwords):
             # Call the function
             stopwords = load_stopwords(language="es")
 
