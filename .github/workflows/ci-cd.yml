@@ -37,42 +37,24 @@ jobs:
   pre-cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Free disk space
+      - name: Display Disk Space Before Cleanup
+        run: df -h
+
+      - name: Clean Docker resources
+        run: docker system prune -af
+
+      - name: Clean APT cache and remove unneeded packages
         run: |
-          echo "Disk space before cleanup:"
-          df -h
-
-          # Remove large unnecessary directories
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache
-          sudo rm -rf /usr/local/.ghcup
-
-          # Remove Docker images
-          docker system prune -af
-
-          # Clean apt cache
           sudo apt-get clean
           sudo apt-get autoremove -y
 
-          # Remove swap file to free more space
-          sudo swapoff -a
-          sudo rm -f /swapfile
+      - name: Remove specific temporary directories (if they exist)
+        run: |
+          [ -d /opt/hostedtoolcache ] && sudo rm -rf /opt/hostedtoolcache || echo "No hostedtoolcache directory"
+          # Add other directories only if you're sure they cause issues
 
-          # Remove large packages
-          sudo apt-get remove -y '^dotnet-.*' || true
-          sudo apt-get remove -y '^llvm-.*' || true
-          sudo apt-get remove -y 'php.*' || true
-          sudo apt-get remove -y azure-cli google-cloud-sdk || true
-          sudo apt-get remove -y google-chrome-stable firefox || true
-          sudo apt-get remove -y mongodb-org || true
-
-          # Remove large log files
-          sudo find /var/log -type f -delete
-
-          echo "Disk space after cleanup:"
-          df -h
+      - name: Display Disk Space After Cleanup
+        run: df -h
 
   bash-lint:
     needs: [pre-cleanup]
@@ -290,6 +272,9 @@ jobs:
       # Configure Docker to use tmpfs for temporary storage
       - name: Configure Docker tmpfs settings
         run: |
+          # Create the directory before mounting
+          sudo mkdir -p /mnt/docker
+
           echo '{
             "experimental": true,
             "storage-driver": "overlay2",
