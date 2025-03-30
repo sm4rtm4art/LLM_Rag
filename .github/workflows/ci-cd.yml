@@ -484,13 +484,7 @@ jobs:
       - name: Clean after workflow
         uses: mickem/clean-after-action@v2
         with:
-          # Clean all untracked directories and files
-          clean-includes: |
-            **/*.env
-            ~/.kube/config
-            **/*.key
-            **/*.pem
-            **/*.crt
+          keepGit: false
 
       - name: Final runner cleanup
         run: |
@@ -509,5 +503,11 @@ jobs:
 
           # Remove any SSH keys
           rm -rf ~/.ssh || true
+
+          # Remove specific sensitive files
+          find . -name "*.env" -type f -delete || true
+          find . -name "*.key" -type f -delete || true
+          find . -name "*.pem" -type f -delete || true
+          find . -name "*.crt" -type f -delete || true
 
           echo "Runner cleanup complete."
