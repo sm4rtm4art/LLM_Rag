@@ -248,9 +248,12 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
-          config: .github/trivy-container.yml
           format: "sarif"
           output: "trivy-container-enhanced-results.sarif"
+          severity: "CRITICAL,HIGH,MEDIUM"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          scan-type: "vuln,secret,config"
 
       - name: Upload enhanced Trivy container scan results
         uses: github/codeql-action/upload-sarif@v3
