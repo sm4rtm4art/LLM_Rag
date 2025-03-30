@@ -270,25 +270,35 @@ curl -X POST "http://localhost:8000/query" \
 
 ## Testing
 
-### Python Tests
-
-To run the tests, use the following command:
+We use pytest for testing. To run the tests:
 
 ```bash
-python -m pytest
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=src/llm_rag
+
+# Run specific test file
+pytest tests/unit/test_file.py
 ```
 
-For more verbose output, use:
+### Running Tests with Progress Display
+
+The project includes a special test runner that shows a nice progress spinner and better output formatting:
 
 ```bash
-python -m pytest -v
+# Run from the project root
+.github/scripts/test.sh
+
+# With options
+.github/scripts/test.sh -v                # Verbose mode
+.github/scripts/test.sh -c                # With coverage
+.github/scripts/test.sh -p tests/unit     # Run only unit tests
+.github/scripts/test.sh -x                # Stop on first failure
 ```
 
-For test coverage reporting:
-
-```bash
-python -m pytest --cov=src/llm_rag --cov-report=xml --cov-report=term
-```
+This runner uses the Rich library to display a progress spinner and nicer output formatting.
 
 ---
 
