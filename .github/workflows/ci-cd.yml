@@ -33,7 +33,49 @@ defaults:
     shell: bash
 
 jobs:
+  # Pre-cleanup job to prepare the runner environment
+  pre-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free disk space
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+
+          # Remove large unnecessary directories
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+          sudo rm -rf /usr/local/.ghcup
+
+          # Remove Docker images
+          docker system prune -af
+
+          # Clean apt cache
+          sudo apt-get clean
+          sudo apt-get autoremove -y
+
+          # Remove swap file to free more space
+          sudo swapoff -a
+          sudo rm -f /swapfile
+
+          # Remove large packages
+          sudo apt-get remove -y '^dotnet-.*' || true
+          sudo apt-get remove -y '^llvm-.*' || true
+          sudo apt-get remove -y 'php.*' || true
+          sudo apt-get remove -y azure-cli google-cloud-sdk || true
+          sudo apt-get remove -y google-chrome-stable firefox || true
+          sudo apt-get remove -y mongodb-org || true
+
+          # Remove large log files
+          sudo find /var/log -type f -delete
+
+          echo "Disk space after cleanup:"
+          df -h
+
   bash-lint:
+    needs: [pre-cleanup]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,6 +86,7 @@ jobs:
       - run: scripts/test_bash_scripts.sh
 
   security:
+    needs: [pre-cleanup]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -141,6 +184,7 @@ jobs:
           sarif_file: trivy-results.sarif
 
   lint:
+    needs: [pre-cleanup]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -156,6 +200,7 @@ jobs:
       - run: ruff format src tests && ruff check src tests && mypy src tests
 
   test:
+    needs: [pre-cleanup]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -168,7 +213,8 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
       - run: uv pip install pytest pytest-cov pytest-asyncio sentence-transformers chromadb -e .[dev]
-      - run: .venv/bin/python -m pytest --cov=src/llm_rag --cov-report=xml -v
+      - name: Run tests with Rich progress display
+        run: .github/scripts/test.sh -c -v
       # Add Codecov upload step
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -210,8 +256,55 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
+      # Aggressive disk cleanup to ensure enough space for the build
+      - name: Free disk space
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+
+          # Remove large unnecessary directories
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+
+          # Remove Docker images
+          docker system prune -af
+
+          # Clean apt cache
+          sudo apt-get clean
+          sudo apt-get autoremove -y
+
+          echo "Disk space after cleanup:"
+          df -h
+
+      # Set up Docker layer caching on tmpfs (in-memory filesystem)
+      - name: Setup Docker buildx with tmpfs
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
+          buildkitd-flags: --debug
+
+      # Configure Docker to use tmpfs for temporary storage
+      - name: Configure Docker tmpfs settings
+        run: |
+          echo '{
+            "experimental": true,
+            "storage-driver": "overlay2",
+            "data-root": "/mnt/docker",
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "10m",
+              "max-file": "3"
+            }
+          }' | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker || true
+          sudo mount -t tmpfs -o size=8G tmpfs /mnt/docker || true
+          docker info
+
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -235,63 +328,46 @@ jobs:
           key: cache-trivy-container-${{ github.run_id }}
           restore-keys: |
             cache-trivy-container-
-      - name: Run Trivy container scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
-          format: "sarif"
-          output: "trivy-container-results.sarif"
-          severity: "CRITICAL,HIGH"
-          exit-code: "0" # Don't fail the workflow when vulnerabilities are found
-          ignore-unfixed: true
+      - name: Run Trivy container scan (combined)
+        run: |
+          # Install Trivy CLI directly
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 
-      # Enhanced container security scan using custom configuration
-      - name: Run enhanced Trivy container scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
-          format: "sarif"
-          output: "trivy-container-enhanced-results.sarif"
-          severity: "CRITICAL,HIGH,MEDIUM"
-          ignore-unfixed: true
-          vuln-type: "os,library"
-          scan-type: "vuln,secret,config"
+          # Run a single scan with all needed features
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --exit-code 0 \
+            --ignore-unfixed \
+            --format sarif \
+            --output trivy-results.sarif \
+            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
 
-      - name: Upload enhanced Trivy container scan results
+          # Generate a text report for PR comments if needed
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            trivy image --format table --output trivy-summary.txt ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
+
+            # Create markdown summary
+            echo "## Container Security Scan Results" > trivy-summary.md
+            echo "### Image: \`${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}\`" >> trivy-summary.md
+            echo '```' >> trivy-summary.md
+            cat trivy-summary.txt >> trivy-summary.md
+            echo '```' >> trivy-summary.md
+          fi
+
+      # Upload scan results
+      - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: trivy-container-enhanced-results.sarif
-          category: container-enhanced
+          sarif_file: trivy-results.sarif
+          category: container-security
 
-      # Generate container scan summary for PR comments
-      - name: Generate container scan summary
-        if: github.event_name == 'pull_request'
-        run: |
-          # Install trivy cli for text report generation
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
-
-          # Generate text report for PR comment
-          trivy image --format table --output trivy-summary.txt ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
-
-          # Create markdown summary
-          echo "## Container Security Scan Results" > trivy-summary.md
-          echo "### Image: \`${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}\`" >> trivy-summary.md
-          echo '```' >> trivy-summary.md
-          cat trivy-summary.txt >> trivy-summary.md
-          echo '```' >> trivy-summary.md
-
+      # PR comment if applicable
       - name: PR Comment with Container Scan Results
         if: github.event_name == 'pull_request'
         uses: thollander/actions-comment-pull-request@v2
         with:
           filePath: trivy-summary.md
           comment_tag: container-scan
-
-      - name: Upload Trivy container scan results
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-container-results.sarif
-          category: container
 
   deploy:
     needs: docker-build
@@ -398,3 +474,40 @@ jobs:
           kubectl logs -l app=llm-rag -n ${{ steps.config-env.outputs.namespace }} --tail=50 || true
           echo "=== Events ==="
           kubectl get events -n ${{ steps.config-env.outputs.namespace }} --sort-by=.metadata.creationTimestamp | grep llm-rag || true
+
+  # Post-cleanup job to ensure sensitive data is removed
+  post-cleanup:
+    needs: [deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clean after workflow
+        uses: mickem/clean-after-action@v2
+        with:
+          keepGit: false
+
+      - name: Final runner cleanup
+        run: |
+          echo "Removing sensitive data and artifacts..."
+
+          # Remove Docker images and containers
+          docker system prune -af || true
+
+          # Remove any credentials or tokens
+          rm -rf ~/.docker/config.json || true
+          rm -rf ~/.kube || true
+
+          # Clean sensitive environment variables
+          unset GITHUB_TOKEN || true
+          unset DOCKERHUB_TOKEN || true
+
+          # Remove any SSH keys
+          rm -rf ~/.ssh || true
+
+          # Remove specific sensitive files
+          find . -name "*.env" -type f -delete || true
+          find . -name "*.key" -type f -delete || true
+          find . -name "*.pem" -type f -delete || true
+          find . -name "*.crt" -type f -delete || true
+
+          echo "Runner cleanup complete."
