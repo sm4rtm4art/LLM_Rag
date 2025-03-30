@@ -6,4 +6,3 @@ cd "$(dirname "$0")/../.." || exit 1
 
 # Run the test script with all arguments passed to this script
 python .github/scripts/run_tests.py "$@"
-

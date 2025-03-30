@@ -168,7 +168,8 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
       - run: uv pip install pytest pytest-cov pytest-asyncio sentence-transformers chromadb -e .[dev]
-      - run: .venv/bin/python -m pytest --cov=src/llm_rag --cov-report=xml -v
+      - name: Run tests with Rich progress display
+        run: .github/scripts/test.sh -c -v
       # Add Codecov upload step
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
