@@ -1,0 +1,49 @@
+---
+format: "sarif"
+timeout: "10m"
+exit-code: 1
+severity: "CRITICAL,HIGH,MEDIUM"
+ignore-unfixed: true
+vuln-type:
+  - "os"
+  - "library"
+scanners:
+  - "vuln"
+  - "secret"
+  - "config"
+
+security-checks:
+  - "vuln"
+  - "secret"
+  - "config"
+
+# Skip dev dependencies to reduce false positives
+list-all-pkgs: false
+
+# Cache options
+cache:
+  dir: ".trivy-cache"
+  ttl: "24h"
+
+# Output format options
+output:
+  include-non-failures: true
+  report:
+    - "all"
+
+# Secret scanning settings
+secret:
+  enable-builtin-rules: true
+  disable-rules:
+    - "generic-api-key"  # Too many false positives
+  exclude-dirs:
+    - "tests"
+
+# Configuration rule settings
+config:
+  include-modules:
+    - "kubernetes"
+    - "dockerfile"
+    - "python"
+  policy-namespaces:
+    - "builtin"

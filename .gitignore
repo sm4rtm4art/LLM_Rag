@@ -185,3 +185,4 @@ quarantine_backup/
 .coverage
 coverage.xml
 htmlcov/
+*.bak

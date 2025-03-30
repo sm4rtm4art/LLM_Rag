@@ -3,6 +3,7 @@
 This module contains components for building RAG pipelines.
 """
 
-from .pipeline import ConversationalRAGPipeline, RAGPipeline
+from . import anti_hallucination
+from .pipeline import RAGPipeline
 
-__all__ = ["RAGPipeline", "ConversationalRAGPipeline"]
+__all__ = ["RAGPipeline", "anti_hallucination"]
