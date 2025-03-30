@@ -41,17 +41,49 @@ jobs:
         run: df -h
 
       - name: Clean Docker resources
-        run: docker system prune -af
+        run: |
+          # Remove all Docker containers, images, volumes, and build cache
+          docker system prune -af --volumes
+
+          # Stop and remove all Docker containers
+          docker rm -f $(docker ps -aq) 2>/dev/null || true
+
+          # Clean up dangling Docker images
+          docker rmi $(docker images -f "dangling=true" -q) 2>/dev/null || true
+
+          # Remove all unused volumes
+          docker volume prune -f
+
+          # Remove build cache
+          docker builder prune -af
+
+      - name: Clear Docker data directory
+        run: |
+          # This is aggressive, but necessary when space is extremely limited
+          sudo systemctl stop docker
+          sudo rm -rf /var/lib/docker
+          sudo mkdir -p /var/lib/docker
+          sudo systemctl start docker
+          sleep 5
+          docker info
 
       - name: Clean APT cache and remove unneeded packages
         run: |
           sudo apt-get clean
           sudo apt-get autoremove -y
+          # Remove large packages
+          sudo apt-get remove -y '^dotnet-.*' '^llvm-.*' 'php.*' moby-* || true
 
       - name: Remove specific temporary directories (if they exist)
         run: |
-          [ -d /opt/hostedtoolcache ] && sudo rm -rf /opt/hostedtoolcache || echo "No hostedtoolcache directory"
-          # Add other directories only if you're sure they cause issues
+          sudo rm -rf /opt/hostedtoolcache || true
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/ghc || true
+          sudo du -sh /usr/local/* | sort -hr | head -10
+
+      - name: Free up /tmp space
+        run: sudo rm -rf /tmp/* || true
 
       - name: Display Disk Space After Cleanup
         run: df -h
@@ -261,7 +293,7 @@ jobs:
           df -h
 
       # Set up Docker layer caching on tmpfs (in-memory filesystem)
-      - name: Setup Docker buildx with tmpfs
+      - name: Setup Docker buildx with host disk storage
         uses: docker/setup-buildx-action@v3
         with:
           driver-opts: |
@@ -269,24 +301,20 @@ jobs:
             network=host
           buildkitd-flags: --debug
 
-      # Configure Docker to use tmpfs for temporary storage
-      - name: Configure Docker tmpfs settings
+      # Configure Docker to use a clean Docker Root Dir
+      - name: Configure Docker settings for maximum space
         run: |
-          # Create the directory before mounting
+          # Use a clean directory for Docker data
           sudo mkdir -p /mnt/docker
-          sudo chmod 777 /mnt/docker
 
-          # Mount tmpfs first
-          sudo mount -t tmpfs -o size=8G tmpfs /mnt/docker
+          # Ensure we have maximum available space
+          df -h
 
-          # Set proper permissions after mounting
-          sudo chmod 777 /mnt/docker
-
-          # Update Docker daemon settings
+          # Configure Docker to use our clean directory
           echo '{
             "experimental": true,
             "storage-driver": "overlay2",
-            "data-root": "/mnt/docker",
+            "data-root": "/var/lib/docker",
             "log-driver": "json-file",
             "log-opts": {
               "max-size": "10m",
@@ -295,21 +323,35 @@ jobs:
           }' | sudo tee /etc/docker/daemon.json
 
           # Restart Docker to apply settings
-          sudo systemctl restart docker
-
-          # Wait for Docker to initialize
-          echo "Waiting for Docker to restart..."
+          sudo systemctl restart docker || true
           sleep 5
 
-          # Verify Docker is running with new settings
-          docker info | grep "Docker Root Dir"
+          # Show Docker info and available space
+          docker info
+          df -h
 
-          # Create the tmp directory explicitly
-          sudo mkdir -p /mnt/docker/tmp
-          sudo chmod 777 /mnt/docker/tmp
+          # Create any needed directories
+          sudo mkdir -p /var/lib/docker/tmp || true
 
-          # Show directory structure for debugging
-          sudo ls -la /mnt/docker
+      # Free up more disk space during build if needed
+      - name: Set up disk space monitoring
+        run: |
+          # Create a background monitor to clean up if space gets low during build
+          cat > /tmp/disk_monitor.sh << 'EOF'
+          #!/bin/bash
+          while true; do
+            DISK_USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
+            if [ "$DISK_USAGE" -gt 90 ]; then
+              echo "Disk usage is high ($DISK_USAGE%), cleaning up..."
+              docker system prune -af --volumes
+              docker builder prune -af
+            fi
+            sleep 30
+          done
+          EOF
+
+          chmod +x /tmp/disk_monitor.sh
+          /tmp/disk_monitor.sh &
 
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
@@ -319,6 +361,7 @@ jobs:
       - uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
@@ -326,6 +369,12 @@ jobs:
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache
           cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache,mode=max
           platforms: linux/amd64
+          provenance: false
+          outputs: type=registry,compression=zstd
+          # Important build args that can help with space issues
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            PIP_NO_CACHE_DIR=1
 
       # Trivy container scan
       - name: Cache Trivy DB

@@ -271,18 +271,26 @@ The refactoring plan is ongoing, with the following tasks still pending:
      - Limited testing of error conditions and edge cases
      - Some test redundancy in well-covered modules
      - Inconsistent mocking strategies
-   - **Strategic approach**:
-     - Focus first on modules with zero coverage to quickly improve overall metrics
-     - Target low-coverage critical path modules next
-     - Improve test quality by focusing on behavior rather than implementation details
-     - Enhance test efficiency through proper fixtures and parameterization
-   - **Implementation strategy**:
-     - Run detailed coverage reports to identify gaps
-     - Audit and refactor existing tests for quality and efficiency
-     - Focus on high-impact, uncovered code paths
-     - Create comprehensive parameterized tests for edge cases
-     - Add integration tests for component interactions
-     - Implement mutation testing to assess test effectiveness
+   - **Quality-Focused Strategy**:
+     - Focus on critical areas with 0-20% coverage first
+     - Prioritize testing error handling branches
+     - Cover edge cases (empty inputs, unexpected file formats)
+     - Test integration points between components
+     - Focus on test quality over quantity (100% coverage doesn't guarantee bug-free code)
+   - **Refactoring for Testability**:
+     - Extract pure functions from complex methods
+     - Create clearer interfaces between components
+     - Apply dependency injection patterns to make mocking easier
+   - **Test Efficiency Improvements**:
+     - Use parameterized tests to cover multiple scenarios without duplicating code
+     - Implement proper test fixtures and setup/teardown
+     - Organize tests by execution speed (unit → integration → e2e)
+     - Configure test parallelization with pytest-xdist for faster execution
+   - **Test Suite Organization**:
+     - Group tests by category and run faster tests locally
+     - Set up longer tests to run only in CI or on scheduled intervals
+     - Split test suite in CI into multiple jobs for faster feedback
+     - Review and consolidate redundant tests
 
 2. **Documentation**:
 
