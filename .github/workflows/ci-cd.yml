@@ -33,7 +33,49 @@ defaults:
     shell: bash
 
 jobs:
+  # Pre-cleanup job to prepare the runner environment
+  pre-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free disk space
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+
+          # Remove large unnecessary directories
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+          sudo rm -rf /usr/local/.ghcup
+
+          # Remove Docker images
+          docker system prune -af
+
+          # Clean apt cache
+          sudo apt-get clean
+          sudo apt-get autoremove -y
+
+          # Remove swap file to free more space
+          sudo swapoff -a
+          sudo rm -f /swapfile
+
+          # Remove large packages
+          sudo apt-get remove -y '^dotnet-.*' || true
+          sudo apt-get remove -y '^llvm-.*' || true
+          sudo apt-get remove -y 'php.*' || true
+          sudo apt-get remove -y azure-cli google-cloud-sdk || true
+          sudo apt-get remove -y google-chrome-stable firefox || true
+          sudo apt-get remove -y mongodb-org || true
+
+          # Remove large log files
+          sudo find /var/log -type f -delete
+
+          echo "Disk space after cleanup:"
+          df -h
+
   bash-lint:
+    needs: [pre-cleanup]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,6 +86,7 @@ jobs:
       - run: scripts/test_bash_scripts.sh
 
   security:
+    needs: [pre-cleanup]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -141,6 +184,7 @@ jobs:
           sarif_file: trivy-results.sarif
 
   lint:
+    needs: [pre-cleanup]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -156,6 +200,7 @@ jobs:
       - run: ruff format src tests && ruff check src tests && mypy src tests
 
   test:
+    needs: [pre-cleanup]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -274,8 +319,6 @@ jobs:
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache
           cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache,mode=max
           platforms: linux/amd64
-          # Use the CI-specific Dockerfile that creates a smaller image without CUDA
-          file: Dockerfile.ci
 
       # Trivy container scan
       - name: Cache Trivy DB
@@ -431,3 +474,40 @@ jobs:
           kubectl logs -l app=llm-rag -n ${{ steps.config-env.outputs.namespace }} --tail=50 || true
           echo "=== Events ==="
           kubectl get events -n ${{ steps.config-env.outputs.namespace }} --sort-by=.metadata.creationTimestamp | grep llm-rag || true
+
+  # Post-cleanup job to ensure sensitive data is removed
+  post-cleanup:
+    needs: [deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clean after workflow
+        uses: mickem/clean-after-action@v2
+        with:
+          # Clean all untracked directories and files
+          clean-includes: |
+            **/*.env
+            ~/.kube/config
+            **/*.key
+            **/*.pem
+            **/*.crt
+
+      - name: Final runner cleanup
+        run: |
+          echo "Removing sensitive data and artifacts..."
+
+          # Remove Docker images and containers
+          docker system prune -af || true
+
+          # Remove any credentials or tokens
+          rm -rf ~/.docker/config.json || true
+          rm -rf ~/.kube || true
+
+          # Clean sensitive environment variables
+          unset GITHUB_TOKEN || true
+          unset DOCKERHUB_TOKEN || true
+
+          # Remove any SSH keys
+          rm -rf ~/.ssh || true
+
+          echo "Runner cleanup complete."

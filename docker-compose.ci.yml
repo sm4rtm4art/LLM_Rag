@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  llm-rag-ci:
+    image: llm-rag:ci
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # CI test service
+  llm-rag-ci-test:
+    image: llm-rag:ci
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./coverage:/app/coverage
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: pytest -xvs --cov=src/llm_rag --cov-report=xml:/app/coverage/coverage.xml tests/
+    profiles:
+      - ci
