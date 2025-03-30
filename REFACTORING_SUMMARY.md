@@ -170,47 +170,36 @@ Improved the project structure by moving utility and test scripts from the root 
 - **Improved input validation and error handling**
 - **Better dependency management with explicit version constraints**
 
-### 5. Modularized Anti-Hallucination Framework
+### 7. CI/CD Pipeline Enhancements
 
-Refactored the monolithic `anti_hallucination.py` (694 lines) into focused modules while maintaining backward compatibility:
+- **Docker Improvements**:
 
-- **Directory Structure** (`src/llm_rag/rag/anti_hallucination/`):
+  - Added HEALTHCHECK directive to Dockerfile for proper container health monitoring
+  - Implemented multi-stage builds with optimized layer caching
+  - Reduced overall container size through careful dependency management
+  - Enhanced container security by limiting unnecessary permissions
 
-  - Created a logically organized structure for all hallucination verification components
-  - Established clear separation of concerns with focused modules
-  - Implemented entry point through `__init__.py` with clean public API
+- **GitHub Actions Workflow Optimization**:
 
-- **Modular Components**:
+  - Implemented pre-cleanup job to prepare runner environments
+  - Added aggressive disk space cleanup for Docker builds
+  - Enhanced security scanning with properly configured Trivy
+  - Added post-cleanup job to remove sensitive data using mickem/clean-after-action
+  - Implemented proper workflow segmentation and job dependencies
 
-  - **Entity Verification** (`entity.py`): Extracts and compares key entities between response and context
-  - **Similarity Checking** (`similarity.py`): Performs embedding-based semantic verification
-  - **Processing Tools** (`processing.py`): Handles response post-processing and warning generation
-  - **Verification Logic** (`verification.py`): Implements combined verification strategies
-  - **Configuration** (`config.py`): Provides a dedicated configuration data class
-  - **Utilities** (`utils.py`): Contains shared functions and model loading logic
+- **Test Visualization**:
 
-- **Enhanced Features**:
+  - Created Rich-based test runner (.github/scripts/run_tests.py) for improved test visualization
+  - Added progress spinners and colorized test output
+  - Enhanced test result reporting with detailed failure information
+  - Integrated with existing pytest infrastructure
 
-  - Implemented model caching for improved performance
-  - Created a configurable system for setting verification thresholds
-  - Added support for multi-language entity verification
-  - Improved error logging and recovery
-  - Enhanced configurability through a centralized configuration class
+- **Pre-commit Hook Improvements**:
+  - Fixed Safety pre-commit hook configuration
+  - Enhanced hook reliability and documentation
+  - Improved developer experience during local development
 
-- **Backward Compatibility Layer**:
-
-  - Original `anti_hallucination.py` now imports from modular components
-  - Provides graceful fallback to stub implementations if new modules are unavailable
-  - Maintains identical API signatures for all public functions
-  - Includes deprecation warnings to guide users to new structure
-
-- **Benefits of Modularization**:
-  - **Improved Maintainability**: Each component has a single focused responsibility
-  - **Enhanced Extensibility**: New verification strategies can be added without changing existing code
-  - **Better Performance**: Model caching and optimized verification paths
-  - **Configurability**: Centralized configuration with validation
-  - **Testability**: Smaller, isolated components that are easier to test
-  - **Readability**: Clearer code organization and responsibility boundaries
+These enhancements ensure the project has a robust and efficient CI/CD pipeline that maintains code quality, security, and performance.
 
 ## Benefits of Refactoring
 
@@ -245,25 +234,62 @@ Refactored the monolithic `anti_hallucination.py` (694 lines) into focused modul
    - Contextual logging capabilities
 
 6. **Enhanced Security**:
+
    - Addressed known vulnerabilities
    - Improved input validation and error handling
    - Better dependency management with explicit version constraints
+
+7. **CI/CD Pipeline Enhancements**:
+   - Docker improvements for container health monitoring and security
+   - GitHub Actions workflow optimization for CI/CD efficiency
+   - Test visualization for improved test result reporting
+   - Pre-commit hook improvements for developer experience
 
 ## Next Steps
 
 The refactoring plan is ongoing, with the following tasks still pending:
 
-1. **Testing Enhancement**:
+1. **Testing Enhancement and Coverage Improvement**:
 
-   - Add unit tests for new modules
-   - Increase code coverage
-   - Add integration tests
+   - **Current testing**: 400+ tests running successfully
+   - **Current coverage**: 61% (as reported by Codecov)
+   - **Target coverage**: 85-90%
+   - **Coverage analysis findings**:
+     - **Zero coverage modules**: Several critical modules have 0% coverage, including:
+       - Legacy pipeline implementation (`src/llm_rag/rag/pipeline.py`)
+       - Legacy document loaders (`src/llm_rag/document_processing/loaders.py`)
+       - Most anti-hallucination framework modules
+       - Pipeline factory module
+     - **Low coverage modules**: Key modules with under 50% coverage:
+       - Main anti-hallucination interface (19%)
+       - Conversational pipeline (27%)
+       - Multimodal vector store (41%)
+       - PDF loaders (44%)
+       - Base pipeline classes (48%)
+   - **Current challenges**:
+     - Uneven test distribution, with many modules having minimal or no coverage
+     - Limited testing of error conditions and edge cases
+     - Some test redundancy in well-covered modules
+     - Inconsistent mocking strategies
+   - **Strategic approach**:
+     - Focus first on modules with zero coverage to quickly improve overall metrics
+     - Target low-coverage critical path modules next
+     - Improve test quality by focusing on behavior rather than implementation details
+     - Enhance test efficiency through proper fixtures and parameterization
+   - **Implementation strategy**:
+     - Run detailed coverage reports to identify gaps
+     - Audit and refactor existing tests for quality and efficiency
+     - Focus on high-impact, uncovered code paths
+     - Create comprehensive parameterized tests for edge cases
+     - Add integration tests for component interactions
+     - Implement mutation testing to assess test effectiveness
 
 2. **Documentation**:
 
    - Update API documentation
    - Add architecture diagrams
    - Create usage examples
+   - Include coverage badges and metrics
 
 3. **Script Organization Completion**:
    - Continue testing and fixing scripts in their new locations
@@ -271,4 +297,13 @@ The refactoring plan is ongoing, with the following tasks still pending:
    - Create a proper quarantine/legacy folder for deprecated code
    - Update documentation to reference script locations correctly
 
-The current refactoring follows the planned approach of maintaining backward compatibility while gradually improving the codebase's structure, a critical factor for the ongoing stability of the system.
+The current refactoring follows the planned approach of maintaining backward compatibility while gradually improving the codebase's structure and test coverage, both critical factors for the ongoing stability and maintainability of the system.
+
+### Code Coverage Improvement Timeline
+
+- **Immediate (2 weeks)**: Reach 70% coverage by focusing on core pipeline components
+- **Short-term (1 month)**: Reach 80% coverage by improving anti-hallucination and document processing tests
+- **Medium-term (2 months)**: Reach 85%+ coverage by addressing remaining gaps
+- **Long-term (3 months)**: Stabilize at 90% coverage with comprehensive test suite
+
+This timeline aligns with our overall goal of creating a highly maintainable, well-tested codebase that adheres to clean code principles and SOLID design.

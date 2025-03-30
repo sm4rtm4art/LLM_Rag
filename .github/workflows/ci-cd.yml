@@ -274,11 +274,12 @@ jobs:
         run: |
           # Create the directory before mounting
           sudo mkdir -p /mnt/docker
+          sudo chmod 777 /mnt/docker
 
           # Mount tmpfs first
           sudo mount -t tmpfs -o size=8G tmpfs /mnt/docker
 
-          # Set proper permissions
+          # Set proper permissions after mounting
           sudo chmod 777 /mnt/docker
 
           # Update Docker daemon settings
@@ -308,7 +309,7 @@ jobs:
           sudo chmod 777 /mnt/docker/tmp
 
           # Show directory structure for debugging
-          ls -la /mnt/docker
+          sudo ls -la /mnt/docker
 
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3

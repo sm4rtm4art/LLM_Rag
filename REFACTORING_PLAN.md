@@ -254,6 +254,118 @@ This strategy will ensure systematic improvement of test coverage while prioriti
   - [ ] Update all examples to use new structure
   - [ ] Provide migration guidance for users
 
+## Phase 8: CI/CD Pipeline Improvements (Completed)
+
+- ✅ Enhanced Docker build process:
+
+  - ✅ Added container health checks to Dockerfile
+  - ✅ Implemented proper caching strategy
+  - ✅ Optimized container layers for faster builds
+
+- ✅ Improved GitHub Actions workflow:
+
+  - ✅ Added pre-cleanup job to optimize runner environment
+  - ✅ Implemented efficient disk space management
+  - ✅ Added post-cleanup job to remove sensitive data using mickem/clean-after-action
+  - ✅ Enhanced security scanning with Trivy
+
+- ✅ Test visualization improvements:
+
+  - ✅ Created Rich-based test runner for improved visualization
+  - ✅ Added progress spinners and colorized test output
+  - ✅ Improved test failure reporting
+
+- ✅ Pre-commit hook improvements:
+  - ✅ Fixed issues with Safety pre-commit hook
+  - ✅ Implemented more robust hook configurations
+  - ✅ Added documentation on bypassing hooks during development
+
+These improvements significantly enhance the development experience while ensuring code quality and security throughout the CI/CD pipeline.
+
+## Phase 9: Code Coverage Improvement Plan
+
+Current code coverage is at 61%, which is below our target of 85-90%. The project already has an impressive foundation of 400+ tests, which demonstrates a strong commitment to quality. However, coverage analysis indicates there are still critical code paths that aren't being exercised.
+
+The following plan outlines a strategic approach to improve test coverage, focusing on quality over quantity and targeting the most important untested areas:
+
+### Priority Areas (Based on Coverage Report)
+
+- [ ] **Zero Coverage Modules (Target: At least 70% Coverage)**:
+
+  - [ ] Pipeline legacy implementation (`src/llm_rag/rag/pipeline.py`) - 0% coverage
+  - [ ] Document loaders legacy implementation (`src/llm_rag/document_processing/loaders.py`) - 0% coverage
+  - [ ] Anti-hallucination modules:
+    - [ ] `src/llm_rag/rag/anti_hallucination/config.py` - 0% coverage
+    - [ ] `src/llm_rag/rag/anti_hallucination/entity.py` - 0% coverage
+    - [ ] `src/llm_rag/rag/anti_hallucination/processing.py` - 0% coverage
+    - [ ] `src/llm_rag/rag/anti_hallucination/similarity.py` - 0% coverage
+    - [ ] `src/llm_rag/rag/anti_hallucination/verification.py` - 0% coverage
+  - [ ] Pipeline factory (`src/llm_rag/rag/pipeline/factory.py`) - 0% coverage
+
+- [ ] **Low Coverage Modules (Target: At least 75% Coverage)**:
+
+  - [ ] Main anti-hallucination interface (`src/llm_rag/rag/anti_hallucination.py`) - 19% coverage
+  - [ ] Conversational pipeline (`src/llm_rag/rag/pipeline/conversational.py`) - 27% coverage
+  - [ ] Multimodal vector store (`src/llm_rag/vectorstore/multimodal.py`) - 41% coverage
+  - [ ] PDF loaders (`src/llm_rag/document_processing/pdf_loaders.py`) - 44% coverage
+  - [ ] Base pipeline classes (`src/llm_rag/rag/pipeline/base_classes.py`) - 48% coverage
+  - [ ] Factory modules for models (`src/llm_rag/models/factory.py`) - 54% coverage
+  - [ ] Web loaders (`src/llm_rag/document_processing/loaders/web_loaders.py`) - 54% coverage
+
+- [ ] **Medium Coverage Modules (Target: 85%+ Coverage)**:
+  - [ ] Web loader (`src/llm_rag/document_processing/loaders/web_loader.py`) - 59% coverage
+  - [ ] Chroma vector store (`src/llm_rag/vectorstore/chroma.py`) - 60% coverage
+  - [ ] Main module (`src/llm_rag/main.py`) - 61% coverage
+  - [ ] Document processor (`src/llm_rag/rag/pipeline/document_processor.py`) - 62% coverage
+  - [ ] Chunking (`src/llm_rag/document_processing/chunking.py`) - 63% coverage
+  - [ ] Pipeline component factory (`src/llm_rag/rag/pipeline/component_factory.py`) - 64% coverage
+  - [ ] JSON loader (`src/llm_rag/document_processing/loaders/json_loader.py`) - 67% coverage
+
+### Implementation Strategy
+
+1. **Identify Coverage Gaps**:
+
+   - [ ] Run detailed coverage reports to identify specific untested functions and branches
+   - [ ] Generate coverage heat maps for visual analysis
+   - [ ] Prioritize critical code paths for immediate improvement
+
+2. **Test Quality Improvement**:
+
+   - [ ] Audit existing tests for redundancy and effectiveness
+   - [ ] Refactor tests to focus on behavior verification rather than implementation details
+   - [ ] Consolidate similar tests using parameterization
+   - [ ] Add assertions for edge cases and error conditions
+   - [ ] Ensure test isolation and independence
+
+3. **Test Efficiency Enhancement**:
+
+   - [ ] Identify and fix slow-running tests
+   - [ ] Implement proper test fixtures and setup/teardown
+   - [ ] Use appropriate mocking strategies to avoid external dependencies
+   - [ ] Organize tests by execution speed (unit → integration → e2e)
+   - [ ] Configure test parallelization where appropriate
+
+4. **Test Implementation**:
+
+   - [ ] Use behavior-driven approach for feature testing
+   - [ ] Implement comprehensive parametrized tests for edge cases
+   - [ ] Add integration tests for component interactions
+   - [ ] Create targeted unit tests for complex functions
+
+5. **Infrastructure Improvements**:
+   - [ ] Set up automated coverage reporting in CI pipeline
+   - [ ] Implement coverage regression prevention checks
+   - [ ] Create coverage badges for documentation
+   - [ ] Add test quality metrics (mutation testing)
+
+### Timeframe and Milestones
+
+- **Short-term (1 month)**: Reach 80% coverage by improving anti-hallucination and document processing
+- **Medium-term (2 months)**: Reach 85%+ coverage by addressing remaining gaps
+- **Long-term (3 months)**: Stabilize at 90% coverage with comprehensive testing
+
+This systematic approach will ensure that we not only reach our target coverage metrics but also focus on testing the most critical components of the system first.
+
 ## Implementation Approach
 
 Throughout this refactoring, we will:
