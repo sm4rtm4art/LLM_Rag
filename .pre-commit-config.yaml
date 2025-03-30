@@ -1,4 +1,5 @@
 # Top-level configurations should be at the start
+
 default_install_hook_types:
   - pre-commit
   - post-checkout
@@ -15,6 +16,7 @@ ci:
   autoupdate_commit_msg: 'ci: pre-commit autoupdate'
 
 # Then list all repositories
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -23,7 +25,7 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
-        args: ['--maxkb=2000']  # Increase size limit to accommodate database files
+        args: ['--maxkb=2000'] # Increase size limit to accommodate database files
       - id: check-json
       - id: check-toml
 
@@ -64,24 +66,30 @@ repos:
         ]
         files: ^(src|tests)/.*\.py$
 
-      # Add Bandit security check
+  # Add Bandit security check
+  - repo: local
+    hooks:
       - id: bandit-check
         name: Security check with Bandit
         entry: bandit
         language: system
         types: [python]
         args: ['-r', 'src/', '-c', 'pyproject.toml']
-        pass_filenames: false  # Run on entire codebase, not individual files
-        stages: [pre-commit]  # Run on every commit
+        pass_filenames: false # Run on entire codebase, not individual files
+        stages: [pre-commit] # Run on every commit
 
-      # Add Safety check for dependencies
+  # Add Safety check for dependencies
+  - repo: local
+    hooks:
       - id: safety-check
         name: Check for vulnerable dependencies with Safety
-        entry: bash -c "SAFETY_CACHE_DIR=/tmp SAFETY_API_KEY=${SAFETY_API_KEY:-} safety scan --policy-file .safety-policy.yml || echo 'Safety check failed but continuing'"
+        entry: bash -c "SAFETY_CACHE_DIR=/tmp SAFETY_NO_SAVE=1 SAFETY_API_KEY=${SAFETY_API_KEY:-} safety scan --policy-file .safety-policy.yml --save-as-default=false > /tmp/safety-output.txt || echo 'Safety check failed but continuing'"
         language: system
         pass_filenames: false
-        stages: [pre-push]  # Changed from pre-commit to pre-push to run only when pushing
+        stages: [pre-push] # Changed from pre-commit to pre-push to run only when pushing
 
+  - repo: local
+    hooks:
       - id: create-test-directories
         name: Create Test Directories
         entry: python -c "from pathlib import Path; test_dir = Path('./test_data'); test_file = test_dir / 'test.txt'; test_dir.mkdir(exist_ok=True); test_file.write_text('This is a sample test document for RAG testing.\\n') if not test_file.exists() else None;"
@@ -90,6 +98,8 @@ repos:
         always_run: true
         stages: [pre-commit, pre-push]
 
+  - repo: local
+    hooks:
       - id: pytest-rag-evaluation
         name: RAG Evaluation Tests
         entry: pytest tests/test_rag_evaluation.py -v
@@ -98,24 +108,27 @@ repos:
         always_run: true
         stages: [pre-commit]
 
+  - repo: local
+    hooks:
       - id: run-all-tests
         name: Run All Tests
-        # Run pytest only on modified files or files in modified directories
-        entry: bash -c 'FILES=$(git diff --name-only --cached | grep -E "\.py$"); for file in $FILES; do if [[ $file == src/* ]]; then module_path=${file#src/}; module_path=${module_path%.py}; module_path=${module_path//\//.}; test_pattern="tests/**/test_*$(basename $file)"; if ls $test_pattern 2>/dev/null; then pytest $test_pattern -v; fi; fi; done'
+        entry: pytest
         language: system
         pass_filenames: false
-        always_run: false  # Only run when explicitly called or on push
-        stages: [pre-push]  # Run on push, not on every commit to avoid slowing down workflow
+        always_run: false # Only run when explicitly called or on push
+        stages: [pre-push] # Run on push, not on every commit to avoid slowing down workflow
 
-      # Add bash script testing hook
+  # Add bash script testing hook
+  - repo: local
+    hooks:
       - id: test-bash-scripts
         name: Test Bash Scripts
         entry: scripts/test_bash_scripts.sh
         language: system
         files: ^scripts/.*\.sh$
         pass_filenames: false
-        always_run: false  # Only run when explicitly called or on push
-        stages: [pre-push]  # Run on push, not on every commit
+        always_run: false # Only run when explicitly called or on push
+        stages: [pre-push] # Run on push, not on every commit
 
   # Custom variable naming consistency check
   - repo: local
@@ -128,16 +141,17 @@ repos:
       #   types: [python]
       #   pass_filenames: false
       #   verbose: true
-      - id: dummy-hook  # This is a placeholder to keep the YAML structure valid
+      - id: dummy-hook # This is a placeholder to keep the YAML structure valid
         name: Placeholder hook (disabled)
         entry: echo "Placeholder hook"
         language: system
         pass_filenames: false
         always_run: false
-        stages: []  # This hook will never run
+        stages: [] # This hook will never run
 
 exclude: >
   (?x)^(
+
     \.llm_rag/.*|
     __pycache__/.*|
     .*\.pyc|
