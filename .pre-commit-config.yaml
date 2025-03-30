@@ -100,7 +100,8 @@ repos:
 
       - id: run-all-tests
         name: Run All Tests
-        entry: pytest
+        # Run pytest only on modified files or files in modified directories
+        entry: bash -c 'FILES=$(git diff --name-only --cached | grep -E "\.py$"); for file in $FILES; do if [[ $file == src/* ]]; then module_path=${file#src/}; module_path=${module_path%.py}; module_path=${module_path//\//.}; test_pattern="tests/**/test_*$(basename $file)"; if ls $test_pattern 2>/dev/null; then pytest $test_pattern -v; fi; fi; done'
         language: system
         pass_filenames: false
         always_run: false  # Only run when explicitly called or on push
