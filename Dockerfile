@@ -34,7 +34,7 @@ RUN echo "UV location: $(which uv)" && uv --version
 COPY pyproject.toml ./
 
 # Install Python dependencies using UV's pip wrapper.
-# Install to a dedicated target directory
+# Install to a dedicated target directory and install the package in development mode
 RUN uv pip install --no-cache-dir -e . --target=/app/site-packages
 
 # Copy the rest of your application code.
@@ -60,7 +60,8 @@ WORKDIR /app
 # Set environment variables for runtime.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app:/app/site-packages \
+    PYTHONPATH=/app:/app/site-packages:/app/src \
+    PATH="/app/site-packages/bin:${PATH}" \
     PORT=8000
 
 # Install minimal runtime dependencies and clean up.
@@ -90,5 +91,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 EXPOSE 8000
 
+# Use the entrypoint script with the 'api' command
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["api"]
