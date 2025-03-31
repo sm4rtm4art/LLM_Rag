@@ -9,7 +9,8 @@ FROM python:3.12-slim AS builder
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive \
-    PIP_DEFAULT_TIMEOUT=600
+    PIP_DEFAULT_TIMEOUT=600 \
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
@@ -26,34 +27,42 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=uv /uv /usr/local/bin/uv
 COPY --from=uv /uvx /usr/local/bin/uvx
 
-# (Optional) Verify UV installation; remove if not needed in production.
-RUN echo "UV location: $(which uv)" && echo "UV version: $(uv --version)"
+# (Optional) Verify UV installation.
+RUN echo "UV location: $(which uv)" && uv --version
 
-# Copy dependency files first for better caching.
+# Copy dependency file first for better caching.
 COPY pyproject.toml ./
 
 # Install Python dependencies using UV's pip wrapper.
-RUN uv pip install --no-cache-dir --system -e .
+# Install to a dedicated target directory and install the package in development mode
+RUN uv pip install --no-cache-dir -e . --target=/app/site-packages
 
 # Copy the rest of your application code.
 COPY . .
 
-# Create a non‑root user and adjust file ownership.
-RUN useradd --create-home appuser && \
-    chown -R appuser:appuser /app
+# Create a non‑root user and fix file ownership.
+RUN useradd --create-home appuser && chown -R appuser:appuser /app
 
-# Create an entrypoint script that uses UV or uvicorn.
-RUN echo '#!/bin/bash\n\
-    if [ "$1" = "api" ]; then\n\
-    exec uvicorn llm_rag.api.main:app --host 0.0.0.0 --port 8000\n\
-    else\n\
-    exec "$@"\n\
-    fi' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+# Create an entrypoint script using a multi‑line echo chain.
+RUN echo '#!/bin/bash' > /app/entrypoint.sh && \
+    echo 'if [ "$1" = "api" ]; then' >> /app/entrypoint.sh && \
+    echo '  exec uvicorn llm_rag.api.main:app --host 0.0.0.0 --port 8000' >> /app/entrypoint.sh && \
+    echo 'else' >> /app/entrypoint.sh && \
+    echo '  exec "$@"' >> /app/entrypoint.sh && \
+    echo 'fi' >> /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
 
 # === Stage 2: Final Runtime Image ===
 FROM python:3.12-slim AS final
 
 WORKDIR /app
+
+# Set environment variables for runtime.
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app:/app/site-packages:/app/src \
+    PATH="/app/site-packages/bin:${PATH}" \
+    PORT=8000
 
 # Install minimal runtime dependencies and clean up.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -66,23 +75,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=uv /uv /usr/local/bin/uv
 COPY --from=uv /uvx /usr/local/bin/uvx
 
-# Copy installed Python packages and application from the builder stage.
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /app /app
+# Copy only the necessary files from the builder stage.
+COPY --from=builder /app/site-packages /app/site-packages
+COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
+COPY --from=builder /app/pyproject.toml /app/
+COPY --from=builder /app/src /app/src
 
-# Reinstall the package in the final stage to ensure consistency.
-RUN uv pip install --no-cache-dir --system -e /app
-
-# Ensure proper ownership and switch to a non‑root user.
+# Create a non‑root user for runtime and set proper ownership.
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Add a health check to ensure container is ready to handle requests
+# Add a health check to ensure the container is ready.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 EXPOSE 8000
 
+# Use the entrypoint script with the 'api' command
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["api"]
