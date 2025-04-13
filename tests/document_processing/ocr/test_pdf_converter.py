@@ -126,11 +126,22 @@ class TestPDFImageConverter(unittest.TestCase):
             with self.assertRaises(DocumentProcessingError):
                 self.converter._render_page_to_image(mock_page)
 
-    @pytest.mark.skip("Method convert_pdf_pages_to_images not available")
-    def test_convert_pdf_pages_to_images(self):
+    @patch.object(PDFImageConverter, "_render_page_to_image")
+    def test_convert_pdf_pages_to_images(self, mock_render):
         """Test converting multiple PDF pages to images."""
-        # Setup page rendering mock
-        with patch.object(self.converter, "_render_page_to_image", return_value=self.sample_image):
+        # Setup mock
+        mock_render.return_value = self.sample_image
+
+        # Mock PDF document
+        mock_doc = MagicMock()
+        mock_doc.page_count = 3
+
+        # Mock load_page
+        mock_page = MagicMock()
+        mock_doc.load_page.return_value = mock_page
+
+        # Patch open_pdf_document
+        with patch.object(self.converter, "_open_pdf_document", return_value=mock_doc):
             # Call method for all pages
             images = self.converter.convert_pdf_pages_to_images(self.mock_pdf, page_numbers=None, dpi=300)
 
@@ -138,12 +149,24 @@ class TestPDFImageConverter(unittest.TestCase):
             self.assertEqual(len(images), 3)
             for img in images:
                 self.assertEqual(img, self.sample_image)
+            mock_doc.close.assert_called_once()
 
-    @pytest.mark.skip("Method convert_pdf_pages_to_images not available")
-    def test_convert_pdf_pages_to_images_specific_pages(self):
+    @patch.object(PDFImageConverter, "_render_page_to_image")
+    def test_convert_pdf_pages_to_images_specific_pages(self, mock_render):
         """Test converting specific PDF pages to images."""
-        # Setup page rendering mock
-        with patch.object(self.converter, "_render_page_to_image", return_value=self.sample_image):
+        # Setup mock
+        mock_render.return_value = self.sample_image
+
+        # Mock PDF document
+        mock_doc = MagicMock()
+        mock_doc.page_count = 3
+
+        # Mock load_page
+        mock_page = MagicMock()
+        mock_doc.load_page.return_value = mock_page
+
+        # Patch open_pdf_document
+        with patch.object(self.converter, "_open_pdf_document", return_value=mock_doc):
             # Call method for specific pages
             images = self.converter.convert_pdf_pages_to_images(self.mock_pdf, page_numbers=[0, 2], dpi=300)
 
@@ -151,18 +174,20 @@ class TestPDFImageConverter(unittest.TestCase):
             self.assertEqual(len(images), 2)
             for img in images:
                 self.assertEqual(img, self.sample_image)
+            mock_doc.close.assert_called_once()
 
-    @pytest.mark.skip("Issues with dpi and alpha parameters")
+    @pytest.mark.skip("Issues with mocking fitz.Page.get_pixmap")
+    @patch("PIL.Image.frombytes")
     @patch("fitz.Page.get_pixmap")
     @patch("fitz.open")
-    def test_render_page_to_image(self, mock_fitz_open, mock_get_pixmap):
+    def test_render_page_to_image(self, mock_fitz_open, mock_get_pixmap, mock_frombytes):
         """Test rendering a PDF page to an image."""
         # Setup mocks
         mock_doc = MagicMock()
         mock_fitz_open.return_value = mock_doc
 
         mock_page = MagicMock()
-        mock_doc.__getitem__.return_value = mock_page
+        mock_doc.load_page.return_value = mock_page
 
         mock_pixmap = MagicMock()
         mock_get_pixmap.return_value = mock_pixmap
@@ -171,29 +196,33 @@ class TestPDFImageConverter(unittest.TestCase):
         mock_pixmap.height = 1500
         mock_pixmap.n = 3  # RGB
 
-        # Mock PIL.Image.frombytes
-        with patch("PIL.Image.frombytes", return_value=self.sample_image) as mock_frombytes:
+        # Setup frombytes mock
+        mock_frombytes.return_value = self.sample_image
+
+        # Mock _open_pdf_document
+        with patch.object(self.converter, "_open_pdf_document", return_value=mock_doc):
             # Call method
             image = self.converter._render_page_to_image(self.test_pdf_path, 0, dpi=300, alpha=False)
 
             # Assertions
             self.assertEqual(image, self.sample_image)
-            mock_fitz_open.assert_called_once_with(self.test_pdf_path)
-            mock_doc.__getitem__.assert_called_once_with(0)
+            mock_fitz_open.assert_not_called()  # Should not be called directly
+            mock_doc.load_page.assert_called_once_with(0)
             mock_get_pixmap.assert_called_once()
             mock_frombytes.assert_called_once()
 
-    @pytest.mark.skip("Issues with dpi and alpha parameters")
+    @pytest.mark.skip("Issues with mocking fitz.Page.get_pixmap")
+    @patch("PIL.Image.frombytes")
     @patch("fitz.Page.get_pixmap")
     @patch("fitz.open")
-    def test_render_page_to_image_with_alpha(self, mock_fitz_open, mock_get_pixmap):
+    def test_render_page_to_image_with_alpha(self, mock_fitz_open, mock_get_pixmap, mock_frombytes):
         """Test rendering a PDF page to an image with alpha channel."""
         # Setup mocks
         mock_doc = MagicMock()
         mock_fitz_open.return_value = mock_doc
 
         mock_page = MagicMock()
-        mock_doc.__getitem__.return_value = mock_page
+        mock_doc.load_page.return_value = mock_page
 
         mock_pixmap = MagicMock()
         mock_get_pixmap.return_value = mock_pixmap
@@ -205,14 +234,17 @@ class TestPDFImageConverter(unittest.TestCase):
         # Mock sample image with alpha
         sample_image_alpha = MagicMock(spec=Image.Image)
         sample_image_alpha.mode = "RGBA"
+        mock_frombytes.return_value = sample_image_alpha
 
-        # Mock PIL.Image.frombytes
-        with patch("PIL.Image.frombytes", return_value=sample_image_alpha) as mock_frombytes:
+        # Mock _open_pdf_document
+        with patch.object(self.converter, "_open_pdf_document", return_value=mock_doc):
             # Call method
             image = self.converter._render_page_to_image(self.test_pdf_path, 0, dpi=300, alpha=True)
 
             # Assertions
             self.assertEqual(image, sample_image_alpha)
+            mock_fitz_open.assert_not_called()  # Should not be called directly
+            mock_doc.load_page.assert_called_once_with(0)
             mock_get_pixmap.assert_called_once()
             mock_frombytes.assert_called_once()
 

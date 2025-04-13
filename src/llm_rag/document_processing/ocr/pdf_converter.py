@@ -98,11 +98,14 @@ class PDFImageConverter:
         error_code=ErrorCode.DOCUMENT_PARSE_ERROR,
         default_message="Failed to convert PDF page to image",
     )
-    def _render_page_to_image(self, page: fitz.Page) -> Image.Image:
+    def _render_page_to_image(self, page_or_path, page_num=0, dpi=None, alpha=None) -> Image.Image:
         """Render a single PDF page to a PIL Image.
 
         Args:
-            page: PyMuPDF Page object to render.
+            page_or_path: Either a PyMuPDF Page object or a path to a PDF file.
+            page_num: Page number to render (0-indexed). Only used if page_or_path is a file path.
+            dpi: DPI for rendering (overrides config if provided).
+            alpha: Whether to include alpha channel (overrides config if provided).
 
         Returns:
             PIL Image object of the rendered page.
@@ -111,27 +114,53 @@ class PDFImageConverter:
             DocumentProcessingError: If page rendering fails.
 
         """
+        # Set rendering parameters
+        render_dpi = dpi if dpi is not None else self.config.dpi
+        use_alpha = alpha if alpha is not None else self.config.use_alpha_channel
+
         # Calculate zoom matrix based on DPI
-        zoom = self.config.dpi / 72 * self.config.zoom_factor  # 72 is the base DPI
+        zoom = render_dpi / 72 * self.config.zoom_factor  # 72 is the base DPI
         matrix = fitz.Matrix(zoom, zoom)
 
-        # Render the page to a pixmap
         try:
-            pix = page.get_pixmap(matrix=matrix, alpha=self.config.use_alpha_channel)
+            # Handle different input types
+            if isinstance(page_or_path, fitz.Page):
+                page = page_or_path
+            else:
+                # Open the document and get the page
+                doc = self._open_pdf_document(page_or_path)
+                try:
+                    page = doc.load_page(page_num)
+                except Exception as e:
+                    doc.close()
+                    raise DocumentProcessingError(
+                        f"Error loading page {page_num}",
+                        error_code=ErrorCode.DOCUMENT_PARSE_ERROR,
+                        original_exception=e,
+                    ) from e
+
+            # Render the page to a pixmap
+            pix = page.get_pixmap(matrix=matrix, alpha=use_alpha)
 
             # Convert pixmap to PIL Image
-            if self.config.use_alpha_channel:
+            if use_alpha:
                 img = Image.frombytes("RGBA", [pix.width, pix.height], pix.samples)
             else:
                 img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
 
+            # Close the document if we opened it here
+            if not isinstance(page_or_path, fitz.Page) and "doc" in locals():
+                doc.close()
+
             return img
+
         except Exception as e:
+            page_num_info = getattr(page, "number", page_num) if "page" in locals() else page_num
             raise DocumentProcessingError(
-                f"Error rendering page {page.number} to image",
+                f"Error rendering page {page_num_info} to image",
                 error_code=ErrorCode.DOCUMENT_PARSE_ERROR,
                 original_exception=e,
-                details={"page_number": page.number},
+                details={"page_number": page_num_info},
             ) from e
 
     def convert_pdf_to_images(self, pdf_path: Union[str, Path]) -> Generator[Tuple[int, Image.Image], None, None]:
@@ -245,3 +274,41 @@ class PDFImageConverter:
             return doc.page_count
         finally:
             doc.close()
+
+    def convert_pdf_pages_to_images(self, pdf_path: Union[str, Path], page_numbers=None, dpi=None) -> list[Image.Image]:
+        """Convert multiple PDF pages to images.
+
+        Args:
+            pdf_path: Path to the PDF file.
+            page_numbers: List of page numbers to convert (0-indexed). If None, convert all pages.
+            dpi: DPI for rendering (overrides config if provided).
+
+        Returns:
+            List of PIL Image objects.
+
+        Raises:
+            DataAccessError: If the PDF file cannot be accessed or opened.
+            DocumentProcessingError: If page rendering fails.
+
+        """
+        logger.info(f"Converting PDF pages from {pdf_path}")
+        doc = self._open_pdf_document(pdf_path)
+        images = []
+
+        try:
+            # If no specific pages are requested, convert all pages
+            if page_numbers is None:
+                page_numbers = range(doc.page_count)
+
+            # Process each requested page
+            for page_num in page_numbers:
+                logger.debug(f"Processing PDF page {page_num + 1}/{doc.page_count}")
+                page = doc.load_page(page_num)
+                image = self._render_page_to_image(page, dpi=dpi)
+                images.append(image)
+
+            return images
+        finally:
+            # Always close the document
+            doc.close()
+            logger.debug(f"Closed PDF document: {pdf_path}")
