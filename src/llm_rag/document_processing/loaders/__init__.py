@@ -1,7 +1,9 @@
-"""Document loaders implementation modules.
+# mypy: disable-error-code="duplicate-module"
 
-This package contains the implementation of document loaders
-for different document types.
+"""Modular document loaders package.
+
+This package contains the modular implementation of document loaders,
+breaking down the original monolithic loaders.py into focused modules.
 """
 
 # Import components from submodules

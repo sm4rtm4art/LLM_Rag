@@ -227,7 +227,6 @@ To address the low test coverage (~26%) and ensure reliable, maintainable code, 
    - [ ] Test integration points between components
    - [ ] Focus on test quality, not just quantity - 100% coverage doesn't guarantee bug-free code
 
-
 3. **Refactor for Testability**:
 
    - [ ] Identify modules that are difficult to test due to tight coupling
@@ -392,6 +391,61 @@ The following plan outlines a strategic approach to improve test coverage, focus
 - **Long-term (3 months)**: Stabilize at 90% coverage with comprehensive testing
 
 This systematic approach will ensure that we not only reach our target coverage metrics but also focus on testing the most critical components of the system first.
+
+## Phase 10: PDF-to-Markdown Conversion Enhancement
+
+Building on our existing document processing capabilities, we'll implement a robust PDF-to-Markdown conversion system leveraging local LLMs. This feature will enhance our document processing pipeline by providing clean, structured text from complex PDF documents.
+
+### Implementation Strategy
+
+1. **PDF Rendering and Processing**:
+
+   - [ ] Enhance current PDF processing with PyMuPDF (fitz) for image-based rendering
+   - [ ] Implement page-by-page image conversion with configurable resolution
+   - [ ] Create efficiency optimizations for large documents (batch processing)
+   - [ ] Add support for various PDF structures (text-based, image-based, mixed)
+
+2. **LLM-Based Content Extraction**:
+
+   - [ ] Integrate with local LLM infrastructure (using existing CustomLlamaCpp or ModelFactory)
+   - [ ] Design specialized prompts for accurate text extraction and format preservation
+   - [ ] Implement layout analysis to maintain document structure
+   - [ ] Create fallback mechanisms for pages that fail processing
+
+3. **Markdown Generation and Post-Processing**:
+
+   - [ ] Develop proper markdown formatting with heading hierarchy preservation
+   - [ ] Implement table detection and conversion to markdown tables
+   - [ ] Add support for extracting and referencing embedded images
+   - [ ] Create intelligent list and bullet point formatting
+
+4. **Integration with Existing Codebase**:
+
+   - [ ] Extend DocumentLoader interface with markdown conversion capabilities
+   - [ ] Make extraction parameters configurable via config system
+   - [ ] Support both synchronous and asynchronous processing modes
+   - [ ] Implement progress tracking for long-running conversions
+
+5. **Testing and Validation**:
+
+   - [ ] Create comprehensive test suite with various PDF types
+   - [ ] Benchmark conversion accuracy against commercial solutions
+   - [ ] Implement validation metrics for conversion quality
+   - [ ] Test with various LLM models to determine minimum requirements
+
+6. **User Interface Components**:
+   - [ ] Add CLI command for direct PDF-to-Markdown conversion
+   - [ ] Implement progress reporting for large documents
+   - [ ] Create configuration options for quality vs. speed tradeoffs
+   - [ ] Add support for batch processing multiple documents
+
+This enhancement will leverage our existing document processing pipeline while adding specialized capabilities for high-quality markdown conversion from even complex PDFs, using the power of local LLMs to interpret document structure and content.
+
+### Timeframe and Dependencies
+
+- **Estimated Development Time**: 5-7 days
+- **Dependencies**: Requires PyMuPDF, Pillow, and a compatible local LLM (Mistral 7B, Llama 3/4, or Gemma 3)
+- **Integration Points**: Extends current DocumentLoader system with new capabilities
 
 ## Implementation Approach
 

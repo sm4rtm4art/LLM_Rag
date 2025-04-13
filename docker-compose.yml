@@ -9,14 +9,11 @@ services:
     volumes:
       - ./data:/app/data
       - ./models:/app/models
-      - ./demo_llm_rag.py:/app/demo_llm_rag.py
-      - ./simple_llama_test.py:/app/simple_llama_test.py
-      - ./test_llama_cpp.py:/app/test_llama_cpp.py
     ports:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-    command: python /app/test_llama_cpp.py
+    command: api
     restart: unless-stopped
 
   # Add a service for testing if needed

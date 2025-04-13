@@ -38,6 +38,7 @@ dependencies = [
     "pdf2image>=1.16.3",    # For converting PDF pages to images
     "pytesseract>=0.3.10",  # For OCR on images
     "Pillow>=10.0.0",       # For image processing
+    "PyMuPDF>=1.22.5",      # For PDF processing and rendering
 ]
 
 [project.optional-dependencies]
@@ -148,7 +149,7 @@ warn_redundant_casts = true
 warn_unused_ignores = false
 warn_no_return = true
 warn_unreachable = false
-exclude = ["scripts"]  # Exclude scripts directory
+# exclude = ["scripts", "src/llm_rag/document_processing/loaders/__init__.py"]  # Exclude scripts directory and duplicate loader module
 namespace_packages = true
 explicit_package_bases = true
 error_summary = false
@@ -193,6 +194,12 @@ module = "tests.*"
 ignore_errors = true
 follow_imports = "skip"
 
+# Add exclusion for specific modules that cause duplicate module name errors
+[[tool.mypy.overrides]]
+module = "src.llm_rag.document_processing.loaders"
+ignore_errors = true
+follow_imports = "skip"
+
 [tool.semantic_release]
 version_variable = ["src/llm_rag/version.py:__version__", "llm_rag/version.py:__version__"]
 version_toml = ["pyproject.toml:project.version"]
@@ -204,3 +211,6 @@ commit_message = "{version}"
 changelog_file = "CHANGELOG.md"
 major_on_zero = false
 tag_format = "v{version}"
+
+[tools.uv]
+environments = { ".llm_rag" = { mode = "development" } }

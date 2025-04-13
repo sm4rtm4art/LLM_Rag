@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     git \
     curl \
+    openjdk-17-jdk \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy UV binaries from the UV stage into /usr/local/bin so that "uv" is in PATH.
@@ -69,7 +70,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     curl \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    openjdk-17-jre \
+    && rm -rf /var/lib/apt/lists/* \
+    && JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) \
+    && echo "export JAVA_HOME=$JAVA_HOME" >> /etc/environment \
+    && chmod 755 $JAVA_HOME
 
 # Copy UV binaries from the UV stage.
 COPY --from=uv /uv /usr/local/bin/uv
