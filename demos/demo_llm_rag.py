@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 # Import RAG components
 from llm_rag.main import CustomLlamaCpp  # noqa: E402
-from llm_rag.rag.pipeline import ConversationalRAGPipeline, RAGPipeline  # noqa: E402
+from llm_rag.rag.pipeline import BaseConversationalRAGPipeline, RAGPipeline  # noqa: E402
 from llm_rag.vectorstore.chroma import ChromaVectorStore  # noqa: E402
 
 # Configure logging
@@ -122,7 +122,7 @@ def setup_vector_store(args: argparse.Namespace) -> ChromaVectorStore:
     return vector_store
 
 
-def run_interactive_mode(rag_pipeline: ConversationalRAGPipeline) -> None:
+def run_interactive_mode(rag_pipeline: BaseConversationalRAGPipeline) -> None:
     """Run the RAG pipeline in interactive mode."""
     print("\nEntering interactive mode. Type 'exit' to quit.")
     print("Type your query and press Enter.")
@@ -173,7 +173,7 @@ def main() -> None:
     # Create the RAG pipeline
     if args.interactive:
         print("Creating conversational RAG pipeline...")
-        rag_pipeline = ConversationalRAGPipeline(
+        rag_pipeline = BaseConversationalRAGPipeline(
             vector_store=vector_store,
             llm_chain=llm,
         )
