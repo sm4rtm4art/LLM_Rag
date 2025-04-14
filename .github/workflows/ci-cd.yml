@@ -226,7 +226,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
       - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-      - run: uv pip install pytest pytest-cov pytest-asyncio sentence-transformers chromadb -e .[dev]
+      - run: uv pip install pytest pytest-cov pytest-asyncio sentence-transformers chromadb rich -e .[dev]
       - name: Run tests with Rich progress display
         run: .github/scripts/test.sh -c -v
       # Add Codecov upload step
