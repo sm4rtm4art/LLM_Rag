@@ -111,6 +111,7 @@ class TesseractOCREngine:
         psm: int = 3,
         oem: int = 3,
         config_params: Optional[Dict[str, str]] = None,
+        config: Optional[TesseractConfig] = None,  # Add config parameter for test compatibility
     ):
         """Initialize the OCR engine with configuration options.
 
@@ -124,8 +125,23 @@ class TesseractOCREngine:
             oem: OCR Engine Mode (default: 3 - default, based on what is available).
                 See Tesseract documentation for all options.
             config_params: Additional Tesseract configuration parameters.
+            config: TesseractConfig object (for compatibility with tests).
 
         """
+        # Handle TesseractConfig if provided
+        if config:
+            tesseract_path = config.tesseract_cmd
+            languages = config.languages
+            psm = config.psm.value if isinstance(config.psm, PageSegmentationMode) else config.psm
+            oem = config.oem
+            config_params = {}
+            if config.custom_config:
+                for param in config.custom_config.split():
+                    if param.startswith("--"):
+                        parts = param.split(" ", 1) if " " in param else [param, ""]
+                        if len(parts) > 1:
+                            config_params[parts[0].lstrip("-")] = parts[1]
+
         # Set Tesseract executable path if provided
         if tesseract_path:
             pytesseract.pytesseract.tesseract_cmd = tesseract_path
@@ -140,10 +156,14 @@ class TesseractOCREngine:
         self.oem = oem
         self.config_params = config_params or {}
 
+        # For compatibility with existing tests
+        self.config = config
+        self.tesseract_cmd = tesseract_path
+
         # Build Tesseract config string
-        self.config = f"--psm {psm} --oem {oem}"
+        self.config_string = f"--psm {psm} --oem {oem}"
         for key, value in self.config_params.items():
-            self.config += f" -{key} {value}"
+            self.config_string += f" -{key} {value}"
 
         logger.info(f"Initialized TesseractOCREngine with languages={self.languages}, psm={psm}, oem={oem}")
 
@@ -178,7 +198,7 @@ class TesseractOCREngine:
         """
         try:
             logger.debug("Processing image with Tesseract OCR")
-            text = pytesseract.image_to_string(image, lang=self.languages, config=self.config)
+            text = pytesseract.image_to_string(image, lang=self.languages, config=self.config_string)
 
             logger.debug(f"OCR processing complete, extracted {len(text)} characters")
             return text
@@ -281,3 +301,7 @@ class TesseractOCREngine:
                 error_code=ErrorCode.SERVICE_UNAVAILABLE,
                 original_exception=e,
             ) from e
+
+    def _build_config_string(self):
+        """Build the Tesseract configuration string."""
+        return self.config_string
