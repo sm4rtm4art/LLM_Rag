@@ -52,6 +52,13 @@ Tasks:
     - Write unit and integration tests for the complete pipeline.
 7.  Update dependencies and ensure proper integration with the existing OCR pipeline.
 8.  Apply code formatting (e.g., using black/ruff if configured) to ensure PEP 8 compliance.
+9.  Implement CI-friendly testing:
+    - Create small, synthetic test files that can be committed to the repository
+    - For tests requiring larger PDF test data that cannot be committed due to copyright or size:
+      - Add conditional test skipping using `pytest.mark.skipif` based on the presence of test files
+      - Implement robust mocking of file operations in tests to avoid dependencies on real files
+      - Add clear documentation about which tests require local files versus which can run in CI
+      - Consider separating fast and slow tests using pytest markers (`@pytest.mark.fast`, `@pytest.mark.slow`)
 
 Deliverables:
 

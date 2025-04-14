@@ -1,13 +1,18 @@
 """Unit tests for the PDFImageConverter."""
 
+import os
 import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
 from PIL import Image
 
 from llm_rag.document_processing.ocr.pdf_converter import PDFImageConverter
 from llm_rag.utils.errors import DocumentProcessingError
+
+# Check if running in CI environment
+IN_CI = os.environ.get("CI", "false").lower() == "true"
 
 
 class TestPDFImageConverter(unittest.TestCase):
@@ -85,6 +90,7 @@ class TestPDFImageConverter(unittest.TestCase):
             # zoom = 200 / 72  # Based on the DPI set in setUp
             mock_page.get_pixmap.assert_called_with(matrix=mock.ANY, alpha=False)
 
+    @pytest.mark.skipif(IN_CI, reason="Test requires access to real PDF files")
     @mock.patch("fitz.open")
     @mock.patch("llm_rag.document_processing.ocr.pdf_converter.Path.exists")
     def test_get_page_image(self, mock_exists, mock_fitz_open):
