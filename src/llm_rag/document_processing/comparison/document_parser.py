@@ -100,19 +100,65 @@ class DocumentParser:
             DocumentProcessingError: If the document cannot be parsed.
 
         """
-        try:
-            # Determine format if not provided
-            doc_format = format or self.default_format
+        # Determine format if not provided
+        doc_format = format or self.default_format
 
-            # Determine if document is a file path or content
-            content = document
-            if isinstance(document, (str, Path)):
-                # Check if it might be a file path
+        # Determine if document is a file path or content
+        content = document
+
+        # If it's a Path object, treat it as a file path
+        if isinstance(document, Path):
+            path = document
+            try:
+                if path.exists():
+                    if path.is_file():
+                        content = self._load_document(path)
+                    else:
+                        error_msg = f"Document path is not a file: {document}"
+                        logger.error(error_msg)
+                        raise DocumentProcessingError(error_msg)
+                else:
+                    error_msg = f"Document file not found: {document}"
+                    logger.error(error_msg)
+                    raise DocumentProcessingError(error_msg)
+            except OSError as e:
+                error_msg = f"Error accessing document file: {document}: {str(e)}"
+                logger.error(error_msg)
+                raise DocumentProcessingError(error_msg) from e
+        # For strings, check if it looks like a file path
+        elif isinstance(document, str):
+            # Heuristics to determine if this is a file path:
+            # 1. No newlines (content usually has newlines)
+            # 2. Less than 255 chars (typical max path length)
+            # 3. Contains file extension or path separators
+            # 4. Doesn't start with common content markers
+            is_likely_path = (
+                "\n" not in document
+                and len(document) < 255
+                and ("." in document or "/" in document or "\\" in document)
+                and not document.lstrip().startswith(("#", "{", "[", "<", "-"))
+            )
+
+            if is_likely_path:
                 path = Path(document)
-                if path.exists() and path.is_file():
-                    content = self._load_document(path)
-                # Otherwise, assume it's already content
+                try:
+                    if path.exists():
+                        if path.is_file():
+                            content = self._load_document(path)
+                        else:
+                            error_msg = f"Document path is not a file: {document}"
+                            logger.error(error_msg)
+                            raise DocumentProcessingError(error_msg)
+                    else:
+                        error_msg = f"Document file not found: {document}"
+                        logger.error(error_msg)
+                        raise DocumentProcessingError(error_msg)
+                except OSError:
+                    # OSError from path operations - likely not a valid path
+                    # Just treat as content
+                    pass
 
+        try:
             # Parse based on format
             if doc_format == DocumentFormat.MARKDOWN:
                 return self._parse_markdown(content)
@@ -123,13 +169,16 @@ class DocumentParser:
             else:
                 raise ValueError(f"Unsupported document format: {doc_format}")
 
+        except DocumentProcessingError:
+            # Re-raise DocumentProcessingError
+            raise
         except Exception as e:
             error_msg = f"Error parsing document: {str(e)}"
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
     def _load_document(self, document_path: Union[str, Path]) -> str:
-        """Load document content from a file.
+        """Load a document from a file path.
 
         Args:
             document_path: Path to the document file.
@@ -143,10 +192,18 @@ class DocumentParser:
         """
         try:
             path = Path(document_path)
-            logger.debug(f"Loading document from: {path}")
 
+            # Check if file exists
             if not path.exists():
-                raise FileNotFoundError(f"Document not found: {path}")
+                error_msg = f"Document file not found: {document_path}"
+                logger.error(error_msg)
+                raise DocumentProcessingError(error_msg)
+
+            # Check if it's a file
+            if not path.is_file():
+                error_msg = f"Document path is not a file: {document_path}"
+                logger.error(error_msg)
+                raise DocumentProcessingError(error_msg)
 
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
@@ -154,6 +211,9 @@ class DocumentParser:
             logger.debug(f"Loaded document with {len(content)} characters")
             return content
 
+        except DocumentProcessingError:
+            # Re-raise existing DocumentProcessingError
+            raise
         except Exception as e:
             error_msg = f"Error loading document from {document_path}: {str(e)}"
             logger.error(error_msg)
@@ -174,6 +234,10 @@ class DocumentParser:
         current_section = None
         current_text = ""
         current_level = 0
+
+        # Make sure content is a string
+        if not isinstance(content, str):
+            content = str(content)
 
         # Split content into lines for processing
         lines = content.splitlines()
@@ -262,12 +326,44 @@ class DocumentParser:
         """
         logger.debug("Parsing JSON content")
 
+        # Ensure we have a string
+        if not isinstance(content, str):
+            content = str(content)
+
         import json
 
         try:
             # Parse JSON
             data = json.loads(content)
-            sections = self._convert_json_to_sections(data)
+            sections = []
+
+            # Process title directly if available
+            if isinstance(data, dict) and "title" in data:
+                sections.append(Section(str(data["title"]), SectionType.HEADING, 1))
+
+            # Process sections directly if available
+            if isinstance(data, dict) and "sections" in data and isinstance(data["sections"], list):
+                for section in data["sections"]:
+                    if isinstance(section, dict):
+                        # Add heading
+                        if "heading" in section:
+                            sections.append(Section(section["heading"], SectionType.HEADING, 2))
+                        # Add content
+                        if "content" in section:
+                            sections.append(Section(section["content"], SectionType.PARAGRAPH, 0))
+                        # Handle subsections
+                        if "subsections" in section and isinstance(section["subsections"], list):
+                            for subsection in section["subsections"]:
+                                if isinstance(subsection, dict):
+                                    if "heading" in subsection:
+                                        sections.append(Section(subsection["heading"], SectionType.HEADING, 3))
+                                    if "content" in subsection:
+                                        sections.append(Section(subsection["content"], SectionType.PARAGRAPH, 0))
+
+            # If sections list is still empty, use the generic conversion
+            if not sections:
+                sections = self._convert_json_to_sections(data)
+
             logger.debug(f"Parsed {len(sections)} sections from JSON")
             return sections
         except json.JSONDecodeError as e:

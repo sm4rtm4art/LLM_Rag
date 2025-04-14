@@ -98,6 +98,7 @@ This is paragraph 3."""
 
     def test_parse_json(self):
         """Test parsing JSON content."""
+        # Make sure the JSON content is treated as content, not a file path
         sections = self.parser.parse(self.json_content, format=DocumentFormat.JSON)
 
         # Assertions
@@ -134,16 +135,26 @@ This is paragraph 3."""
         self.assertIn("paragraph 2", sections[1].content)
         self.assertIn("paragraph 3", sections[2].content)
 
-    def test_parse_file_not_found(self):
+    @mock.patch("pathlib.Path.exists")
+    def test_parse_file_not_found(self, mock_exists):
         """Test handling of non-existent file."""
+        # Mock Path.exists to return False for this test
+        mock_exists.return_value = False
+
+        # Use a file path that will be recognized as a file path and not content
+        non_existent_file = Path("non_existent_file.md")
+
         with self.assertRaises(DocumentProcessingError):
-            self.parser.parse(Path("non_existent_file.md"))
+            self.parser.parse(non_existent_file)
 
     @mock.patch("builtins.open", mock.mock_open(read_data="# Test Heading\n\nTest paragraph."))
     @mock.patch("pathlib.Path.exists", return_value=True)
-    def test_parse_file(self, mock_exists):
+    @mock.patch("pathlib.Path.is_file", return_value=True)
+    def test_parse_file(self, mock_is_file, mock_exists):
         """Test parsing a file."""
-        sections = self.parser.parse(Path("test.md"))
+        # Use a file path that will be recognized as a file path and not content
+        test_file = Path("test.md")
+        sections = self.parser.parse(test_file)
 
         # Assertions
         self.assertIsInstance(sections, list)

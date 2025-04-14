@@ -24,10 +24,19 @@
         - Add logging using `src/llm_rag/utils/logging.py`.
         - Include comprehensive docstrings and type hints.
         - Write basic unit tests for this module (e.g., mocking the `pytesseract.image_to_string` call).
-    4.  Ensure all dependencies (`PyMuPDF`, `pytesseract`, `Pillow`) are added using `uv`.
-    5.  Apply code formatting (e.g., using black/ruff if configured) to ensure PEP 8 compliance.
+    4.  Implement `src/llm_rag/document_processing/ocr/pipeline.py`:
+        - Create a class (e.g., `OCRPipeline`) that orchestrates the PDF → Image → OCR Text flow.
+        - Combine the functionality of `PDFImageConverter` and `TesseractOCREngine`.
+        - Define a configuration dataclass (e.g., `OCRPipelineConfig`) that encapsulates settings for both components.
+        - Implement methods to process a PDF document and return OCR text (for the entire document or specified pages).
+        - Handle errors properly using the error handling utilities in `src/llm_rag/utils/errors.py`.
+        - Add comprehensive logging using `src/llm_rag/utils/logging.py`.
+        - Include proper type hints and docstrings.
+        - Write unit and integration tests in `tests/document_processing/ocr/test_pipeline.py`.
+    5.  Ensure all dependencies (`PyMuPDF`, `pytesseract`, `Pillow`) are added using `uv`.
+    6.  Apply code formatting (e.g., using ruff and mypy) to ensure PEP 8 compliance.
 
     Deliverables:
-    - New/modified Python files: `src/llm_rag/document_processing/ocr/__init__.py`, `pdf_converter.py`, `ocr_engine.py`.
-    - Associated test files (e.g., `tests/document_processing/ocr/test_pdf_converter.py`, `tests/document_processing/ocr/test_ocr_engine.py`).
+    - New/modified Python files: `src/llm_rag/document_processing/ocr/__init__.py`, `pdf_converter.py`, `ocr_engine.py`, `pipeline.py`.
+    - Associated test files (e.g., `tests/document_processing/ocr/test_pdf_converter.py`, `tests/document_processing/ocr/test_ocr_engine.py`, `tests/document_processing/ocr/test_pipeline.py`).
     - Updates to dependency files managed by `uv`.
