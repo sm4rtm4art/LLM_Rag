@@ -71,18 +71,19 @@ class PDFImageConverter:
             DocumentProcessingError: If the file cannot be accessed or processed.
 
         """
-        pdf_path = Path(pdf_path)
-        if not pdf_path.exists():
-            error_msg = f"PDF file not found: {pdf_path}"
-            logger.error(error_msg)
-            raise DocumentProcessingError(error_msg)
-
         try:
-            logger.info(f"Opening PDF file: {pdf_path}")
-            pdf_document = fitz.open(pdf_path)
+            path = Path(pdf_path)
+            logger.debug(f"Converting PDF to images: {path}")
 
-            for page_num, page in enumerate(pdf_document):
-                logger.debug(f"Processing page {page_num + 1} of {len(pdf_document)}")
+            if not path.exists():
+                raise FileNotFoundError(f"PDF file not found: {path}")
+
+            # Open the PDF file
+            doc = fitz.open(str(path))  # Convert path to string
+
+            # Process each page
+            for page_num, page in enumerate(doc):
+                logger.debug(f"Processing page {page_num + 1} of {len(doc)}")
 
                 # Set the rendering matrix for the desired DPI
                 zoom = self.dpi / 72  # 72 DPI is the default PDF resolution
@@ -96,11 +97,11 @@ class PDFImageConverter:
 
                 yield image
 
-            pdf_document.close()
-            logger.info(f"Completed converting PDF {pdf_path} to images")
+            doc.close()
+            logger.info(f"Completed converting PDF {path} to images")
 
         except Exception as e:
-            error_msg = f"Error processing PDF {pdf_path}: {str(e)}"
+            error_msg = f"Error processing PDF {path}: {str(e)}"
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 

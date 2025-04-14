@@ -136,11 +136,20 @@ class TesseractOCREngine:
             oem = config.oem
             config_params = {}
             if config.custom_config:
-                for param in config.custom_config.split():
-                    if param.startswith("--"):
-                        parts = param.split(" ", 1) if " " in param else [param, ""]
-                        if len(parts) > 1:
-                            config_params[parts[0].lstrip("-")] = parts[1]
+                # Parse the custom config string (e.g. "--dpi 300 --tessdata-dir /path")
+                parts = config.custom_config.split()
+                i = 0
+                while i < len(parts):
+                    if parts[i].startswith("--"):
+                        key = parts[i][2:]  # Remove --
+                        if i + 1 < len(parts) and not parts[i + 1].startswith("--"):
+                            config_params[key] = parts[i + 1]
+                            i += 2
+                        else:
+                            config_params[key] = ""
+                            i += 1
+                    else:
+                        i += 1
 
         # Set Tesseract executable path if provided
         if tesseract_path:
@@ -305,3 +314,76 @@ class TesseractOCREngine:
     def _build_config_string(self):
         """Build the Tesseract configuration string."""
         return self.config_string
+
+    # Alias for backward compatibility with tests
+    image_to_text = process_image
+
+    def image_to_data(
+        self, image: Image.Image, output_format: OCROutputFormat = OCROutputFormat.TEXT
+    ) -> Union[str, Dict]:
+        """Extract detailed OCR data from an image in various formats.
+
+        Args:
+            image: PIL Image object to process.
+            output_format: Format for the OCR output (text, hOCR, TSV, JSON, ALTO).
+
+        Returns:
+            Extracted OCR data in the specified format (string or dictionary).
+
+        Raises:
+            DocumentProcessingError: If OCR processing fails.
+
+        """
+        try:
+            logger.debug(f"Extracting OCR data in {output_format.value} format")
+
+            if output_format == OCROutputFormat.TEXT:
+                return pytesseract.image_to_string(
+                    image,
+                    lang=self.languages,
+                    config=self.config_string,
+                    timeout=self.config.timeout if hasattr(self, "config") and self.config else 30,
+                )
+
+            elif output_format == OCROutputFormat.HOCR:
+                return pytesseract.image_to_pdf_or_hocr(
+                    image,
+                    lang=self.languages,
+                    config=self.config_string,
+                    extension="hocr",
+                    timeout=self.config.timeout if hasattr(self, "config") and self.config else 30,
+                )
+
+            elif output_format == OCROutputFormat.TSV:
+                return pytesseract.image_to_data(
+                    image,
+                    lang=self.languages,
+                    config=self.config_string,
+                    timeout=self.config.timeout if hasattr(self, "config") and self.config else 30,
+                )
+
+            elif output_format == OCROutputFormat.JSON:
+                output_type = pytesseract.Output.DICT
+                return pytesseract.image_to_data(
+                    image,
+                    lang=self.languages,
+                    config=self.config_string,
+                    output_type=output_type,
+                    timeout=self.config.timeout if hasattr(self, "config") and self.config else 30,
+                )
+
+            elif output_format == OCROutputFormat.ALTO:
+                return pytesseract.image_to_alto_xml(
+                    image,
+                    lang=self.languages,
+                    config=self.config_string,
+                    timeout=self.config.timeout if hasattr(self, "config") and self.config else 30,
+                )
+
+            else:
+                raise ValueError(f"Unsupported output format: {output_format}")
+
+        except Exception as e:
+            error_msg = f"OCR data extraction failed: {str(e)}"
+            logger.error(error_msg)
+            raise DocumentProcessingError(error_msg) from e

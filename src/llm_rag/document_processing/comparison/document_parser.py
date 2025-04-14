@@ -104,8 +104,14 @@ class DocumentParser:
             # Determine format if not provided
             doc_format = format or self.default_format
 
-            # Load document content if a path is provided
-            content = self._load_document(document) if isinstance(document, (str, Path)) else document
+            # Determine if document is a file path or content
+            content = document
+            if isinstance(document, (str, Path)):
+                # Check if it might be a file path
+                path = Path(document)
+                if path.exists() and path.is_file():
+                    content = self._load_document(path)
+                # Otherwise, assume it's already content
 
             # Parse based on format
             if doc_format == DocumentFormat.MARKDOWN:
@@ -348,17 +354,52 @@ class DocumentParser:
         logger.debug(f"Segmenting text into fixed chunks of size {chunk_size}")
         sections = []
 
-        # Split content into lines
-        lines = content.splitlines()
+        # Ensure we're working with a string
+        if not isinstance(content, str):
+            content = str(content)
 
+        # If content is smaller than chunk_size, just return it as one chunk
+        if len(content) <= chunk_size:
+            return [Section(content.strip(), SectionType.PARAGRAPH)]
+
+        # Split content into paragraphs first to maintain some coherence
+        paragraphs = content.split("\n\n")
         current_chunk = ""
-        for line in lines:
-            # If adding this line would exceed chunk size, create a new section
-            if len(current_chunk) + len(line) + 1 > chunk_size and current_chunk:
-                sections.append(Section(current_chunk.strip(), SectionType.PARAGRAPH))
-                current_chunk = ""
 
-            current_chunk += line + "\n"
+        for paragraph in paragraphs:
+            # If adding this paragraph would exceed chunk size and we already have content
+            if current_chunk and len(current_chunk) + len(paragraph) + 2 > chunk_size:
+                # Add the current chunk and start a new one
+                sections.append(Section(current_chunk.strip(), SectionType.PARAGRAPH))
+                current_chunk = paragraph + "\n\n"
+            elif len(paragraph) > chunk_size:
+                # If the paragraph itself is too long, split it by sentences or just characters
+                if current_chunk:
+                    sections.append(Section(current_chunk.strip(), SectionType.PARAGRAPH))
+                    current_chunk = ""
+
+                # Try to split by sentences first
+                sentences = paragraph.replace(". ", ".\n").split("\n")
+                current_sentence_chunk = ""
+
+                for sentence in sentences:
+                    if len(current_sentence_chunk) + len(sentence) + 1 > chunk_size:
+                        if current_sentence_chunk:
+                            sections.append(Section(current_sentence_chunk.strip(), SectionType.PARAGRAPH))
+                            current_sentence_chunk = sentence + " "
+                        else:
+                            # Even a single sentence is too long, so split by characters
+                            for i in range(0, len(sentence), chunk_size):
+                                chunk = sentence[i : i + chunk_size]
+                                sections.append(Section(chunk.strip(), SectionType.PARAGRAPH))
+                    else:
+                        current_sentence_chunk += sentence + " "
+
+                if current_sentence_chunk:
+                    sections.append(Section(current_sentence_chunk.strip(), SectionType.PARAGRAPH))
+            else:
+                # This paragraph fits, add it to the current chunk
+                current_chunk += paragraph + "\n\n"
 
         # Add the last chunk if it's not empty
         if current_chunk.strip():
