@@ -160,6 +160,9 @@ class TesseractOCREngine:
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
+    # Alias for backward compatibility with tests
+    _check_tesseract_installed = _verify_tesseract_installation
+
     def process_image(self, image: Image.Image) -> str:
         """Extract text from an image using Tesseract OCR.
 

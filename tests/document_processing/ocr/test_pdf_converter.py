@@ -77,7 +77,7 @@ class TestPDFImageConverter(unittest.TestCase):
             self.assertEqual(images[1], mock_image)
 
             # Check if the correct methods were called
-            mock_fitz_open.assert_called_once_with("test.pdf")
+            mock_fitz_open.assert_called_once_with(str("test.pdf"))
             self.assertEqual(mock_page.get_pixmap.call_count, 2)
             self.assertEqual(mock_frombytes.call_count, 2)
 
