@@ -82,6 +82,7 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 - **Dataset**:
   - [ ] Curate a diverse PDF dataset (text, scanned, complex layouts, tables, images).
   - [ ] Create corresponding "golden standard" Markdown/JSON outputs manually.
+  - [ ] **CI Testing Data**: Create small, synthetic test PDFs that can be committed to the repository for CI testing, or implement robust mocking strategies for tests that run in CI environments without real test data.
 - **Metrics**:
   - [ ] Implement Character Error Rate (CER) / Word Error Rate (WER) calculation.
   - [ ] Explore semantic similarity metrics (BLEU, ROUGE, embedding distance).
@@ -108,6 +109,7 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 - [ ] **Performance Bottlenecks**: Address proactively with optimization techniques (parallelization, efficient models), manage user expectations.
 - [ ] **Complex Structure Extraction**: Start simple (Markdown), use capable LLMs, combine with heuristics, consider specialized models if necessary.
 - [ ] **Dependency Management**: Use Docker for environment consistency, maintain clear dependency lists (`requirements.txt`/`pyproject.toml`).
+- [ ] **CI/Test Environment Discrepancies**: Ensure tests gracefully handle missing test data in CI environments by using synthetic data, mocks, or conditional test skipping. Add markers like `@pytest.mark.requires_test_data` to clearly identify tests that need real documents.
 
 ---
 

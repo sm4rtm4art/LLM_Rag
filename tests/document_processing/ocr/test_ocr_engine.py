@@ -1,5 +1,6 @@
 """Unit tests for the OCR engine module."""
 
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -16,6 +17,9 @@ from llm_rag.document_processing.ocr.ocr_engine import (
 )
 from llm_rag.utils.errors import ErrorCode, ExternalServiceError
 from llm_rag.utils.logging import get_logger
+
+# Check if running in CI environment
+IN_CI = os.environ.get("CI", "false").lower() == "true"
 
 logger = get_logger(__name__)
 
