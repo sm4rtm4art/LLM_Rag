@@ -1,252 +1,121 @@
-"""Unit tests for the PDF image converter module."""
+"""Unit tests for the PDFImageConverter."""
 
 import unittest
-from unittest.mock import MagicMock, patch
+from pathlib import Path
+from unittest import mock
 
-import fitz  # PyMuPDF
-import pytest
 from PIL import Image
-from pypdf import PdfReader
 
 from llm_rag.document_processing.ocr.pdf_converter import PDFImageConverter
-from llm_rag.utils.errors import DataAccessError, DocumentProcessingError
-from llm_rag.utils.logging import get_logger
-
-logger = get_logger(__name__)
+from llm_rag.utils.errors import DocumentProcessingError
 
 
 class TestPDFImageConverter(unittest.TestCase):
-    """Test cases for the PDF image converter."""
+    """Test cases for PDFImageConverter."""
 
     def setUp(self):
-        """Set up test fixtures."""
-        # Create mock PDF document
-        self.mock_pdf = MagicMock(spec=PdfReader)
-        self.mock_pdf.pages = [MagicMock() for _ in range(3)]
+        """Set up test cases."""
+        self.converter = PDFImageConverter(dpi=200)
+        self.test_pdf_path = "tests/document_processing/ocr/data/test.pdf"
 
-        # Create a sample converter
-        self.converter = PDFImageConverter()
+        # Create test directory if it doesn't exist
+        Path("tests/document_processing/ocr/data").mkdir(parents=True, exist_ok=True)
 
-        # Setup some paths for testing
-        self.test_pdf_path = "test.pdf"
-        self.sample_page = self.mock_pdf.pages[0]
+    def test_init(self):
+        """Test initialization of PDFImageConverter."""
+        converter = PDFImageConverter(dpi=300)
+        self.assertEqual(converter.dpi, 300)
 
-        # Sample image for testing
-        self.sample_image = MagicMock(spec=Image.Image)
-        self.sample_image.mode = "RGB"
-        self.sample_image.size = (1000, 1500)
+        # Test default value
+        default_converter = PDFImageConverter()
+        self.assertEqual(default_converter.dpi, 300)
 
-    @pytest.mark.skip("Test failing due to module import issues")
-    @patch("pikepdf.Pdf.open")
-    def test_open_pdf_document(self, mock_pdf_open):
-        """Test opening a PDF document."""
-        # Setup mock
-        mock_pdf = MagicMock()
-        mock_pdf_open.return_value = mock_pdf
+    def test_pdf_to_images_file_not_found(self):
+        """Test pdf_to_images with non-existent file."""
+        with self.assertRaises(DocumentProcessingError):
+            list(self.converter.pdf_to_images("non_existent.pdf"))
 
-        # Call method
-        pdf = self.converter._open_pdf_document(self.test_pdf_path)
+    @mock.patch("fitz.open")
+    def test_pdf_to_images_processing_error(self, mock_fitz_open):
+        """Test pdf_to_images with processing error."""
+        mock_fitz_open.side_effect = Exception("Mocked error")
 
-        # Assertions
-        self.assertEqual(pdf, mock_pdf)
-        mock_pdf_open.assert_called_once_with(self.test_pdf_path)
+        with self.assertRaises(DocumentProcessingError):
+            list(self.converter.pdf_to_images(self.test_pdf_path))
 
-    @patch("os.path.isfile")
-    def test_open_pdf_document_file_not_found(self, mock_isfile):
-        """Test opening a PDF document when the file doesn't exist."""
-        # Skip this test as handle_exceptions doesn't reraise by default
-        pytest.skip("handle_exceptions doesn't reraise by default")
-
-        # Setup mock
-        mock_isfile.return_value = False
-
-        # Assertions
-        with self.assertRaises(DataAccessError):
-            self.converter._open_pdf_document("test.pdf")
-
-    @patch("fitz.open")
-    @patch("os.path.isfile")
-    def test_open_pdf_document_open_error(self, mock_isfile, mock_open):
-        """Test opening a PDF document when an error occurs during opening."""
-        # Skip this test as handle_exceptions doesn't reraise by default
-        pytest.skip("handle_exceptions doesn't reraise by default")
-
+    @mock.patch("fitz.open")
+    @mock.patch("llm_rag.document_processing.ocr.pdf_converter.Path.exists")
+    def test_pdf_to_images_success(self, mock_exists, mock_fitz_open):
+        """Test successful conversion of PDF to images."""
         # Setup mocks
-        mock_isfile.return_value = True
-        mock_open.side_effect = Exception("File cannot be opened")
+        mock_exists.return_value = True
 
-        # Assertions
-        with self.assertRaises(DataAccessError):
-            self.converter._open_pdf_document("test.pdf")
+        mock_doc = mock.MagicMock()
+        mock_page = mock.MagicMock()
+        mock_pixmap = mock.MagicMock()
 
-    @pytest.mark.skip("Test failing due to NoneType has no attribute issues")
-    def test_get_pdf_page_count(self):
-        """Test getting the page count of a PDF."""
-        # Setup
-        pdf = self.mock_pdf
+        mock_doc.__len__.return_value = 2
+        mock_doc.__iter__.return_value = [mock_page, mock_page]
+        mock_fitz_open.return_value = mock_doc
 
-        # Call method
-        count = self.converter.get_pdf_page_count(pdf)
+        mock_page.get_pixmap.return_value = mock_pixmap
+        mock_pixmap.width = 100
+        mock_pixmap.height = 200
+        mock_pixmap.samples = b"sample_data"
 
-        # Assertions
-        self.assertEqual(count, 3)
+        # Mock PIL.Image.frombytes
+        with mock.patch("PIL.Image.frombytes") as mock_frombytes:
+            mock_image = mock.MagicMock(spec=Image.Image)
+            mock_frombytes.return_value = mock_image
 
-    @pytest.mark.skip("Test failing due to module import issues")
-    @patch("pypdfium2.PdfDocument.render_to_pil")
-    def test_convert_pdf_page_to_image(self, mock_render):
-        """Test converting a PDF page to an image."""
-        # Setup mock
-        mock_image = MagicMock(spec=Image.Image)
-        mock_render.return_value = [mock_image]
-
-        # Mock PDF document
-        mock_pdf = MagicMock()
-
-        # Test
-        result = self.converter.convert_pdf_page_to_image(mock_pdf, 0)
-
-        # Assertions
-        self.assertEqual(result, mock_image)
-        mock_render.assert_called_once()
-
-    @patch.object(fitz.Page, "get_pixmap")
-    def test_render_page_to_image_error(self, mock_get_pixmap):
-        """Test handling of errors during page rendering."""
-        # Skip this test as handle_exceptions doesn't reraise by default
-        pytest.skip("handle_exceptions doesn't reraise by default")
-
-        # Setup
-        mock_get_pixmap.side_effect = Exception("Rendering error")
-        mock_page = MagicMock(spec=fitz.Page)
-        mock_page.number = 2
-
-        # Create test data for the Matrix constructor
-        with patch("fitz.Matrix"):
-            # Assertions
-            with self.assertRaises(DocumentProcessingError):
-                self.converter._render_page_to_image(mock_page)
-
-    @patch.object(PDFImageConverter, "_render_page_to_image")
-    def test_convert_pdf_pages_to_images(self, mock_render):
-        """Test converting multiple PDF pages to images."""
-        # Setup mock
-        mock_render.return_value = self.sample_image
-
-        # Mock PDF document
-        mock_doc = MagicMock()
-        mock_doc.page_count = 3
-
-        # Mock load_page
-        mock_page = MagicMock()
-        mock_doc.load_page.return_value = mock_page
-
-        # Patch open_pdf_document
-        with patch.object(self.converter, "_open_pdf_document", return_value=mock_doc):
-            # Call method for all pages
-            images = self.converter.convert_pdf_pages_to_images(self.mock_pdf, page_numbers=None, dpi=300)
-
-            # Assertions
-            self.assertEqual(len(images), 3)
-            for img in images:
-                self.assertEqual(img, self.sample_image)
-            mock_doc.close.assert_called_once()
-
-    @patch.object(PDFImageConverter, "_render_page_to_image")
-    def test_convert_pdf_pages_to_images_specific_pages(self, mock_render):
-        """Test converting specific PDF pages to images."""
-        # Setup mock
-        mock_render.return_value = self.sample_image
-
-        # Mock PDF document
-        mock_doc = MagicMock()
-        mock_doc.page_count = 3
-
-        # Mock load_page
-        mock_page = MagicMock()
-        mock_doc.load_page.return_value = mock_page
-
-        # Patch open_pdf_document
-        with patch.object(self.converter, "_open_pdf_document", return_value=mock_doc):
-            # Call method for specific pages
-            images = self.converter.convert_pdf_pages_to_images(self.mock_pdf, page_numbers=[0, 2], dpi=300)
+            # Call the method
+            images = list(self.converter.pdf_to_images("test.pdf"))
 
             # Assertions
             self.assertEqual(len(images), 2)
-            for img in images:
-                self.assertEqual(img, self.sample_image)
-            mock_doc.close.assert_called_once()
+            self.assertEqual(images[0], mock_image)
+            self.assertEqual(images[1], mock_image)
 
-    @pytest.mark.skip("Issues with mocking fitz.Page.get_pixmap")
-    @patch("PIL.Image.frombytes")
-    @patch("fitz.Page.get_pixmap")
-    @patch("fitz.open")
-    def test_render_page_to_image(self, mock_fitz_open, mock_get_pixmap, mock_frombytes):
-        """Test rendering a PDF page to an image."""
-        # Setup mocks
-        mock_doc = MagicMock()
+            # Check if the correct methods were called
+            mock_fitz_open.assert_called_once_with("test.pdf")
+            self.assertEqual(mock_page.get_pixmap.call_count, 2)
+            self.assertEqual(mock_frombytes.call_count, 2)
+
+            # Check if matrix was created with correct DPI
+            # zoom = 200 / 72  # Based on the DPI set in setUp
+            mock_page.get_pixmap.assert_called_with(matrix=mock.ANY, alpha=False)
+
+    @mock.patch("fitz.open")
+    @mock.patch("llm_rag.document_processing.ocr.pdf_converter.Path.exists")
+    def test_get_page_image(self, mock_exists, mock_fitz_open):
+        """Test getting a specific page from a PDF."""
+        mock_exists.return_value = True
+
+        mock_doc = mock.MagicMock()
+        mock_page = mock.MagicMock()
+        mock_pixmap = mock.MagicMock()
+
+        mock_doc.__len__.return_value = 3
+        mock_doc.__getitem__.return_value = mock_page
         mock_fitz_open.return_value = mock_doc
 
-        mock_page = MagicMock()
-        mock_doc.load_page.return_value = mock_page
+        mock_page.get_pixmap.return_value = mock_pixmap
+        mock_pixmap.width = 100
+        mock_pixmap.height = 200
+        mock_pixmap.samples = b"sample_data"
 
-        mock_pixmap = MagicMock()
-        mock_get_pixmap.return_value = mock_pixmap
-        mock_pixmap.samples = b"image_data"
-        mock_pixmap.width = 1000
-        mock_pixmap.height = 1500
-        mock_pixmap.n = 3  # RGB
+        with mock.patch("PIL.Image.frombytes") as mock_frombytes:
+            mock_image = mock.MagicMock(spec=Image.Image)
+            mock_frombytes.return_value = mock_image
 
-        # Setup frombytes mock
-        mock_frombytes.return_value = self.sample_image
+            # Test valid page
+            result = self.converter.get_page_image("test.pdf", 1)
+            self.assertEqual(result, mock_image)
+            mock_doc.__getitem__.assert_called_with(1)
 
-        # Mock _open_pdf_document
-        with patch.object(self.converter, "_open_pdf_document", return_value=mock_doc):
-            # Call method
-            image = self.converter._render_page_to_image(self.test_pdf_path, 0, dpi=300, alpha=False)
-
-            # Assertions
-            self.assertEqual(image, self.sample_image)
-            mock_fitz_open.assert_not_called()  # Should not be called directly
-            mock_doc.load_page.assert_called_once_with(0)
-            mock_get_pixmap.assert_called_once()
-            mock_frombytes.assert_called_once()
-
-    @pytest.mark.skip("Issues with mocking fitz.Page.get_pixmap")
-    @patch("PIL.Image.frombytes")
-    @patch("fitz.Page.get_pixmap")
-    @patch("fitz.open")
-    def test_render_page_to_image_with_alpha(self, mock_fitz_open, mock_get_pixmap, mock_frombytes):
-        """Test rendering a PDF page to an image with alpha channel."""
-        # Setup mocks
-        mock_doc = MagicMock()
-        mock_fitz_open.return_value = mock_doc
-
-        mock_page = MagicMock()
-        mock_doc.load_page.return_value = mock_page
-
-        mock_pixmap = MagicMock()
-        mock_get_pixmap.return_value = mock_pixmap
-        mock_pixmap.samples = b"image_data_with_alpha"
-        mock_pixmap.width = 1000
-        mock_pixmap.height = 1500
-        mock_pixmap.n = 4  # RGBA
-
-        # Mock sample image with alpha
-        sample_image_alpha = MagicMock(spec=Image.Image)
-        sample_image_alpha.mode = "RGBA"
-        mock_frombytes.return_value = sample_image_alpha
-
-        # Mock _open_pdf_document
-        with patch.object(self.converter, "_open_pdf_document", return_value=mock_doc):
-            # Call method
-            image = self.converter._render_page_to_image(self.test_pdf_path, 0, dpi=300, alpha=True)
-
-            # Assertions
-            self.assertEqual(image, sample_image_alpha)
-            mock_fitz_open.assert_not_called()  # Should not be called directly
-            mock_doc.load_page.assert_called_once_with(0)
-            mock_get_pixmap.assert_called_once()
-            mock_frombytes.assert_called_once()
+            # Test out of range page
+            result = self.converter.get_page_image("test.pdf", 5)
+            self.assertIsNone(result)
 
 
 if __name__ == "__main__":

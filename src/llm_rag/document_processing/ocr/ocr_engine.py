@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Union
 import pytesseract
 from PIL import Image
 
-from llm_rag.utils.errors import DocumentProcessingError, ErrorCode, ExternalServiceError, handle_exceptions
+from llm_rag.utils.errors import DocumentProcessingError, ErrorCode, ExternalServiceError
 from llm_rag.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -97,158 +97,119 @@ class TesseractConfig:
 
 
 class TesseractOCREngine:
-    """OCR engine that uses Tesseract for text extraction from images.
+    """OCR engine wrapper for Tesseract.
 
-    This class provides a wrapper around the pytesseract library with
-    configurable options for different OCR scenarios.
+    This class provides a wrapper around the Tesseract OCR engine, with
+    configuration options for language models, page segmentation mode, and
+    other Tesseract settings.
     """
 
-    def __init__(self, config: Optional[TesseractConfig] = None):
-        """Initialize the Tesseract OCR engine.
+    def __init__(
+        self,
+        tesseract_path: Optional[str] = None,
+        languages: Union[str, List[str]] = "eng",
+        psm: int = 3,
+        oem: int = 3,
+        config_params: Optional[Dict[str, str]] = None,
+    ):
+        """Initialize the OCR engine with configuration options.
 
         Args:
-            config: Configuration for the Tesseract OCR engine. If None,
-                default configuration will be used.
+            tesseract_path: Path to the Tesseract executable. If None, uses the
+                system default or the value from TESSDATA_PREFIX environment variable.
+            languages: Language models to use, either as a string (comma-separated)
+                or a list of language codes.
+            psm: Page Segmentation Mode (default: 3 - fully automatic page segmentation).
+                See Tesseract documentation for all options.
+            oem: OCR Engine Mode (default: 3 - default, based on what is available).
+                See Tesseract documentation for all options.
+            config_params: Additional Tesseract configuration parameters.
 
         """
-        self.config = config or TesseractConfig()
-        self._check_tesseract_installed()
+        # Set Tesseract executable path if provided
+        if tesseract_path:
+            pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
-        logger.info(
-            f"Initialized TesseractOCREngine with languages={self.config.languages}, psm={self.config.psm.value}"
-        )
+        # Convert language list to comma-separated string if needed
+        if isinstance(languages, list):
+            self.languages = "+".join(languages)
+        else:
+            self.languages = languages
 
-    def _check_tesseract_installed(self) -> None:
-        """Check if Tesseract is installed and properly configured.
+        self.psm = psm
+        self.oem = oem
+        self.config_params = config_params or {}
 
-        Raises:
-            ExternalServiceError: If Tesseract is not available.
+        # Build Tesseract config string
+        self.config = f"--psm {psm} --oem {oem}"
+        for key, value in self.config_params.items():
+            self.config += f" -{key} {value}"
 
-        """
+        logger.info(f"Initialized TesseractOCREngine with languages={self.languages}, psm={psm}, oem={oem}")
+
+        # Verify Tesseract is available
+        self._verify_tesseract_installation()
+
+    def _verify_tesseract_installation(self):
+        """Verify that Tesseract is properly installed and accessible."""
         try:
             pytesseract.get_tesseract_version()
-            logger.debug(f"Tesseract version: {pytesseract.get_tesseract_version()}")
+            logger.debug("Tesseract installation verified successfully")
         except Exception as e:
-            error_msg = (
-                "Tesseract OCR is not available. Ensure it is installed and "
-                "properly configured, or specify the path using the tesseract_cmd "
-                "configuration option."
-            )
+            error_msg = f"Tesseract is not installed or not accessible. Error: {str(e)}"
             logger.error(error_msg)
-            raise ExternalServiceError(
-                error_msg,
-                error_code=ErrorCode.SERVICE_UNAVAILABLE,
-                original_exception=e,
-            ) from e
+            raise DocumentProcessingError(error_msg) from e
 
-    def _build_config_string(self) -> str:
-        """Build the Tesseract configuration string.
-
-        Returns:
-            A configuration string for Tesseract.
-
-        """
-        config_parts = [
-            f"--psm {self.config.psm.value}",
-            f"--oem {self.config.oem}",
-        ]
-
-        if self.config.custom_config:
-            config_parts.append(self.config.custom_config)
-
-        return " ".join(config_parts)
-
-    @handle_exceptions(
-        error_type=DocumentProcessingError,
-        error_code=ErrorCode.DOCUMENT_PARSE_ERROR,
-        default_message="Failed to perform OCR on image",
-    )
-    def image_to_text(self, image: Image.Image) -> str:
-        """Extract plain text from an image using OCR.
+    def process_image(self, image: Image.Image) -> str:
+        """Extract text from an image using Tesseract OCR.
 
         Args:
             image: PIL Image object to process.
 
         Returns:
-            Extracted text from the image.
+            Extracted text as a string.
 
         Raises:
             DocumentProcessingError: If OCR processing fails.
 
         """
-        logger.debug("Performing OCR on image")
-
         try:
-            lang = "+".join(self.config.languages)
-            config = self._build_config_string()
+            logger.debug("Processing image with Tesseract OCR")
+            text = pytesseract.image_to_string(image, lang=self.languages, config=self.config)
 
-            text = pytesseract.image_to_string(
-                image,
-                lang=lang,
-                config=config,
-                timeout=self.config.timeout,
-            )
-
-            logger.debug(f"OCR completed, extracted {len(text)} characters")
+            logger.debug(f"OCR processing complete, extracted {len(text)} characters")
             return text
-        except Exception as e:
-            raise DocumentProcessingError(
-                "OCR text extraction failed",
-                error_code=ErrorCode.DOCUMENT_PARSE_ERROR,
-                original_exception=e,
-                details={"image_size": f"{image.width}x{image.height}"},
-            ) from e
 
-    @handle_exceptions(
-        error_type=DocumentProcessingError,
-        error_code=ErrorCode.DOCUMENT_PARSE_ERROR,
-        default_message="Failed to perform OCR data extraction",
-    )
-    def image_to_data(self, image: Image.Image, output_format: Optional[OCROutputFormat] = None) -> Union[str, Dict]:
-        """Extract detailed OCR data from an image.
+        except Exception as e:
+            error_msg = f"OCR processing failed: {str(e)}"
+            logger.error(error_msg)
+            raise DocumentProcessingError(error_msg) from e
+
+    def process_multiple_images(self, images: List[Image.Image]) -> List[str]:
+        """Process multiple images and return text for each.
 
         Args:
-            image: PIL Image object to process.
-            output_format: Output format (overrides config if provided).
+            images: List of PIL Image objects to process.
 
         Returns:
-            Extracted OCR data in the specified format.
+            List of extracted text strings, one per image.
 
         Raises:
-            DocumentProcessingError: If OCR processing fails.
+            DocumentProcessingError: If OCR processing fails for any image.
 
         """
-        logger.debug("Extracting OCR data from image")
+        results = []
+        for i, image in enumerate(images):
+            try:
+                logger.debug(f"Processing image {i + 1} of {len(images)}")
+                text = self.process_image(image)
+                results.append(text)
+            except Exception as e:
+                error_msg = f"OCR processing failed for image {i + 1}: {str(e)}"
+                logger.error(error_msg)
+                raise DocumentProcessingError(error_msg) from e
 
-        output_format = output_format or self.config.output_format
-        lang = "+".join(self.config.languages)
-        config = self._build_config_string()
-
-        try:
-            if output_format == OCROutputFormat.TEXT:
-                return pytesseract.image_to_string(image, lang=lang, config=config, timeout=self.config.timeout)
-            elif output_format == OCROutputFormat.HOCR:
-                return pytesseract.image_to_pdf_or_hocr(
-                    image, lang=lang, config=config, extension="hocr", timeout=self.config.timeout
-                )
-            elif output_format == OCROutputFormat.TSV:
-                return pytesseract.image_to_data(image, lang=lang, config=config, timeout=self.config.timeout)
-            elif output_format == OCROutputFormat.JSON:
-                data = pytesseract.image_to_data(
-                    image, lang=lang, config=config, output_type=pytesseract.Output.DICT, timeout=self.config.timeout
-                )
-                return data
-            elif output_format == OCROutputFormat.ALTO:
-                return pytesseract.image_to_alto_xml(image, lang=lang, config=config, timeout=self.config.timeout)
-            else:
-                raise ValueError(f"Unsupported output format: {output_format}")
-        except Exception as e:
-            raise DocumentProcessingError(
-                f"OCR data extraction failed for format {output_format.value}",
-                error_code=ErrorCode.DOCUMENT_PARSE_ERROR,
-                original_exception=e,
-                details={"image_size": f"{image.width}x{image.height}"},
-            ) from e
+        return results
 
     def get_supported_languages(self) -> List[str]:
         """Get list of languages supported by the Tesseract installation.
@@ -262,7 +223,7 @@ class TesseractOCREngine:
         """
         try:
             # Get the tesseract command
-            tesseract_cmd = self.config.tesseract_cmd or pytesseract.pytesseract.tesseract_cmd or "tesseract"
+            tesseract_cmd = self.tesseract_cmd or pytesseract.pytesseract.tesseract_cmd or "tesseract"
 
             # Validate tesseract_cmd
             if not re.match(r"^[a-zA-Z0-9_\-./\\]+$", tesseract_cmd):

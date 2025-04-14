@@ -5,7 +5,6 @@ images suitable for OCR processing. It uses PyMuPDF (fitz) to render PDF pages
 and converts them to PIL Image objects.
 """
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator, Optional, Tuple, Union
@@ -13,7 +12,7 @@ from typing import Generator, Optional, Tuple, Union
 import fitz  # PyMuPDF
 from PIL import Image
 
-from llm_rag.utils.errors import DataAccessError, DocumentProcessingError, ErrorCode, handle_exceptions
+from llm_rag.utils.errors import DataAccessError, DocumentProcessingError, ErrorCode
 from llm_rag.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -42,126 +41,118 @@ class PDFImageConverterConfig:
 
 
 class PDFImageConverter:
-    """Converts PDF documents to high-resolution images for OCR processing.
+    """Converts PDF pages to high-resolution images for OCR processing.
 
-    This class uses PyMuPDF to render PDF pages as high-quality images suitable
-    for OCR processing. It can generate images for all pages or a specific range.
+    This class takes a PDF file path and renders each page as a high-resolution
+    image suitable for OCR processing.
     """
 
-    def __init__(self, config: Optional[PDFImageConverterConfig] = None):
-        """Initialize the PDF to image converter.
+    def __init__(self, dpi: int = 300):
+        """Initialize the PDF converter with configuration options.
 
         Args:
-            config: Configuration options for PDF rendering. If None, default
-                configuration will be used.
+            dpi: The dots per inch (resolution) for rendering PDF pages.
+                Higher values result in better quality but larger images.
 
         """
-        self.config = config or PDFImageConverterConfig()
-        logger.info(f"Initialized PDFImageConverter with DPI={self.config.dpi}, format={self.config.output_format}")
+        self.dpi = dpi
+        logger.info(f"Initialized PDFImageConverter with DPI: {dpi}")
 
-    @handle_exceptions(
-        error_type=DataAccessError,
-        error_code=ErrorCode.FILE_NOT_FOUND,
-        default_message="Failed to open PDF file",
-    )
-    def _open_pdf_document(self, pdf_path: Union[str, Path]) -> fitz.Document:
-        """Open a PDF document using PyMuPDF.
+    def pdf_to_images(self, pdf_path: Union[str, Path]) -> Generator[Image.Image, None, None]:
+        """Convert PDF pages to high-resolution images.
+
+        Args:
+            pdf_path: Path to the PDF file to convert.
+
+        Returns:
+            A generator yielding PIL Image objects for each page.
+
+        Raises:
+            DocumentProcessingError: If the file cannot be accessed or processed.
+
+        """
+        pdf_path = Path(pdf_path)
+        if not pdf_path.exists():
+            error_msg = f"PDF file not found: {pdf_path}"
+            logger.error(error_msg)
+            raise DocumentProcessingError(error_msg)
+
+        try:
+            logger.info(f"Opening PDF file: {pdf_path}")
+            pdf_document = fitz.open(pdf_path)
+
+            for page_num, page in enumerate(pdf_document):
+                logger.debug(f"Processing page {page_num + 1} of {len(pdf_document)}")
+
+                # Set the rendering matrix for the desired DPI
+                zoom = self.dpi / 72  # 72 DPI is the default PDF resolution
+                matrix = fitz.Matrix(zoom, zoom)
+
+                # Render page to pixmap
+                pixmap = page.get_pixmap(matrix=matrix, alpha=False)
+
+                # Convert pixmap to PIL image
+                image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
+
+                yield image
+
+            pdf_document.close()
+            logger.info(f"Completed converting PDF {pdf_path} to images")
+
+        except Exception as e:
+            error_msg = f"Error processing PDF {pdf_path}: {str(e)}"
+            logger.error(error_msg)
+            raise DocumentProcessingError(error_msg) from e
+
+    def get_page_image(self, pdf_path: Union[str, Path], page_number: int) -> Optional[Image.Image]:
+        """Get a specific page as an image from a PDF file.
 
         Args:
             pdf_path: Path to the PDF file.
+            page_number: The 0-indexed page number to retrieve.
 
         Returns:
-            A PyMuPDF Document object.
+            PIL Image object of the requested page or None if the page doesn't exist.
 
         Raises:
-            DataAccessError: If the file cannot be opened or does not exist.
+            DocumentProcessingError: If the file cannot be accessed or processed.
 
         """
-        pdf_path_str = str(pdf_path)
-        if not os.path.isfile(pdf_path_str):
-            raise DataAccessError(
-                f"PDF file not found: {pdf_path_str}",
-                error_code=ErrorCode.FILE_NOT_FOUND,
-            )
+        pdf_path = Path(pdf_path)
+        if not pdf_path.exists():
+            error_msg = f"PDF file not found: {pdf_path}"
+            logger.error(error_msg)
+            raise DocumentProcessingError(error_msg)
 
         try:
-            return fitz.open(pdf_path_str)
-        except Exception as e:
-            raise DataAccessError(
-                f"Failed to open PDF file: {pdf_path_str}",
-                error_code=ErrorCode.INVALID_FILE_FORMAT,
-                original_exception=e,
-            ) from e
+            logger.info(f"Opening PDF file to extract page {page_number}: {pdf_path}")
+            pdf_document = fitz.open(pdf_path)
 
-    @handle_exceptions(
-        error_type=DocumentProcessingError,
-        error_code=ErrorCode.DOCUMENT_PARSE_ERROR,
-        default_message="Failed to convert PDF page to image",
-    )
-    def _render_page_to_image(self, page_or_path, page_num=0, dpi=None, alpha=None) -> Image.Image:
-        """Render a single PDF page to a PIL Image.
+            if page_number < 0 or page_number >= len(pdf_document):
+                logger.warning(f"Page {page_number} out of range (0-{len(pdf_document) - 1})")
+                return None
 
-        Args:
-            page_or_path: Either a PyMuPDF Page object or a path to a PDF file.
-            page_num: Page number to render (0-indexed). Only used if page_or_path is a file path.
-            dpi: DPI for rendering (overrides config if provided).
-            alpha: Whether to include alpha channel (overrides config if provided).
+            page = pdf_document[page_number]
 
-        Returns:
-            PIL Image object of the rendered page.
+            # Set the rendering matrix for the desired DPI
+            zoom = self.dpi / 72
+            matrix = fitz.Matrix(zoom, zoom)
 
-        Raises:
-            DocumentProcessingError: If page rendering fails.
+            # Render page to pixmap
+            pixmap = page.get_pixmap(matrix=matrix, alpha=False)
 
-        """
-        # Set rendering parameters
-        render_dpi = dpi if dpi is not None else self.config.dpi
-        use_alpha = alpha if alpha is not None else self.config.use_alpha_channel
+            # Convert pixmap to PIL image
+            image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
 
-        # Calculate zoom matrix based on DPI
-        zoom = render_dpi / 72 * self.config.zoom_factor  # 72 is the base DPI
-        matrix = fitz.Matrix(zoom, zoom)
+            pdf_document.close()
+            logger.info(f"Successfully extracted page {page_number} from {pdf_path}")
 
-        try:
-            # Handle different input types
-            if isinstance(page_or_path, fitz.Page):
-                page = page_or_path
-            else:
-                # Open the document and get the page
-                doc = self._open_pdf_document(page_or_path)
-                try:
-                    page = doc.load_page(page_num)
-                except Exception as e:
-                    doc.close()
-                    raise DocumentProcessingError(
-                        f"Error loading page {page_num}",
-                        error_code=ErrorCode.DOCUMENT_PARSE_ERROR,
-                        original_exception=e,
-                    ) from e
-
-            # Render the page to a pixmap
-            pix = page.get_pixmap(matrix=matrix, alpha=use_alpha)
-
-            # Convert pixmap to PIL Image
-            if use_alpha:
-                img = Image.frombytes("RGBA", [pix.width, pix.height], pix.samples)
-            else:
-                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-
-            # Close the document if we opened it here
-            if not isinstance(page_or_path, fitz.Page) and "doc" in locals():
-                doc.close()
-
-            return img
+            return image
 
         except Exception as e:
-            page_num_info = getattr(page, "number", page_num) if "page" in locals() else page_num
-            raise DocumentProcessingError(
-                f"Error rendering page {page_num_info} to image",
-                error_code=ErrorCode.DOCUMENT_PARSE_ERROR,
-                original_exception=e,
-                details={"page_number": page_num_info},
-            ) from e
+            error_msg = f"Error extracting page {page_number} from PDF {pdf_path}: {str(e)}"
+            logger.error(error_msg)
+            raise DocumentProcessingError(error_msg) from e
 
     def convert_pdf_to_images(self, pdf_path: Union[str, Path]) -> Generator[Tuple[int, Image.Image], None, None]:
         """Convert a PDF document to a sequence of images.
@@ -270,6 +261,11 @@ class PDFImageConverter:
 
         """
         doc = self._open_pdf_document(pdf_path)
+        if doc is None:
+            # If _open_pdf_document returns None, the error is already logged,
+            # and the handle_exceptions decorator should handle reraise_for_testing
+            raise DataAccessError(f"Failed to open PDF file: {pdf_path}", error_code=ErrorCode.FILE_NOT_FOUND)
+
         try:
             return doc.page_count
         finally:

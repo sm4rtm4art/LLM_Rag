@@ -323,6 +323,7 @@ def handle_exceptions(
     default_message: str = "An unexpected error occurred",
     log_exception: bool = True,
     reraise: bool = False,
+    reraise_for_testing: bool = False,
 ) -> Callable[[Callable[..., T]], Callable[..., Union[T, Optional[Dict[str, Any]]]]]:
     """Handle exceptions consistently in functions.
 
@@ -335,6 +336,8 @@ def handle_exceptions(
         default_message: Default error message
         log_exception: Whether to log the exception
         reraise: Whether to reraise the wrapped exception
+        reraise_for_testing: Whether to reraise exceptions during tests
+            (determined by checking if the function is called from a test)
 
     Returns:
         Decorated function that handles exceptions
@@ -385,7 +388,12 @@ def handle_exceptions(
                         exc_info=True,
                     )
 
-                if reraise:
+                # Check if we should reraise for testing
+                should_reraise_for_testing = reraise_for_testing and (
+                    "test_" in module_name or module_name.startswith("tests.")
+                )
+
+                if reraise or should_reraise_for_testing:
                     raise wrapped_error from e
 
                 return None
