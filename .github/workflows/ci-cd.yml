@@ -226,7 +226,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
       - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-      - run: uv pip install pytest pytest-cov pytest-asyncio sentence-transformers chromadb rich -e .[dev]
+      - run: uv pip install pytest pytest-cov pytest-asyncio sentence-transformers chromadb -e .[dev]
       - name: Install Tesseract OCR
         run: |
           sudo apt-get update
@@ -234,9 +234,10 @@ jobs:
           tesseract --version
       - name: Run tests with Rich progress display
         run: .github/scripts/test.sh -c -v
+        timeout-minutes: 5
       # Add Codecov upload step
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: sm4rtm4art/LLM_Rag
