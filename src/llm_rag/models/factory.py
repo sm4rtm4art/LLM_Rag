@@ -227,13 +227,14 @@ class ModelFactory:
                 from langchain_ollama import OllamaLLM
 
                 logger.info("Using langchain_ollama.OllamaLLM")
+                # Map parameters to what OllamaLLM expects
+                # OllamaLLM uses 'model' instead of 'model_name'
                 return OllamaLLM(
                     model=model_name,
-                    max_tokens=max_tokens,
                     temperature=temperature,
                     top_p=top_p,
-                    repeat_penalty=repetition_penalty,
-                    **kwargs,
+                    # Don't pass max_tokens as it's not supported
+                    **{k: v for k, v in kwargs.items() if k != "max_tokens"},
                 )
             except ImportError:
                 # Fallback to langchain_community
@@ -241,26 +242,30 @@ class ModelFactory:
                     from langchain_community.llms.ollama import OllamaLLM
 
                     logger.info("Using langchain_community.llms.ollama.OllamaLLM")
+                    # Map parameters to what OllamaLLM expects
+                    # OllamaLLM uses 'model' instead of 'model_name'
                     return OllamaLLM(
                         model=model_name,
-                        max_tokens=max_tokens,
                         temperature=temperature,
                         top_p=top_p,
-                        repeat_penalty=repetition_penalty,
-                        **kwargs,
+                        # Don't pass max_tokens as it's not supported
+                        **{k: v for k, v in kwargs.items() if k != "max_tokens"},
                     )
                 except ImportError:
                     # Final fallback to older API
                     from langchain_community.llms import Ollama
 
                     logger.info("Using langchain_community.llms.Ollama")
+                    # Ollama class uses different parameter names
                     return Ollama(
                         model=model_name,
-                        max_tokens=max_tokens,
                         temperature=temperature,
                         top_p=top_p,
-                        repeat_penalty=repetition_penalty,
-                        **kwargs,
+                        # Older Ollama API might use "num_predict" instead of "max_tokens"
+                        num_predict=max_tokens,
+                        # Use this only if the API supports it
+                        repeat_penalty=repetition_penalty if kwargs.get("use_repeat_penalty", True) else None,
+                        **{k: v for k, v in kwargs.items() if k not in ("max_tokens", "use_repeat_penalty")},
                     )
         except Exception as e:
             logger.error(f"Error creating Ollama model: {e}")

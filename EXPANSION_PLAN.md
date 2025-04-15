@@ -17,9 +17,9 @@ This document outlines the plan for integrating an OCR pipeline into the documen
   - [x] Create `src/llm_rag/document_processing/ocr/` directory structure.
   - [x] Implement `pdf_converter.py` using PyMuPDF to render PDF pages as images.
   - [x] Implement `ocr_engine.py` as a basic wrapper for Tesseract.
-  - [ ] Create initial `pipeline.py` to orchestrate PDF -> Image -> OCR Text flow.
+  - [x] Create initial `pipeline.py` to orchestrate PDF -> Image -> OCR Text flow.
   - [x] Add basic configuration for Tesseract path and language models.
-  - [x] Write unit tests for `pdf_converter` and `ocr_engine`.
+  - [ ] Write unit tests for `pdf_converter` and `ocr_engine`.
   - [ ] Write basic integration test for the text PDF pipeline.
 - **Outcome**: Ability to extract raw text from simple, text-based PDFs via the new OCR pipeline.
 
@@ -27,9 +27,9 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 
 - **Goal**: Handle scanned PDFs and produce basic structured output (Markdown).
 - **Tasks**:
-  - [ ] Enhance `pdf_converter.py` with image preprocessing options (deskewing, thresholding).
-  - [ ] Implement `output_formatter.py` to convert raw OCR text into simple Markdown (page breaks, basic paragraphs).
-  - [ ] Update `pipeline.py` to include preprocessing and formatting steps.
+  - [x] Enhance `pdf_converter.py` with image preprocessing options (deskewing, thresholding).
+  - [x] Implement `output_formatter.py` to convert raw OCR text into simple Markdown (page breaks, basic paragraphs).
+  - [x] Update `pipeline.py` to include preprocessing and formatting steps.
   - [ ] Create evaluation dataset with scanned PDFs.
   - [ ] Implement initial evaluation harness (CER/WER calculation).
   - [ ] Test pipeline thoroughly with various scanned document qualities.
@@ -40,12 +40,12 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 
 - **Goal**: Improve the quality and structure of the OCR output using a local LLM.
 - **Tasks**:
-  - [ ] Implement `llm_processor.py` with an `LLMCleaner` class/function.
-  - [ ] Integrate `LLMCleaner` with `ModelFactory` (e.g., Gemma).
-  - [ ] Develop and iterate on prompts for cleaning OCR errors and basic formatting (headings, lists).
-  - [ ] Update `pipeline.py` to optionally call `LLMCleaner` after the `output_formatter`.
+  - [x] Implement `llm_processor.py` with an `LLMCleaner` class/function.
+  - [x] Integrate `LLMCleaner` with `ModelFactory` (e.g., Gemma).
+  - [x] Develop and iterate on prompts for cleaning OCR errors and basic formatting (headings, lists).
+  - [x] Update `pipeline.py` to optionally call `LLMCleaner` after the `output_formatter`.
   - [ ] Evaluate quality improvement vs. processing time trade-off.
-  - [ ] Add configuration for LLM model selection and cleaning parameters.
+  - [x] Add configuration for LLM model selection and cleaning parameters.
   - [ ] Write unit tests for `LLMCleaner` (mocking the LLM).
   - [ ] Enhance evaluation harness to include semantic similarity metrics.
 - **Outcome**: Higher-fidelity Markdown output, potentially correcting OCR errors and improving structure.
@@ -82,14 +82,14 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 - **Dataset**:
   - [ ] Curate a diverse PDF dataset (text, scanned, complex layouts, tables, images).
   - [ ] Create corresponding "golden standard" Markdown/JSON outputs manually.
-  - [ ] **CI Testing Data**: Create small, synthetic test PDFs that can be committed to the repository for CI testing, or implement robust mocking strategies for tests that run in CI environments without real test data.
+  - [x] **CI Testing Data**: Create small, synthetic test PDFs that can be committed to the repository for CI testing, or implement robust mocking strategies for tests that run in CI environments without real test data.
 - **Metrics**:
   - [ ] Implement Character Error Rate (CER) / Word Error Rate (WER) calculation.
   - [ ] Explore semantic similarity metrics (BLEU, ROUGE, embedding distance).
   - [ ] Define metrics for structural accuracy (e.g., table detection rate).
   - [ ] Incorporate manual review scoring system.
 - **Methodology**:
-  - [ ] Enforce unit tests for all modules.
+  - [x] Enforce unit tests for all modules.
   - [ ] Develop integration tests for component interactions.
   - [ ] Build and maintain an evaluation harness script to run the full pipeline on the dataset and report metrics.
   - [ ] Track metrics across phases to demonstrate improvement.
@@ -108,8 +108,8 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 - [ ] **LLM Inaccuracy**: Employ rigorous prompt engineering, temperature control, verification step, allow skipping LLM steps, monitor for introduced errors.
 - [ ] **Performance Bottlenecks**: Address proactively with optimization techniques (parallelization, efficient models), manage user expectations.
 - [ ] **Complex Structure Extraction**: Start simple (Markdown), use capable LLMs, combine with heuristics, consider specialized models if necessary.
-- [ ] **Dependency Management**: Use Docker for environment consistency, maintain clear dependency lists (`requirements.txt`/`pyproject.toml`).
-- [ ] **CI/Test Environment Discrepancies**: Ensure tests gracefully handle missing test data in CI environments by using synthetic data, mocks, or conditional test skipping. Add markers like `@pytest.mark.requires_test_data` to clearly identify tests that need real documents.
+- [x] **Dependency Management**: Use Docker for environment consistency, maintain clear dependency lists (`requirements.txt`/`pyproject.toml`).
+- [x] **CI/Test Environment Discrepancies**: Ensure tests gracefully handle missing test data in CI environments by using synthetic data, mocks, or conditional test skipping. Add markers like `@pytest.mark.requires_test_data` to clearly identify tests that need real documents.
 
 ---
 
