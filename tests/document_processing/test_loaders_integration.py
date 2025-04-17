@@ -10,11 +10,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# For backward compatibility, import directly from document_processing
-from llm_rag.document_processing import DirectoryLoader
-from llm_rag.document_processing import TextFileLoader as TopLevelTextFileLoader
+from llm_rag.document_processing.loader_api import TextFileLoader as TopLevelTextFileLoader
 
-# Test import paths
+# Replace deprecated imports with recommended patterns
+from llm_rag.document_processing.loaders import DirectoryLoader
 from llm_rag.document_processing.loaders import TextFileLoader as NewTextFileLoader
 
 

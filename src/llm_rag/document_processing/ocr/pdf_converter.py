@@ -2,7 +2,7 @@
 
 This module provides functionality for converting PDF documents to high-resolution
 images suitable for OCR processing. It uses PyMuPDF (fitz) to render PDF pages
-and converts them to PIL Image objects.
+and converts them to PIL Image objects with optional preprocessing.
 """
 
 from dataclasses import dataclass
@@ -10,7 +10,15 @@ from pathlib import Path
 from typing import Generator, Optional, Tuple, Union
 
 import fitz  # PyMuPDF
-from PIL import Image
+import numpy as np
+from PIL import Image, ImageEnhance, ImageFilter
+
+try:
+    import cv2
+
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
 
 from llm_rag.utils.errors import DataAccessError, DocumentProcessingError, ErrorCode
 from llm_rag.utils.logging import get_logger
@@ -29,6 +37,13 @@ class PDFImageConverterConfig:
         zoom_factor: Additional zoom factor applied to rendered pages (default: 1.0).
         first_page: First page to process, 1-indexed (default: None - start from the first page).
         last_page: Last page to process, 1-indexed (default: None - process until the last page).
+        preprocessing_enabled: Whether to apply preprocessing to images (default: False).
+        deskew_enabled: Whether to attempt to correct skewed text (default: False).
+        threshold_enabled: Whether to apply adaptive thresholding (default: False).
+        threshold_method: Thresholding method ('adaptive', 'otsu', or 'simple') (default: 'adaptive').
+        contrast_adjust: Factor to adjust contrast (1.0 = no change) (default: 1.0).
+        sharpen_enabled: Whether to apply sharpening to the image (default: False).
+        denoise_enabled: Whether to apply denoising to the image (default: False).
 
     """
 
@@ -38,25 +53,48 @@ class PDFImageConverterConfig:
     zoom_factor: float = 1.0
     first_page: Optional[int] = None
     last_page: Optional[int] = None
+    preprocessing_enabled: bool = False
+    deskew_enabled: bool = False
+    threshold_enabled: bool = False
+    threshold_method: str = "adaptive"
+    contrast_adjust: float = 1.0
+    sharpen_enabled: bool = False
+    denoise_enabled: bool = False
 
 
 class PDFImageConverter:
     """Converts PDF pages to high-resolution images for OCR processing.
 
     This class takes a PDF file path and renders each page as a high-resolution
-    image suitable for OCR processing.
+    image suitable for OCR processing, with optional preprocessing to improve OCR quality.
     """
 
-    def __init__(self, dpi: int = 300):
+    def __init__(self, dpi: int = 300, config: Optional[PDFImageConverterConfig] = None):
         """Initialize the PDF converter with configuration options.
 
         Args:
             dpi: The dots per inch (resolution) for rendering PDF pages.
                 Higher values result in better quality but larger images.
+            config: Complete configuration object. If provided, overrides the dpi parameter.
 
         """
-        self.dpi = dpi
-        logger.info(f"Initialized PDFImageConverter with DPI: {dpi}")
+        if config:
+            self.config = config
+        else:
+            self.config = PDFImageConverterConfig(dpi=dpi)
+
+        self.dpi = self.config.dpi
+
+        if self.config.preprocessing_enabled and not OPENCV_AVAILABLE:
+            logger.warning(
+                "OpenCV is not available but preprocessing is enabled. "
+                "Install it with 'pip install opencv-python' for preprocessing features."
+            )
+            self.config.preprocessing_enabled = False
+
+        logger.info(
+            f"Initialized PDFImageConverter with DPI: {self.dpi}, preprocessing: {self.config.preprocessing_enabled}"
+        )
 
     def pdf_to_images(self, pdf_path: Union[str, Path]) -> Generator[Image.Image, None, None]:
         """Convert PDF pages to high-resolution images.
@@ -95,13 +133,17 @@ class PDFImageConverter:
                 # Convert pixmap to PIL image
                 image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
 
+                # Apply preprocessing if enabled
+                if self.config.preprocessing_enabled:
+                    image = self._preprocess_image(image)
+
                 yield image
 
             doc.close()
             logger.info(f"Completed converting PDF {path} to images")
 
         except Exception as e:
-            error_msg = f"Error processing PDF {path}: {str(e)}"
+            error_msg = f"Error processing PDF {pdf_path}: {str(e)}"
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
@@ -144,6 +186,10 @@ class PDFImageConverter:
 
             # Convert pixmap to PIL image
             image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
+
+            # Apply preprocessing if enabled
+            if self.config.preprocessing_enabled:
+                image = self._preprocess_image(image)
 
             pdf_document.close()
             logger.info(f"Successfully extracted page {page_number} from {pdf_path}")
@@ -309,3 +355,168 @@ class PDFImageConverter:
             # Always close the document
             doc.close()
             logger.debug(f"Closed PDF document: {pdf_path}")
+
+    def _preprocess_image(self, image: Image.Image) -> Image.Image:
+        """Apply preprocessing to improve OCR quality.
+
+        Args:
+            image: The PIL image to preprocess.
+
+        Returns:
+            Preprocessed PIL image.
+
+        """
+        if not self.config.preprocessing_enabled:
+            return image
+
+        logger.debug("Applying image preprocessing")
+
+        # Apply PIL-based preprocessing (always available)
+        # Adjust contrast if needed
+        if self.config.contrast_adjust != 1.0:
+            enhancer = ImageEnhance.Contrast(image)
+            image = enhancer.enhance(self.config.contrast_adjust)
+
+        # Apply sharpening if enabled
+        if self.config.sharpen_enabled:
+            image = image.filter(ImageFilter.SHARPEN)
+
+        # Skip OpenCV preprocessing if not available
+        if not OPENCV_AVAILABLE:
+            logger.debug("OpenCV not available, skipping advanced preprocessing")
+            return image
+
+        # Convert PIL to OpenCV format
+        img = np.array(image)
+        # Convert RGB to BGR (OpenCV format)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+        # Apply grayscale conversion for preprocessing operations
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Apply denoising if enabled
+        if self.config.denoise_enabled:
+            gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
+
+        # Apply deskewing if enabled
+        if self.config.deskew_enabled:
+            gray = self._deskew_image(gray)
+
+        # Apply thresholding if enabled
+        if self.config.threshold_enabled:
+            gray = self._apply_threshold(gray)
+
+        # Convert back to RGB for PIL
+        processed = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
+
+        # Convert back to PIL
+        return Image.fromarray(processed)
+
+    def _deskew_image(self, img: np.ndarray) -> np.ndarray:
+        """Correct skew in an image.
+
+        Args:
+            img: Grayscale OpenCV image.
+
+        Returns:
+            Deskewed grayscale OpenCV image.
+
+        """
+        if not OPENCV_AVAILABLE:
+            return img
+
+        logger.debug("Applying deskew operation")
+
+        try:
+            # Apply threshold to get a binary image
+            thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+
+            # Find all contours
+            contours, _ = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+            # Find largest contour areas
+            contours = sorted(contours, key=cv2.contourArea, reverse=True)
+
+            # Use the largest contours only
+            contours = contours[: min(10, len(contours))]
+
+            # Compute the rotated bounding boxes
+            angles = []
+            for c in contours:
+                # Minimum area rectangle
+                rect = cv2.minAreaRect(c)
+                # Get angle (adjusted for horizontal/vertical text)
+                angle = rect[2]
+                # Normalize angle between -45 and 45 degrees
+                if angle < -45:
+                    angle = 90 + angle
+                elif angle > 45:
+                    angle = angle - 90
+
+                # Only consider angles within a reasonable range
+                if abs(angle) < 20:  # Ignore extreme angles
+                    angles.append(angle)
+
+            # If we have valid angles, compute the median
+            if angles:
+                skew_angle = np.median(angles)
+
+                # Only correct if skew is significant
+                if abs(skew_angle) > 0.5:
+                    # Get image dimensions
+                    h, w = img.shape[:2]
+                    center = (w // 2, h // 2)
+
+                    # Get rotation matrix
+                    M = cv2.getRotationMatrix2D(center, skew_angle, 1.0)
+
+                    # Apply rotation
+                    rotated = cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+                    return rotated
+
+            # If no valid angles or insignificant skew, return original
+            return img
+        except Exception as e:
+            logger.warning(f"Deskew operation failed: {str(e)}")
+            return img
+
+    def _apply_threshold(self, img: np.ndarray) -> np.ndarray:
+        """Apply thresholding to enhance text visibility.
+
+        Args:
+            img: Grayscale OpenCV image.
+
+        Returns:
+            Thresholded grayscale OpenCV image.
+
+        """
+        if not OPENCV_AVAILABLE:
+            return img
+
+        logger.debug(f"Applying {self.config.threshold_method} thresholding")
+
+        try:
+            if self.config.threshold_method == "adaptive":
+                # Apply adaptive thresholding
+                # This works well for varying lighting conditions
+                binary = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+                return binary
+
+            elif self.config.threshold_method == "otsu":
+                # Apply Otsu's thresholding
+                # Good for bimodal images (clear foreground/background)
+                _, binary = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                return binary
+
+            elif self.config.threshold_method == "simple":
+                # Apply simple binary thresholding
+                _, binary = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)
+                return binary
+
+            else:
+                logger.warning(f"Unknown threshold method: {self.config.threshold_method}")
+                return img
+
+        except Exception as e:
+            logger.warning(f"Thresholding operation failed: {str(e)}")
+            return img
