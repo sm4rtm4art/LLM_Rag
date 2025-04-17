@@ -92,7 +92,7 @@ class OptimizedOCRPipeline(OCRPipeline):
             "mtime": file_stat.st_mtime,
             "page": page_num,
             "config": {
-                "dpi": self.config.pdf_renderer_dpi,
+                "dpi": self.config.pdf_dpi,
                 "ocr_lang": self.config.ocr_language,
                 "output_format": self.config.output_format,
                 "use_llm_cleaner": self.config.use_llm_cleaner,
@@ -246,7 +246,7 @@ class OptimizedOCRPipeline(OCRPipeline):
                 return cache_data["text"]
 
         # Load PDF converter and get images
-        converter = PDFImageConverter(pdf_path, self.config.pdf_renderer_dpi)
+        converter = PDFImageConverter(pdf_path, self.config.pdf_dpi)
         page_images = list(converter.get_images(pages))
         total_pages = len(page_images)
 

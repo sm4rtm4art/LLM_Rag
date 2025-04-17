@@ -58,7 +58,7 @@ def mock_pdf_converter():
 @pytest.fixture
 def mock_ocr_engine():
     """Mock OCR engine to return predefined text."""
-    with patch("llm_rag.document_processing.ocr.pipeline.OCREngine") as mock:
+    with patch("llm_rag.document_processing.ocr.ocr_engine.TesseractOCREngine") as mock:
         mock_instance = MagicMock()
         mock_instance.process_image.side_effect = lambda image: f"Page {image[0] + 1} text"
         mock.return_value = mock_instance
@@ -84,14 +84,14 @@ class TestOptimizedPipelinePerformance:
             max_workers=4,
             use_cache=False,  # Disable cache for fair comparison
             cache_dir=temp_cache_dir,
-            pdf_renderer_dpi=150,
+            pdf_dpi=150,
         )
 
         sequential_config = OptimizedOCRConfig(
             parallel_processing=False,  # Use sequential processing
             use_cache=False,  # Disable cache for fair comparison
             cache_dir=temp_cache_dir,
-            pdf_renderer_dpi=150,
+            pdf_dpi=150,
         )
 
         # Test with mock converter that returns multiple pages
@@ -136,7 +136,7 @@ class TestOptimizedPipelinePerformance:
             parallel_processing=False,  # Disable parallel for consistent measurement
             use_cache=True,
             cache_dir=temp_cache_dir,
-            pdf_renderer_dpi=150,
+            pdf_dpi=150,
         )
 
         pipeline = OptimizedOCRPipeline(config)
@@ -305,7 +305,7 @@ class TestOptimizedPipelinePerformance:
             batched_processing=True,
             batch_size=3,
             skip_processed_files=True,
-            pdf_renderer_dpi=150,
+            pdf_dpi=150,
         )
 
         pipeline = OptimizedOCRPipeline(optimized_config)
