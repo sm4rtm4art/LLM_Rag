@@ -186,3 +186,8 @@ quarantine_backup/
 coverage.xml
 htmlcov/
 *.bak
+
+# Ignore output directory content but preserve directory structure
+output/**/*
+!output/**/
+!output/**/.gitkeep
