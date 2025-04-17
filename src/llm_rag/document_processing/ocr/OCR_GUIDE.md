@@ -1,123 +1,147 @@
-# OCR Module for Document Processing
+# OCR Pipeline Guide
 
-## Overview
+This module provides a complete OCR (Optical Character Recognition) pipeline for converting PDF documents to structured text. It supports both scanned PDFs and digital text PDFs.
 
-This module provides optical character recognition (OCR) capabilities for the LLM RAG system, specifically designed to extract text from PDF documents that contain images or scanned content. It consists of two main components:
+## Features
 
-1. **PDFImageConverter**: Converts PDF pages to high-resolution images
-2. **TesseractOCREngine**: Performs OCR on images to extract text
+- **PDF to Image Conversion**: High-quality rendering of PDF documents to images
+- **Image Preprocessing**: Options to enhance image quality for better OCR results
+  - Deskewing (correcting tilted text)
+  - Thresholding (improving contrast)
+  - Contrast adjustment
+  - Sharpening
+  - Denoising
+- **OCR Processing**: Using Tesseract OCR engine with configurable options
+- **Output Formatting**: Converting raw OCR text to structured formats
+  - Markdown formatting with automatic detection of headings, lists, etc.
+  - JSON output (basic support)
+  - Plain text output
+- **Evaluation**: Metrics for evaluating OCR quality
+  - Character Error Rate (CER)
+  - Word Error Rate (WER)
 
-The module is optimized for German language documents by default, but can be configured for other languages supported by Tesseract.
+## Usage
 
-## Requirements
+### Basic Usage
 
-- Python 3.12+
-- PyMuPDF (fitz)
-- Tesseract OCR (needs to be installed on your system)
-- pytesseract
-- Pillow (PIL)
+```python
+from llm_rag.document_processing.ocr.pipeline import OCRPipeline
+
+# Create pipeline with default settings
+pipeline = OCRPipeline()
+
+# Process a PDF and get text
+text = pipeline.process_pdf("path/to/document.pdf")
+
+# Process and save directly to Markdown
+output_path = pipeline.save_to_markdown("path/to/document.pdf", "output/directory")
+```
+
+### Advanced Usage with Preprocessing
+
+```python
+from llm_rag.document_processing.ocr.pipeline import OCRPipeline, OCRPipelineConfig
+
+# Create custom configuration with preprocessing
+config = OCRPipelineConfig(
+    # PDF settings
+    pdf_dpi=400,  # Higher DPI for better quality
+
+    # Preprocessing settings
+    preprocessing_enabled=True,
+    deskew_enabled=True,      # Fix tilted text
+    threshold_enabled=True,   # Improve contrast
+    threshold_method="adaptive",
+    contrast_adjust=1.2,      # Slightly increase contrast
+    sharpen_enabled=True,     # Make text sharper
+
+    # OCR settings
+    languages=["eng", "deu"],  # Process English and German text
+    psm=3,                     # Page segmentation mode
+
+    # Output formatting
+    output_format="markdown",
+    detect_headings=True,
+    detect_lists=True
+)
+
+# Create pipeline with custom configuration
+pipeline = OCRPipeline(config)
+
+# Process PDF and save to file
+output_path = pipeline.process_and_save(
+    "path/to/document.pdf",
+    "output/directory",
+    format="markdown"  # Can also be "json" or "txt"
+)
+```
+
+### Evaluating OCR Quality
+
+```python
+from llm_rag.document_processing.ocr.evaluation import calculate_metrics, compare_preprocessing_methods
+
+# Evaluate OCR quality against ground truth
+ground_truth = "This is the correct text content."
+ocr_result = "Thls is the correot text contant."
+
+# Calculate error rates
+metrics = calculate_metrics(ground_truth, ocr_result)
+print(f"Character Error Rate: {metrics['character_error_rate']:.4f}")
+print(f"Word Error Rate: {metrics['word_error_rate']:.4f}")
+
+# Compare results with and without preprocessing
+base_ocr = "Thls is the correot text contant."
+enhanced_ocr = "This is the correct text content."
+
+comparison = compare_preprocessing_methods(
+    ground_truth,
+    base_ocr,
+    enhanced_ocr
+)
+
+print(f"Improvement in CER: {comparison['improvement_percent']['character_error_rate']:.2f}%")
+```
+
+### Running the Example Script
+
+The module includes an example script that demonstrates the OCR pipeline capabilities:
+
+```bash
+# Run with default settings on a sample document
+python -m llm_rag.document_processing.ocr.example
+
+# Process a specific PDF
+python -m llm_rag.document_processing.ocr.example --pdf path/to/document.pdf
+
+# Specify output directory
+python -m llm_rag.document_processing.ocr.example --output output/directory
+
+# Run only the basic or enhanced processing
+python -m llm_rag.document_processing.ocr.example --mode basic
+```
+
+## Dependencies
+
+- **PyMuPDF (fitz)**: For PDF rendering
+- **Tesseract OCR**: For text extraction
+- **OpenCV** (optional): For advanced image preprocessing
+- **NumPy** and **Pillow**: For image processing
 
 ## Installation
 
-Ensure Tesseract OCR is installed on your system:
+Make sure Tesseract OCR is installed on your system:
 
-### macOS:
+- On macOS: `brew install tesseract`
+- On Ubuntu: `sudo apt-get install tesseract-ocr`
+- On Windows: Download and install from [Tesseract GitHub page](https://github.com/UB-Mannheim/tesseract/wiki)
 
-```bash
-brew install tesseract
-brew install tesseract-lang  # For additional language packs
-```
-
-### Ubuntu/Debian:
+Then install the required Python dependencies:
 
 ```bash
-apt-get install tesseract-ocr
-apt-get install tesseract-ocr-deu  # For German language support
+# Basic requirements
+pip install pymupdf pillow pytesseract numpy
+
+# For advanced preprocessing
+pip install opencv-python
 ```
-
-### Windows:
-
-Download and install from: https://github.com/UB-Mannheim/tesseract/wiki
-
-## Usage Example
-
-```python
-from pathlib import Path
-from llm_rag.document_processing.ocr import PDFImageConverter, TesseractOCREngine
-from llm_rag.document_processing.ocr.pdf_converter import PDFImageConverterConfig
-from llm_rag.document_processing.ocr.ocr_engine import TesseractConfig, PageSegmentationMode
-
-# 1. Configure and create components
-pdf_config = PDFImageConverterConfig(
-    dpi=300,  # Higher DPI for better OCR quality
-    use_alpha_channel=False
-)
-
-ocr_config = TesseractConfig(
-    languages=["deu"],  # German language
-    psm=PageSegmentationMode.AUTO,  # Let Tesseract determine page segmentation
-    timeout=60  # Longer timeout for larger documents
-)
-
-pdf_converter = PDFImageConverter(config=pdf_config)
-ocr_engine = TesseractOCREngine(config=ocr_config)
-
-# 2. Process a PDF document
-pdf_path = Path("path/to/document.pdf")
-extracted_text = []
-
-# Process each page
-for page_num, image in pdf_converter.convert_pdf_to_images(pdf_path):
-    # Perform OCR on the page image
-    text = ocr_engine.image_to_text(image)
-    extracted_text.append(text)
-    print(f"Processed page {page_num+1} - extracted {len(text)} characters")
-
-# 3. Combine the extracted text
-full_text = "\n\n".join(extracted_text)
-print(f"Total extracted text: {len(full_text)} characters")
-
-# You can now use this text for further processing in the RAG pipeline
-```
-
-## Advanced Features
-
-### Processing Specific Pages
-
-```python
-# Process only pages 5-10 (1-indexed)
-pdf_config = PDFImageConverterConfig(
-    dpi=300,
-    first_page=5,
-    last_page=10
-)
-```
-
-### Using Different Output Formats
-
-```python
-from llm_rag.document_processing.ocr.ocr_engine import OCROutputFormat
-
-# Get detailed OCR data with confidence scores
-ocr_data = ocr_engine.image_to_data(
-    image,
-    output_format=OCROutputFormat.JSON
-)
-
-# For each recognized word
-for i in range(len(ocr_data['text'])):
-    word = ocr_data['text'][i]
-    confidence = ocr_data['conf'][i]
-    if confidence > 90:
-        print(f"High confidence word: {word} ({confidence}%)")
-```
-
-## Integration with Document Processing Pipeline
-
-This OCR module is designed to integrate with the broader document processing pipeline in the LLM RAG system. After extracting text from PDFs, you can:
-
-1. Pass the text to chunking mechanisms
-2. Generate embeddings for vector storage
-3. Use for retrieval in RAG workflows
-
-For complete workflow examples, see the main documentation.

@@ -13,6 +13,7 @@ dependencies = [
     "langchain-community>=0.0.10",
     "langchain-chroma>=0.2.0",
     "langchain-huggingface>=0.0.2",
+    "langdetect>=1.0.9",
     "numpy>=1.26.4,<2",
     "pandas>=2.2.0",
     "pytest>=8.3.4",
@@ -24,21 +25,21 @@ dependencies = [
     "torch>=2.1.0",
     "transformers>=4.49.0",
     "uvicorn>=0.34.0",
-    "defusedxml>=0.7.1",  # For secure XML parsing
+    "defusedxml>=0.7.1", # For secure XML parsing
     # Temporarily commented out to handle separately in Dockerfile
     # "llama-cpp-python>=0.2.56",
     # Hugging Face dependencies
-    "accelerate>=0.32.1",  # Needed for efficient model loading
-    "safetensors>=0.4.2",  # For secure model loading
-    "bitsandbytes>=0.42.0",  # For quantization support
-    "optimum>=1.17.1",      # Performance optimization for transformers
+    "accelerate>=0.32.1", # Needed for efficient model loading
+    "safetensors>=0.4.2", # For secure model loading
+    "bitsandbytes>=0.42.0", # For quantization support
+    "optimum>=1.17.1", # Performance optimization for transformers
     # Table extraction dependencies
-    "tabula-py>=2.8.0",     # For extracting tables from PDFs
+    "tabula-py>=2.8.0", # For extracting tables from PDFs
     # Image extraction dependencies
-    "pdf2image>=1.16.3",    # For converting PDF pages to images
-    "pytesseract>=0.3.10",  # For OCR on images
-    "Pillow>=10.0.0",       # For image processing
-    "PyMuPDF>=1.22.5",      # For PDF processing and rendering
+    "pdf2image>=1.16.3", # For converting PDF pages to images
+    "pytesseract>=0.3.10", # For OCR on images
+    "Pillow>=10.0.0", # For image processing
+    "PyMuPDF>=1.22.5", # For PDF processing and rendering
 ]
 
 [project.optional-dependencies]

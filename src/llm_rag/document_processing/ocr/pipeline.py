@@ -89,7 +89,6 @@ class OCRPipeline:
         # Create PDF converter config from pipeline config
         pdf_config = PDFImageConverterConfig(
             dpi=self.config.pdf_dpi,
-            preprocessing_enabled=self.config.preprocessing_enabled,
             deskew_enabled=self.config.deskew_enabled,
             threshold_enabled=self.config.threshold_enabled,
             threshold_method=self.config.threshold_method,
@@ -97,6 +96,10 @@ class OCRPipeline:
             sharpen_enabled=self.config.sharpen_enabled,
             denoise_enabled=self.config.denoise_enabled,
         )
+
+        # Only set preprocessing_enabled if it differs from the default
+        if self.config.preprocessing_enabled:
+            pdf_config.preprocessing_enabled = self.config.preprocessing_enabled
 
         # Initialize the PDF converter
         self.pdf_converter = PDFImageConverter(config=pdf_config)
@@ -208,6 +211,7 @@ class OCRPipeline:
             elif self.config.output_format.lower() == "json":
                 result = self.json_formatter.format_document(text_pages)
             else:  # raw text
+                # Simple joining of pages with double newlines for raw text output
                 result = "\n\n".join(text_pages)
 
             logger.info(f"OCR completed for {pdf_path}, extracted {len(result)} characters")

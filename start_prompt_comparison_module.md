@@ -1,9 +1,11 @@
-Objective: Implement the document comparison feature as defined in Phase 6 of EXPANSION_PLAN.md.
+Objective: Implement the document comparison feature as defined in Phase 6 of EXPANSION_PLAN.md, leveraging the S2 Chunking integration from Phase 5.5.
 
 Context:
 
 - Reference EXPANSION_PLAN.md Part 2: Document Comparison Feature for detailed requirements.
 - This builds upon the OCR pipeline developed in earlier phases.
+- Incorporate the S2 Chunking library (structural-semantic chunking) to improve document segmentation quality.
+- The comparison module should operate on the structured and chunked output provided by the main OCR pipeline (using the chunking strategy configured in Phase 5.5, e.g., SemanticChunker initially).
 - Strictly adhere to all rules defined in .cursor/rules/.cursorrules (Python 3.12, uv, FastAPI/Pydantic where applicable, PEP 8, meaningful names, docstrings, type hints, testing, exception handling).
 
 Tasks:
@@ -55,10 +57,12 @@ Tasks:
 9.  Implement CI-friendly testing:
     - Create small, synthetic test files that can be committed to the repository
     - For tests requiring larger PDF test data that cannot be committed due to copyright or size:
-      - Add conditional test skipping using `pytest.mark.skipif` based on the presence of test files
+      - ✅ Add conditional test skipping using `pytest.mark.skipif` based on the presence of test files or CI environment
       - Implement robust mocking of file operations in tests to avoid dependencies on real files
       - Add clear documentation about which tests require local files versus which can run in CI
       - Consider separating fast and slow tests using pytest markers (`@pytest.mark.fast`, `@pytest.mark.slow`)
+    - ✅ Ensure CI environment detects and installs necessary system dependencies like Tesseract OCR
+    - ✅ Add appropriate timeouts to prevent tests from hanging indefinitely
 
 Deliverables:
 
@@ -67,6 +71,7 @@ Deliverables:
 - Associated test files in the `tests/document_processing/comparison/` directory.
 - Updates to dependency files managed by `uv`.
 - Documentation on how to use the comparison module (in docstrings and/or README).
+- ✅ CI workflow improvements supporting both OCR and comparison module testing.
 
 Expected Outcome:
 A functional document comparison system that can:

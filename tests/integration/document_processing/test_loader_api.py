@@ -92,10 +92,9 @@ class TestLoaderAPIIntegration:
         """Test backward compatibility with imports from document_processing."""
         # This test verifies that the old import paths still work via re-exports
         # Import directly from document_processing
-        from llm_rag.document_processing import DirectoryLoader as OldDirectoryLoader
-
         # Import from the new path
         from llm_rag.document_processing.loader_api import DirectoryLoader as NewDirectoryLoader
+        from llm_rag.document_processing.loader_api import DirectoryLoader as OldDirectoryLoader
 
         # Verify both versions work, even if they might not be the same object
         old_loader = OldDirectoryLoader(directory_path=self.test_dir)

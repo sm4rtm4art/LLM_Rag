@@ -48,6 +48,9 @@ class TestOCRPipeline(unittest.TestCase):
         mock_pdf_to_images.return_value = [self.mock_image, self.mock_image]
         mock_process_images.return_value = ["Page 1 text", "Page 2 text"]
 
+        # Set output format to raw text for this test
+        self.pipeline.config.output_format = "raw"
+
         # Process PDF
         result = self.pipeline.process_pdf(self.test_pdf_path)
 

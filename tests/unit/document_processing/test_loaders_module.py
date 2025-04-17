@@ -8,6 +8,18 @@ import pytest
 # Import the module under test
 import llm_rag.document_processing.loaders
 
+# Import other specific loaders from their respective modules
+# Then we can import from the actual modules we need
+from llm_rag.document_processing.loader_api import DocumentLoader as ApiDocumentLoader
+from llm_rag.document_processing.loader_api import JSONLoader as ApiJSONLoader
+from llm_rag.document_processing.loader_api import PDFLoader as ApiPDFLoader
+from llm_rag.document_processing.loader_api import load_document as api_load
+from llm_rag.document_processing.loaders import load_document as compat_load
+
+# Import loaders correctly from their specific modules
+
+# Replace deprecated import
+
 
 @pytest.fixture
 def mock_imports():
@@ -120,15 +132,12 @@ class TestBackwardCompatibility:
     def test_loader_api_compatibility(self):
         """Test compatibility with the loader_api module."""
         # Import from both modules
-        from llm_rag.document_processing.loader_api import DocumentLoader as ApiDocumentLoader
         from llm_rag.document_processing.loaders import DocumentLoader
 
         # They should be the same class
         assert DocumentLoader is ApiDocumentLoader
 
         # Import functions and classes
-        from llm_rag.document_processing.loader_api import JSONLoader as ApiJSONLoader
-        from llm_rag.document_processing.loader_api import PDFLoader as ApiPDFLoader
         from llm_rag.document_processing.loaders import JSONLoader, PDFLoader
 
         # They should be the same
@@ -149,10 +158,6 @@ class TestBackwardCompatibility:
                     "llm_rag.document_processing.loader_api.load_document", return_value=[{"content": "mocked content"}]
                 ):
                     # Both should work with the same arguments
-                    from llm_rag.document_processing.loader_api import load_document as api_load
-                    from llm_rag.document_processing.loaders import load_document as compat_load
-
-                    # Both should accept the same parameters
                     api_result = api_load(temp_file.name)
                     compat_result = compat_load(temp_file.name)
 

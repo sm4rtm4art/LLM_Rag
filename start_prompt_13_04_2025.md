@@ -52,6 +52,11 @@
         - ✅ Implemented error rate estimation for selective cleaning
         - ✅ Added configuration options for LLM model selection
         - ✅ Updated pipeline to optionally use LLM cleaning
+        - ✅ **Initial Hallucination Safeguards:**
+          - Store original text alongside cleaned version (e.g., within `ProcessedDocument`)
+          - Implement basic change detection metrics (e.g., char/word change percentage)
+          - Apply constrained prompting techniques (temperature control, focused instructions)
+          - Ensure LLM cleaning is configurable (on/off)
 
     Deliverables:
     - New/modified Python files: `src/llm_rag/document_processing/ocr/__init__.py`, `pdf_converter.py`, `ocr_engine.py`, `pipeline.py`, `output_formatter.py`, `llm_processor.py`, `llm_cleaning_example.py`

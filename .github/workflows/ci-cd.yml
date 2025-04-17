@@ -210,7 +210,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
       - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-      - run: uv pip install -e .[dev] ruff mypy
+      - run: uv pip install -e .[dev]
       - run: ruff format src tests && ruff check src tests && mypy src tests
 
   test:

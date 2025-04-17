@@ -17,6 +17,14 @@ from llm_rag.models.factory import ModelFactory
 from llm_rag.utils.errors import ModelError
 from llm_rag.utils.logging import get_logger
 
+# Import for language detection
+try:
+    import langdetect
+
+    HAS_LANGDETECT = True
+except ImportError:
+    HAS_LANGDETECT = False
+
 logger = get_logger(__name__)
 
 
@@ -38,6 +46,11 @@ class LLMCleanerConfig:
         preserve_layout: Whether to preserve document layout like paragraphs and lists
             (default: True)
         timeout: Timeout in seconds for LLM calls (default: 30)
+        detect_language: Whether to automatically detect the document language (default: True)
+        preserve_language: Whether to preserve the original document language (default: True)
+        translate_to_language: Optional target language for translation (default: None)
+        language_models: Mapping of language codes to preferred models for that language
+            (default: empty dict, will use default model)
 
     """
 
@@ -51,6 +64,19 @@ class LLMCleanerConfig:
     max_retry_attempts: int = 2
     preserve_layout: bool = True
     timeout: int = 30
+    detect_language: bool = True
+    preserve_language: bool = True
+    translate_to_language: Optional[str] = None
+    language_models: Dict[str, str] = None
+
+    def __post_init__(self):
+        """Initialize any default values that can't be set directly."""
+        if self.language_models is None:
+            self.language_models = {}
+
+        # If translation is requested, disable language preservation
+        if self.translate_to_language:
+            self.preserve_language = False
 
 
 class LLMCleaner:
@@ -79,6 +105,7 @@ class LLMCleaner:
 
         # Lazy initialization of model - only load when needed
         self._model = None
+        self._language_specific_models = {}
 
     @property
     def model(self):
@@ -99,6 +126,72 @@ class LLMCleaner:
                 logger.error(f"Failed to load model {self.config.model_name}: {e}")
                 raise ModelError(f"Failed to load model: {str(e)}") from e
         return self._model
+
+    def detect_language(self, text: str) -> Optional[str]:
+        """Detect the language of the input text.
+
+        Args:
+            text: Text to analyze
+
+        Returns:
+            ISO 639-1 language code (e.g., 'en', 'de', 'fr') or None if detection fails
+
+        """
+        if not self.config.detect_language:
+            return None
+
+        if not HAS_LANGDETECT:
+            logger.warning(
+                "Language detection requested but langdetect not installed. Install with 'pip install langdetect'"
+            )
+            return None
+
+        try:
+            # Use a larger sample for better accuracy
+            sample_text = text[: min(5000, len(text))]
+            lang_code = langdetect.detect(sample_text)
+            logger.info(f"Detected language: {lang_code}")
+            return lang_code
+        except Exception as e:
+            logger.warning(f"Language detection failed: {e}")
+            return None
+
+    def get_model_for_language(self, language_code: Optional[str]) -> Any:
+        """Get appropriate model for the specified language.
+
+        Args:
+            language_code: ISO 639-1 language code
+
+        Returns:
+            Language model appropriate for the language
+
+        """
+        if not language_code or language_code not in self.config.language_models:
+            return self.model
+
+        model_name = self.config.language_models.get(language_code)
+        if not model_name:
+            return self.model
+
+        # Check if we've already created this model
+        if model_name in self._language_specific_models:
+            return self._language_specific_models[model_name]
+
+        # Create a new model for this language
+        try:
+            model = ModelFactory.create_model(
+                model_path_or_name=model_name,
+                backend=self.config.model_backend,
+                max_tokens=512,
+                temperature=0.7,
+            )
+            self._language_specific_models[model_name] = model
+            logger.info(f"Created language-specific model for {language_code}: {model_name}")
+            return model
+        except Exception as e:
+            logger.error(f"Failed to load language model {model_name}: {e}")
+            # Fall back to default model
+            return self.model
 
     def _generate_text(self, prompt: str, max_tokens: int = None, timeout: int = None) -> str:
         """Generate text from the model, handling different model API styles.
@@ -192,6 +285,16 @@ class LLMCleaner:
             return ocr_text
 
         logger.info(f"Cleaning OCR text with LLM (estimated error rate: {error_rate:.2f})")
+
+        # Detect language if configured to do so and not provided in metadata
+        detected_language = None
+        if self.config.detect_language and (not metadata or "language" not in metadata):
+            detected_language = self.detect_language(ocr_text)
+            if metadata is None:
+                metadata = {}
+            if detected_language:
+                metadata["language"] = detected_language
+                logger.info(f"Detected document language: {detected_language}")
 
         # If text is too long, split into chunks
         if len(ocr_text) > self.config.max_chunk_size:
@@ -288,16 +391,39 @@ class LLMCleaner:
 
         # Add document-specific context if available
         context = ""
-        if metadata:
-            if metadata.get("language"):
-                context += f"This document is in {metadata['language']}. "
-            if metadata.get("document_type"):
-                context += f"This is a {metadata['document_type']}. "
+        language_instruction = ""
+
+        # Determine language handling
+        document_language = None
+        if metadata and metadata.get("language"):
+            document_language = metadata.get("language")
+            context += f"This document is in {document_language}. "
+
+        # Language preservation or translation instruction
+        if self.config.translate_to_language:
+            target_lang = self.config.translate_to_language
+            language_instruction = f"Translate the text to {target_lang} while fixing OCR errors. "
+            if document_language:
+                language_instruction = (
+                    f"Translate the text from {document_language} to {target_lang} while fixing OCR errors. "
+                )
+        elif self.config.preserve_language and document_language:
+            language_instruction = (
+                f"Keep the text in the original {document_language} language - DO NOT translate to English. "
+            )
+        else:
+            # Default behavior - preserve language but don't specify it explicitly
+            language_instruction = "Preserve the original language of the document. DO NOT translate the content. "
+
+        # Add document type if available
+        if metadata and metadata.get("document_type"):
+            context += f"This is a {metadata['document_type']}. "
 
         # Format prompt with proper line breaks to stay within line limits
         prompt = (
-            f"Fix OCR errors in the following text. Correct spelling, punctuation, "
-            f"and formatting issues while preserving the original meaning and technical terms. "
+            f"Fix OCR errors in the following text. {language_instruction}"
+            f"Correct spelling, punctuation, and formatting issues while preserving the "
+            f"original meaning and technical terms. "
             f"{layout_instruction} {context}\n\n"
             f"OCR TEXT:\n{text}\n\n"
             f"CORRECTED TEXT:\n"
@@ -317,13 +443,37 @@ class LLMCleaner:
         """
         prompt = self._create_cleaning_prompt(text, metadata)
 
+        # Select the appropriate model based on language
+        current_model = self.model
+        if metadata and "language" in metadata and self.config.language_models:
+            language = metadata["language"]
+            current_model = self.get_model_for_language(language)
+
         # Try multiple times in case of model errors
         for attempt in range(self.config.max_retry_attempts + 1):
             try:
                 start_time = time.time()
 
-                # Generate text using our wrapper method that handles different model APIs
-                response = self._generate_text(prompt, max_tokens=int(len(text) * 1.2), timeout=self.config.timeout)
+                # Generate text using the selected model or our default model
+                if current_model != self.model:
+                    # Use the language-specific model
+                    if hasattr(current_model, "generate"):
+                        response = str(
+                            current_model.generate(prompt, max_tokens=int(len(text) * 1.2), timeout=self.config.timeout)
+                        )
+                    elif hasattr(current_model, "invoke"):
+                        response = str(current_model.invoke(prompt))
+                    elif callable(current_model):
+                        response = str(current_model(prompt))
+                    else:
+                        # Fallback to default model
+                        logger.warning("Language-specific model API not supported, falling back to default model")
+                        response = self._generate_text(
+                            prompt, max_tokens=int(len(text) * 1.2), timeout=self.config.timeout
+                        )
+                else:
+                    # Use our wrapper method that handles different model APIs
+                    response = self._generate_text(prompt, max_tokens=int(len(text) * 1.2), timeout=self.config.timeout)
 
                 duration = time.time() - start_time
                 logger.debug(f"LLM processing took {duration:.2f} seconds")
