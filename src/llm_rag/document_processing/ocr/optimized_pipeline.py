@@ -48,6 +48,7 @@ class OptimizedOCRConfig(OCRPipelineConfig):
     batch_size: int = 5
     skip_processed_files: bool = True
     processed_files: Set[str] = field(default_factory=set)
+    llm_cleaning_enabled: bool = True
 
 
 class OptimizedOCRPipeline(OCRPipeline):
@@ -93,9 +94,9 @@ class OptimizedOCRPipeline(OCRPipeline):
             "page": page_num,
             "config": {
                 "dpi": self.config.pdf_dpi,
-                "ocr_lang": self.config.ocr_language,
+                "ocr_lang": self.config.languages,
                 "output_format": self.config.output_format,
-                "use_llm_cleaner": self.config.use_llm_cleaner,
+                "use_llm_cleaner": self.config.llm_cleaning_enabled,
             },
         }
 
@@ -197,7 +198,7 @@ class OptimizedOCRPipeline(OCRPipeline):
         ocr_text = self.ocr_engine.process_image(image)
 
         # Clean text with LLM if configured
-        if self.config.use_llm_cleaner and self.llm_cleaner:
+        if self.config.llm_cleaning_enabled and self.llm_cleaner:
             confidence = getattr(self.ocr_engine, "last_confidence", None)
             metadata = {
                 "page_number": page_num + 1,
@@ -351,6 +352,19 @@ class OptimizedOCRPipeline(OCRPipeline):
         # Sort results by page number
         sorted_results = sorted(results, key=lambda x: x[0])
         return [text for _, text in sorted_results]
+
+    def _format_output(self, text_pages: List[str]) -> str:
+        """Format the list of page texts based on the output format configuration.
+
+        Args:
+            text_pages: List of text strings from each page
+
+        Returns:
+            Formatted output based on configuration
+
+        """
+        # Simple joining of pages with double newlines for raw text output
+        return "\n\n".join(text_pages)
 
     def batch_process_pdfs(self, pdf_paths: List[str]) -> Dict[str, str]:
         """Process multiple PDF documents in batches.

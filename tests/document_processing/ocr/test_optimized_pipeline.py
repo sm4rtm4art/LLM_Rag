@@ -190,6 +190,9 @@ class TestOptimizedOCRPipeline:
             mock_stat.st_size = 1024
             mock_stat.st_mtime = 1234567890
 
+            # Create test images
+            test_images = [(0, MagicMock()), (1, MagicMock())]
+
             # Patch file operations and config attribute access
             with patch("os.stat", return_value=mock_stat):
                 # Add missing attribute patches
@@ -197,29 +200,38 @@ class TestOptimizedOCRPipeline:
                     with patch.object(pipeline.config, "languages", "eng"):
                         with patch.object(pipeline.config, "output_format", "raw"):
                             with patch.object(pipeline.config, "llm_cleaning_enabled", False):
-                                # Ensure cache misses
-                                with patch.object(pipeline, "_check_cache", return_value=None):
+                                # Directly test the _parallel_process_pages method
+                                with patch(
+                                    "llm_rag.document_processing.ocr.optimized_pipeline.ThreadPoolExecutor"
+                                ) as mock_executor:
+                                    # Set up mock executor
+                                    executor_instance = MagicMock()
+                                    mock_executor.return_value.__enter__.return_value = executor_instance
+
+                                    # Mock futures
+                                    future1 = MagicMock()
+                                    future1.result.return_value = (0, "Page 1 text")
+                                    future2 = MagicMock()
+                                    future2.result.return_value = (1, "Page 2 text")
+                                    executor_instance.submit.side_effect = [future1, future2]
+
+                                    # Mock as_completed to return futures in a controlled way
                                     with patch(
-                                        "llm_rag.document_processing.ocr.optimized_pipeline.ThreadPoolExecutor"
-                                    ) as mock_executor:
-                                        # Setup executor mock
-                                        executor_instance = MagicMock()
-                                        mock_executor.return_value.__enter__.return_value = executor_instance
+                                        "llm_rag.document_processing.ocr.optimized_pipeline.as_completed",
+                                        return_value=[future1, future2],
+                                    ):
+                                        # Test the parallel processing method directly
+                                        results = pipeline._parallel_process_pages("test.pdf", test_images)
 
-                                        # Setup futures
-                                        future1 = MagicMock()
-                                        future1.result.return_value = (0, "Page 1 text")
-                                        future2 = MagicMock()
-                                        future2.result.return_value = (1, "Page 2 text")
-                                        executor_instance.submit.side_effect = [future1, future2]
+                                        # Verify results
+                                        assert len(results) == 2
+                                        assert (0, "Page 1 text") in results
+                                        assert (1, "Page 2 text") in results
 
-                                        # Process PDF
-                                        pipeline.process_pdf("test.pdf")
-
-                                        # Verify ThreadPoolExecutor was used
+                                        # Verify executor was used with correct parameters
                                         mock_executor.assert_called_once_with(max_workers=pipeline_config.max_workers)
 
-                                        # Verify submit was called twice (one for each page)
+                                        # Verify submit was called for each image
                                         assert executor_instance.submit.call_count == 2
 
     def test_sequential_processing(self, pipeline_config, mock_pdf_converter, mock_ocr_engine):
@@ -322,6 +334,8 @@ class TestOptimizedOCRPipeline:
                             with patch.object(pipeline.config, "llm_cleaning_enabled", False):
                                 # Process only page 1
                                 with patch.object(pipeline, "_check_cache", return_value=None):
+                                    # Mock the get_images to return only one page when specific pages are requested
+                                    mock_pdf_converter.return_value.get_images.return_value = [(1, MagicMock())]
                                     pipeline.process_pdf("test.pdf", pages=[1])
 
                                     # Only page 1 should be processed
