@@ -130,9 +130,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
-          key: cache-trivy-${{ github.run_id }}
+          key: trivy-cache-${{ github.workflow }}-${{ github.ref_name }}-${{ hashFiles('Dockerfile') }}-${{ format('{{yyyy-MM-dd}}', github.event.repository.updated_at) }}
           restore-keys: |
-            cache-trivy-
+            trivy-cache-${{ github.workflow }}-${{ github.ref_name }}-
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
@@ -387,9 +387,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
-          key: cache-trivy-container-${{ github.run_id }}
+          key: trivy-container-cache-${{ github.workflow }}-${{ github.ref_name }}-${{ hashFiles('Dockerfile') }}-${{ format('{{yyyy-MM-dd}}', github.event.repository.updated_at) }}
           restore-keys: |
-            cache-trivy-container-
+            trivy-container-cache-${{ github.workflow }}-${{ github.ref_name }}-
       - name: Run Trivy container scan (combined)
         run: |
           # Install Trivy CLI directly
