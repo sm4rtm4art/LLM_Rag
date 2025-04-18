@@ -46,9 +46,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
-          key: ${{ runner.os }}-trivy-${{ github.sha }}
+          key: trivy-security-${{ github.workflow }}-${{ github.ref_name }}-${{ hashFiles('Dockerfile') }}-${{ format('{{yyyy-MM-dd}}', github.event.repository.updated_at) }}
           restore-keys: |
-            ${{ runner.os }}-trivy-
+            trivy-security-${{ github.workflow }}-${{ github.ref_name }}-
 
       - name: Install Trivy
         run: |

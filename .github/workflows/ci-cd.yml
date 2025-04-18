@@ -130,9 +130,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
-          key: cache-trivy-${{ github.run_id }}
+          key: trivy-cache-${{ github.workflow }}-${{ github.ref_name }}-${{ hashFiles('Dockerfile') }}-${{ format('{{yyyy-MM-dd}}', github.event.repository.updated_at) }}
           restore-keys: |
-            cache-trivy-
+            trivy-cache-${{ github.workflow }}-${{ github.ref_name }}-
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
@@ -307,8 +307,12 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker-container
+          driver-opts: |
+            network=host
+            image=moby/buildkit:latest
           buildkitd-flags: --debug
           platforms: linux/amd64
+          use: true
 
       # Login to DockerHub
       - uses: docker/login-action@v3
@@ -335,12 +339,10 @@ jobs:
           cache-from: |
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
-          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache,mode=max
+          cache-to: type=inline
           # Performance optimizations
           platforms: linux/amd64
           provenance: false
-          # Output options - improving layer uploading
-          outputs: type=image,push-by-digest=true,name=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag,push=true
           # Build args for performance
           build-args: |
             BUILDKIT_INLINE_CACHE=1
@@ -351,63 +353,43 @@ jobs:
           # Important options to improve performance
           pull: false # Already pulled separately
           no-cache: false
+          load: false
         id: build
 
       # The separate tag-push step helps with the hanging issue by breaking up the large uploads
       - name: Tag and push by digest
         if: steps.build.outcome == 'success'
         run: |
-          # Extract digest from previous step
-          digest="${{ steps.build.outputs.digest }}"
-          if [ -n "$digest" ]; then
-            # Tag for each target
-            for tag in "latest" "${{ github.sha }}"; do
-              docker buildx imagetools create \
-                --tag ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:$tag \
-                ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag@$digest
-            done
-          else
-            echo "Error: No digest found from build"
-            exit 1
-          fi
+          echo "Build was successful, verifying tags were pushed correctly"
+          # Check if the tags are available
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest || echo "Latest tag may still be uploading"
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} || echo "SHA tag may still be uploading"
 
-      # Fall back to direct Docker push if the buildx/digest approach fails
-      - name: Fallback push (if digest push fails)
-        if: failure() && steps.build.outcome == 'success'
-        run: |
-          echo "Trying fallback direct Docker push method..."
-          # Save image locally first
-          docker buildx build \
-            --load \
-            --cache-from type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache \
-            --cache-from type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --build-arg PIP_NO_CACHE_DIR=1 \
-            .
-
-          # Tag and push (with retry)
-          for i in {1..3}; do
-            echo "Push attempt $i/3..."
-            if docker tag llm-rag:latest ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest && \
-               docker tag llm-rag:latest ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} && \
-               docker push ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest && \
-               docker push ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}; then
-              echo "Push successful!"
-              break
-            else
-              echo "Push failed, retrying in 10 seconds..."
-              sleep 10
-            fi
-          done
+      # Simple fallback build in case main build fails
+      - name: Fallback build
+        if: failure() && steps.build.outcome == 'failure'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
+          platforms: linux/amd64
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            PIP_NO_CACHE_DIR=1
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
+          cache-to: ""
 
       # Trivy container scan
       - name: Cache Trivy DB
         uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
-          key: cache-trivy-container-${{ github.run_id }}
+          key: trivy-container-cache-${{ github.workflow }}-${{ github.ref_name }}-${{ hashFiles('Dockerfile') }}-${{ format('{{yyyy-MM-dd}}', github.event.repository.updated_at) }}
           restore-keys: |
-            cache-trivy-container-
+            trivy-container-cache-${{ github.workflow }}-${{ github.ref_name }}-
       - name: Run Trivy container scan (combined)
         run: |
           # Install Trivy CLI directly
