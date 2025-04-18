@@ -298,89 +298,107 @@ jobs:
           echo "Disk space after cleanup:"
           df -h
 
-      # Set up Docker layer caching on tmpfs (in-memory filesystem)
-      - name: Setup Docker buildx with host disk storage
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1 # Shallow clone for faster checkout
+
+      # Set up Docker Buildx with better caching
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          driver-opts: |
-            image=moby/buildkit:latest
-            network=host
           buildkitd-flags: --debug
+          driver-opts: image=moby/buildkit:latest
+          platforms: linux/amd64
 
-      # Configure Docker to use a clean Docker Root Dir
-      - name: Configure Docker settings for maximum space
-        run: |
-          # Use a clean directory for Docker data
-          sudo mkdir -p /mnt/docker
-
-          # Ensure we have maximum available space
-          df -h
-
-          # Configure Docker to use our clean directory
-          echo '{
-            "experimental": true,
-            "storage-driver": "overlay2",
-            "data-root": "/var/lib/docker",
-            "log-driver": "json-file",
-            "log-opts": {
-              "max-size": "10m",
-              "max-file": "3"
-            }
-          }' | sudo tee /etc/docker/daemon.json
-
-          # Restart Docker to apply settings
-          sudo systemctl restart docker || true
-          sleep 5
-
-          # Show Docker info and available space
-          docker info
-          df -h
-
-          # Create any needed directories
-          sudo mkdir -p /var/lib/docker/tmp || true
-
-      # Free up more disk space during build if needed
-      - name: Set up disk space monitoring
-        run: |
-          # Create a background monitor to clean up if space gets low during build
-          cat > /tmp/disk_monitor.sh << 'EOF'
-          #!/bin/bash
-          while true; do
-            DISK_USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
-            if [ "$DISK_USAGE" -gt 90 ]; then
-              echo "Disk usage is high ($DISK_USAGE%), cleaning up..."
-              docker system prune -af --volumes
-              docker builder prune -af
-            fi
-            sleep 30
-          done
-          EOF
-
-          chmod +x /tmp/disk_monitor.sh
-          /tmp/disk_monitor.sh &
-
-      - uses: actions/checkout@v4
+      # Login to DockerHub
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: docker/build-push-action@v5
+
+      # Pull cache image (separately to ensure it's available)
+      - name: Pull cache image
+        run: |
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache || true
+          echo "Pulled cache image - this is just for ensuring cache is loaded"
+
+      # Fast build with focused caching and optimizations
+      - name: Build and push
+        uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache
+          # Improved cache handling
+          cache-from: |
+            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache
+            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
           cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache,mode=max
+          # Performance optimizations
           platforms: linux/amd64
           provenance: false
-          outputs: type=registry,compression=zstd
-          # Important build args that can help with space issues
+          # Output options - improving layer uploading
+          outputs: type=image,push-by-digest=true,name=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag,push=true
+          # Build args for performance
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             PIP_NO_CACHE_DIR=1
+            DOCKER_BUILDKIT=1
+          # Better builder output and defaults
+          builder: default
+          # Important options to improve performance
+          pull: false # Already pulled separately
+          no-cache: false
+        id: build
+
+      # The separate tag-push step helps with the hanging issue by breaking up the large uploads
+      - name: Tag and push by digest
+        if: steps.build.outcome == 'success'
+        run: |
+          # Extract digest from previous step
+          digest="${{ steps.build.outputs.digest }}"
+          if [ -n "$digest" ]; then
+            # Tag for each target
+            for tag in "latest" "${{ github.sha }}"; do
+              docker buildx imagetools create \
+                --tag ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:$tag \
+                ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag@$digest
+            done
+          else
+            echo "Error: No digest found from build"
+            exit 1
+          fi
+
+      # Fall back to direct Docker push if the buildx/digest approach fails
+      - name: Fallback push (if digest push fails)
+        if: failure() && steps.build.outcome == 'success'
+        run: |
+          echo "Trying fallback direct Docker push method..."
+          # Save image locally first
+          docker buildx build \
+            --load \
+            --cache-from type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache \
+            --cache-from type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --build-arg PIP_NO_CACHE_DIR=1 \
+            .
+
+          # Tag and push (with retry)
+          for i in {1..3}; do
+            echo "Push attempt $i/3..."
+            if docker tag llm-rag:latest ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest && \
+               docker tag llm-rag:latest ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} && \
+               docker push ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest && \
+               docker push ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}; then
+              echo "Push successful!"
+              break
+            else
+              echo "Push failed, retrying in 10 seconds..."
+              sleep 10
+            fi
+          done
 
       # Trivy container scan
       - name: Cache Trivy DB

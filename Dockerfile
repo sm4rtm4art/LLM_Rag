@@ -14,7 +14,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install build and system dependencies
+# Copy UV binary first (this rarely changes)
+COPY --from=uv /uv /usr/local/bin/uv
+
+# Install build dependencies - keep this early since it rarely changes
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -24,26 +27,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openjdk-17-jdk \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy UV binary
-COPY --from=uv /uv /usr/local/bin/uv
-
-# Copy dependency specifications
-COPY pyproject.toml ./
-
-# Create a virtual environment
-RUN uv venv /app/.venv
+# Setup Python venv early - this rarely changes
+RUN python -m venv /app/.venv
 ENV PATH="/app/.venv/bin:${PATH}"
 
-# Use UV sync for fast parallel installation and handle bitsandbytes separately
-RUN echo "Installing dependencies with UV sync (parallel installation)..." && \
-    # Use uv sync to install dependencies quickly (parallel)
-    uv sync --no-install-project || true && \
-    # Then handle bitsandbytes separately
-    pip install --no-cache-dir bitsandbytes==0.42.0 && \
-    # Finally install the project itself
-    pip install -e .
+# Copy ONLY dependency specifications first for better layer caching
+COPY pyproject.toml ./
 
-# Copy the rest of your code
+# Install dependencies (with explicit cache busting if needed)
+RUN echo "Installing dependencies with uv - $(date +%s)" && \
+    uv pip install -e . || true && \
+    pip install --no-cache-dir bitsandbytes==0.42.0
+
+# Now copy the rest of the code (this changes frequently)
 COPY . .
 
 # Create entrypoint script
@@ -58,13 +54,13 @@ RUN echo '#!/bin/bash' > /app/entrypoint.sh && \
 # === Stage 3: Runtime ===
 FROM python:3.12-slim AS final
 
-WORKDIR /app
-
-# Set environment variables for runtime
+# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=8000 \
     BNB_CUDA_VERSION=0
+
+WORKDIR /app
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -76,15 +72,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) \
     && echo "export JAVA_HOME=$JAVA_HOME" >> /etc/environment
 
-# Copy the entire virtual environment from the builder
+# Copy the virtual environment and app code
 COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/src /app/src
+COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
 
 # Add venv to path
 ENV PATH="/app/.venv/bin:${PATH}"
-
-# Copy application code and entry point
-COPY --from=builder /app/src /app/src
-COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
 
 # Create a non-root user
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
