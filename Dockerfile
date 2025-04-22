@@ -68,6 +68,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     openjdk-17-jre \
+    netcat-traditional \
     && rm -rf /var/lib/apt/lists/* \
     && JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) \
     && echo "export JAVA_HOME=$JAVA_HOME" >> /etc/environment
@@ -76,9 +77,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src /app/src
 COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
+COPY --from=builder /app/pyproject.toml /app/pyproject.toml
 
 # Add venv to path
-ENV PATH="/app/.venv/bin:${PATH}"
+ENV PATH="/app/.venv/bin:${PATH}" \
+    PYTHONPATH="/app:${PYTHONPATH}"
+
+# Install the package in development mode
+RUN pip install -e .
 
 # Create a non-root user
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
@@ -86,9 +92,9 @@ USER appuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD nc -z localhost 8008 || exit 1
 
-EXPOSE 8000
+EXPOSE 8008
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["api"]
