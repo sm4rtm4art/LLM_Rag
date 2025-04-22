@@ -33,6 +33,8 @@ ENV/
 .vscode/
 *.swp
 *.swo
+.cursor
+*.cursor
 
 # Jupyter Notebook
 .ipynb_checkpoints
