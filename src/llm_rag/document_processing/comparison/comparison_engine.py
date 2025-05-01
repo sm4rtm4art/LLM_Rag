@@ -247,6 +247,9 @@ class EmbeddingComparisonEngine:
         hash_obj = hashlib.md5(text.encode("utf-8"), usedforsecurity=False)
         hash_val = int(hash_obj.hexdigest(), 16)
 
+        # Ensure hash_val is within valid range for numpy's random seed (0 to 2^32-1)
+        hash_val = hash_val % (2**32)
+
         # Create a mock embedding with some simple features and some hash-based values
         np.random.seed(hash_val)
         random_vals = np.random.rand(7)
