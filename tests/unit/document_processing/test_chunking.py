@@ -3,10 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from src.llm_rag.document_processing.chunking import (
-    CharacterTextChunker,
-    RecursiveTextChunker,
-)
+from llm_rag.document_processing.chunking import CharacterTextChunker, RecursiveTextChunker
 
 
 class TestCharacterTextChunker(unittest.TestCase):
@@ -135,7 +132,7 @@ class TestRecursiveTextChunker(unittest.TestCase):
         with self.assertRaises(ValueError):
             RecursiveTextChunker(chunk_size=100, chunk_overlap=100)
 
-    @patch("src.llm_rag.document_processing.chunking.RecursiveCharacterTextSplitter")
+    @patch("llm_rag.document_processing.chunking.RecursiveCharacterTextSplitter")
     def test_split_text_specific_test_case(self, mock_splitter_class):
         """Test the specific test case in the code with mocks."""
         # Setup mock
