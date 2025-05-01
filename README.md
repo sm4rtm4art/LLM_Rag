@@ -19,6 +19,7 @@ A powerful multi-modal Retrieval-Augmented Generation (RAG) system that processe
   - [Prerequisites](#prerequisites)
   - [Using UV (Recommended)](#using-uv-recommended)
   - [Using Docker](#using-docker)
+  - [Using Makefile](#using-makefile)
 - [Usage](#usage)
   - [Demo Scripts](#demo-scripts)
   - [Command-Line Options](#command-line-options)
@@ -222,6 +223,34 @@ docker run -p 8000:8000 llm-rag api
 # Run with specific arguments
 docker run llm-rag --help
 ```
+
+### Using Makefile
+
+The project includes a comprehensive Makefile that simplifies common development tasks:
+
+```bash
+# Show all available commands
+make help
+
+# Set up development environment
+make dev-install
+
+# Run all quality checks and tests
+make all
+
+# Run the API server
+make api-run
+```
+
+Key Makefile commands:
+
+- **Environment setup**: `make setup-venv`, `make install`, `make dev-install`
+- **Development**: `make lint`, `make format`, `make mypy`, `make clean`
+- **Testing**: `make test`, `make test-ocr`, `make test-comparison`, `make test-cov`
+- **Running**: `make api-run`, `make docker-run`, `make api-docker`
+- **OCR specific**: `make ocr-pipeline`, `make setup-ocr-deps`
+
+The Makefile handles all the details of proper environment setup, testing configurations, and running various components, making development workflow more efficient.
 
 ## Usage
 

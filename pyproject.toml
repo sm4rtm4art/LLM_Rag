@@ -85,6 +85,7 @@ markers = [
     "unit: marks tests as unit tests",
     "integration: marks tests as integration tests",
     "asyncio: mark test as async test",
+    "local_only: marks tests that should only run on local environments",
 ]
 
 [tool.coverage.run]
@@ -215,3 +216,20 @@ tag_format = "v{version}"
 
 [tools.uv]
 environments = { ".llm_rag" = { mode = "development" } }
+
+[tool.cosmic-ray]
+module-path = "src/llm_rag/document_processing/ocr/ocr_engine.py"
+python-version = "3.12"
+timeout = 60
+excluded-modules = []
+test-command = "pytest tests/document_processing/ocr/test_ocr_engine.py -v"
+
+[tool.cosmic-ray.cloning]
+method = "copy"
+commands = []
+
+[tool.cosmic-ray.execution-engine]
+name = "local"
+
+[tool.cosmic-ray.interceptors]
+enabled = []

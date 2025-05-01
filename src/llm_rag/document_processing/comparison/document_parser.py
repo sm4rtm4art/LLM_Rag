@@ -1,13 +1,139 @@
-"""Module for parsing documents into logical sections for comparison."""
+"""Module for parsing structured documents into logical sections."""
 
+import re
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from llm_rag.utils.errors import DocumentProcessingError
 from llm_rag.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+class SectionType(Enum):
+    """Types of document sections."""
+
+    HEADING = "heading"
+    PARAGRAPH = "paragraph"
+    LIST = "list"
+    TABLE = "table"
+    CODE = "code"
+    IMAGE = "image"
+    UNKNOWN = "unknown"
+
+
+class Section:
+    """Representation of a document section.
+
+    Attributes:
+        id: Unique identifier for the section.
+        section_type: Type of the section (heading, paragraph, etc.).
+        content: The text content of the section.
+        level: Section level (e.g., heading level).
+        metadata: Additional information about the section.
+        parent_id: ID of the parent section, if any.
+        children: IDs of child sections, if any.
+
+    """
+
+    def __init__(
+        self,
+        id: str,
+        content: str,
+        section_type: Optional[SectionType] = None,
+        type: Optional[SectionType] = None,  # For backward compatibility
+        level: Optional[int] = None,
+        metadata: Optional[Dict] = None,
+        parent_id: Optional[str] = None,
+        children: Optional[List[str]] = None,
+    ):
+        """Initialize a Section.
+
+        Args:
+            id: Unique identifier for the section.
+            content: The text content of the section.
+            section_type: Type of the section (heading, paragraph, etc.).
+            type: For backward compatibility, alias for section_type.
+            level: Section level (e.g., heading level).
+            metadata: Additional information about the section.
+            parent_id: ID of the parent section, if any.
+            children: IDs of child sections, if any.
+
+        """
+        self.id = id
+
+        # Handle backward compatibility for type vs section_type
+        if section_type is not None:
+            self.section_type = section_type
+        elif type is not None:
+            self.section_type = type
+        else:
+            self.section_type = SectionType.UNKNOWN
+
+        self.content = content
+        self.level = level
+        self.metadata = metadata
+        self.parent_id = parent_id
+        self.children = children
+
+    def __eq__(self, other):
+        """Check if two sections are equal."""
+        if not isinstance(other, Section):
+            return False
+        return (
+            self.id == other.id
+            and self.section_type == other.section_type
+            and self.content == other.content
+            and self.level == other.level
+            and self.metadata == other.metadata
+            and self.parent_id == other.parent_id
+            and self.children == other.children
+        )
+
+    def __repr__(self):
+        """Return string representation of the Section."""
+        return (
+            f"Section(id='{self.id}', "
+            f"section_type={self.section_type}, "
+            f"content='{self.content[:30]}...', "
+            f"level={self.level})"
+        )
+
+
+@dataclass
+class ParserConfig:
+    """Configuration for document parsing.
+
+    Attributes:
+        min_section_length: Minimum content length to be considered a valid section.
+        max_section_length: Maximum content length for a section before splitting.
+        heading_patterns: Regular expressions for identifying headings.
+        split_on_headings: Whether to split the document at headings.
+        split_on_blank_lines: Whether to split paragraphs at blank lines.
+        keep_whitespace: Whether to preserve whitespace in the parsed sections.
+        language: Document language for specialized processing.
+
+    """
+
+    min_section_length: int = 10
+    max_section_length: int = 2000
+    heading_patterns: List[str] = None
+    split_on_headings: bool = True
+    split_on_blank_lines: bool = True
+    keep_whitespace: bool = False
+    language: str = "en"
+
+    def __post_init__(self):
+        """Initialize default values for heading patterns if not provided."""
+        if self.heading_patterns is None:
+            # Default Markdown heading patterns
+            self.heading_patterns = [
+                r"^#{1,6}\s+(.+)$",  # ATX style headings: # Heading
+                r"^(.+)\n[=]{2,}$",  # Setext style heading level 1: Heading\n======
+                r"^(.+)\n[-]{2,}$",  # Setext style heading level 2: Heading\n------
+            ]
 
 
 class DocumentFormat(Enum):
@@ -18,164 +144,401 @@ class DocumentFormat(Enum):
     TEXT = "text"
 
 
-class SectionType(Enum):
-    """Types of document sections."""
-
-    HEADING = "heading"
-    PARAGRAPH = "paragraph"
-    LIST = "list"
-    CODE = "code"
-    TABLE = "table"
-    OTHER = "other"
-
-
-class Section:
-    """Represents a logical section of a document.
-
-    A section is a discrete part of a document with its own semantic meaning,
-    such as a heading, paragraph, list, or code block.
-    """
-
-    def __init__(
-        self,
-        content: str,
-        section_type: SectionType = SectionType.PARAGRAPH,
-        level: int = 0,
-        metadata: Optional[Dict] = None,
-    ):
-        """Initialize a document section.
-
-        Args:
-            content: The text content of the section.
-            section_type: The type of section (heading, paragraph, etc.).
-            level: The nesting level of the section (e.g., heading level).
-            metadata: Additional metadata about the section.
-
-        """
-        self.content = content
-        self.section_type = section_type
-        self.level = level
-        self.metadata = metadata or {}
-
-    def __str__(self) -> str:
-        """Return a string representation of the section."""
-        return f"{self.section_type.value.capitalize()} (L{self.level}): {self.content[:50]}..."
-
-    def __repr__(self) -> str:
-        """Return a developer representation of the section."""
-        return (
-            f"Section(type={self.section_type.value}, level={self.level}, "
-            f"content='{self.content[:30]}...', metadata={self.metadata})"
-        )
-
-
 class DocumentParser:
-    """Parser for structured documents.
+    """Parser for structured documents into logical sections."""
 
-    This class is responsible for parsing structured documents (Markdown, JSON)
-    into logical sections based on headings, semantic breaks, or fixed chunks.
-    """
-
-    def __init__(self, default_format: DocumentFormat = DocumentFormat.MARKDOWN):
+    def __init__(self, config: Optional[ParserConfig] = None, default_format: DocumentFormat = DocumentFormat.MARKDOWN):
         """Initialize the document parser.
 
         Args:
-            default_format: The default format to use when not specified.
+            config: Configuration for parsing behavior.
+                If None, default configuration will be used.
+            default_format: Default format to use when parsing documents.
 
         """
+        self.config = config or ParserConfig()
         self.default_format = default_format
-        logger.info(f"Initialized DocumentParser with default format: {default_format.value}")
+        self._heading_patterns = [re.compile(p, re.MULTILINE) for p in self.config.heading_patterns]
+        logger.info(
+            f"Initialized DocumentParser with split_on_headings={self.config.split_on_headings}, "
+            f"min_section_length={self.config.min_section_length}"
+        )
 
     def parse(self, document: Union[str, Path], format: Optional[DocumentFormat] = None) -> List[Section]:
-        """Parse a document into a list of logical sections.
+        """Parse document into sections.
 
         Args:
-            document: The document content or path to the document file.
-            format: The format of the document. If None, will attempt to detect.
+            document: The document content as a string or a file path.
+            format: Format of the document (markdown, json, etc.).
+                If None, will try to guess the format or use default.
 
         Returns:
-            A list of Section objects representing the document structure.
+            List of document sections.
 
         Raises:
-            DocumentProcessingError: If the document cannot be parsed.
+            DocumentProcessingError: If parsing fails.
 
         """
-        # Determine format if not provided
-        doc_format = format or self.default_format
-
-        # Determine if document is a file path or content
-        content = document
-
-        # If it's a Path object, treat it as a file path
-        if isinstance(document, Path):
-            path = document
-            try:
-                if path.exists():
-                    if path.is_file():
-                        content = self._load_document(path)
-                    else:
-                        error_msg = f"Document path is not a file: {document}"
-                        logger.error(error_msg)
-                        raise DocumentProcessingError(error_msg)
-                else:
-                    error_msg = f"Document file not found: {document}"
-                    logger.error(error_msg)
-                    raise DocumentProcessingError(error_msg)
-            except OSError as e:
-                error_msg = f"Error accessing document file: {document}: {str(e)}"
-                logger.error(error_msg)
-                raise DocumentProcessingError(error_msg) from e
-        # For strings, check if it looks like a file path
-        elif isinstance(document, str):
-            # Heuristics to determine if this is a file path:
-            # 1. No newlines (content usually has newlines)
-            # 2. Less than 255 chars (typical max path length)
-            # 3. Contains file extension or path separators
-            # 4. Doesn't start with common content markers
-            is_likely_path = (
-                "\n" not in document
-                and len(document) < 255
-                and ("." in document or "/" in document or "\\" in document)
-                and not document.lstrip().startswith(("#", "{", "[", "<", "-"))
-            )
-
-            if is_likely_path:
-                path = Path(document)
-                try:
-                    if path.exists():
-                        if path.is_file():
-                            content = self._load_document(path)
-                        else:
-                            error_msg = f"Document path is not a file: {document}"
-                            logger.error(error_msg)
-                            raise DocumentProcessingError(error_msg)
-                    else:
-                        error_msg = f"Document file not found: {document}"
-                        logger.error(error_msg)
-                        raise DocumentProcessingError(error_msg)
-                except OSError:
-                    # OSError from path operations - likely not a valid path
-                    # Just treat as content
-                    pass
-
         try:
-            # Parse based on format
-            if doc_format == DocumentFormat.MARKDOWN:
-                return self._parse_markdown(content)
-            elif doc_format == DocumentFormat.JSON:
-                return self._parse_json(content)
-            elif doc_format == DocumentFormat.TEXT:
-                return self._parse_text(content)
-            else:
-                raise ValueError(f"Unsupported document format: {doc_format}")
+            # If format not specified, use default
+            format = format or self.default_format
+            logger.debug(f"Parsing document with format: {format.value}")
 
-        except DocumentProcessingError:
-            # Re-raise DocumentProcessingError
-            raise
+            # Check if document is a file path
+            if isinstance(document, Path) or (
+                isinstance(document, str)
+                and ("/" in document or "\\" in document)
+                and not document.startswith("{")
+                and not document.startswith("#")
+            ):
+                try:
+                    path = Path(document)
+                    if path.exists() and path.is_file():
+                        document = self._load_document(path)
+                except (ValueError, OSError, PermissionError) as e:
+                    # Catch specific exceptions when dealing with paths
+                    logger.debug(f"Treating as content, not a valid file path: {e}")
+                    # Continue with document as content
+
+            if format == DocumentFormat.MARKDOWN:
+                sections = self._parse_markdown(document)
+            elif format == DocumentFormat.JSON:
+                sections = self._parse_json(document)
+            elif format == DocumentFormat.TEXT:
+                sections = self._parse_text(document)
+            else:
+                raise ValueError(f"Unsupported document format: {format}")
+
+            logger.debug(f"Parsed {len(sections)} sections from document")
+            return sections
+
         except Exception as e:
             error_msg = f"Error parsing document: {str(e)}"
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
+
+    def _parse_markdown(self, markdown_content: str) -> List[Section]:
+        """Parse Markdown document into sections.
+
+        Args:
+            markdown_content: The Markdown document as a string.
+
+        Returns:
+            List of document sections.
+
+        """
+        sections = []
+        current_id = 0
+        lines = markdown_content.splitlines()
+
+        # Debug the content
+        logger.debug(f"Parsing markdown with {len(lines)} lines")
+        for line_num, line in enumerate(lines):
+            logger.debug(f"Line {line_num}: {repr(line)}")
+
+        i = 0
+        in_code_block = False
+        code_start = -1
+
+        while i < len(lines):
+            # Debug current line
+            logger.debug(f"Processing line {i}: {repr(lines[i])}")
+
+            # Handle code blocks
+            if lines[i].strip() == "```" or lines[i].strip().startswith("```"):
+                if not in_code_block:
+                    # Start of code block
+                    in_code_block = True
+                    code_start = i
+                    i += 1
+                    logger.debug(f"Code block start at line {code_start}")
+                    continue
+                else:
+                    # End of code block
+                    in_code_block = False
+
+                    # Extract language if specified
+                    language = ""
+                    if lines[code_start].strip() != "```":
+                        language = lines[code_start].strip().replace("```", "").strip()
+
+                    # Extract code content
+                    code_lines = lines[code_start + 1 : i]
+
+                    # Create code section
+                    current_id += 1
+                    code_content = "\n".join(code_lines)
+                    sections.append(
+                        Section(
+                            id=f"s{current_id}",
+                            section_type=SectionType.CODE,
+                            content=code_content,
+                            metadata={"language": language} if language else None,
+                        )
+                    )
+                    logger.debug(f"Added code block: {code_content[:30]}...")
+                    i += 1
+                    continue
+
+            # If we're in a code block, continue to next line
+            if in_code_block:
+                i += 1
+                continue
+
+            # Check for headings
+            heading_match, heading_level = self._match_heading(lines[i])
+
+            # Check for lists (- or * or 1. style)
+            is_list_item = bool(re.match(r"^\s*[-*+]\s+.+$", lines[i]) or re.match(r"^\s*\d+\.\s+.+$", lines[i]))
+
+            if is_list_item:
+                # Found a list item, collect all items in this list
+                list_items = [lines[i].strip()]
+                i += 1
+
+                # Collect subsequent list items
+                while i < len(lines) and (
+                    re.match(r"^\s*[-*+]\s+.+$", lines[i])
+                    or re.match(r"^\s*\d+\.\s+.+$", lines[i])
+                    or not lines[i].strip()  # Empty lines within list
+                ):
+                    if lines[i].strip():  # Skip empty lines in the count
+                        list_items.append(lines[i].strip())
+                    i += 1
+
+                # Create a section for the list
+                current_id += 1
+                list_content = "\n".join(list_items)
+                if list_content and len(list_content) >= self.config.min_section_length:
+                    sections.append(
+                        Section(
+                            id=f"s{current_id}",
+                            section_type=SectionType.LIST,
+                            content=list_content,
+                        )
+                    )
+                    logger.debug(f"Added list: {list_content[:30]}...")
+                # i is already incremented in the loop
+                continue
+
+            if heading_match and self.config.split_on_headings:
+                # Found a heading, create a new section
+                heading_text = heading_match.group(1).strip()
+                current_id += 1
+                section_id = f"s{current_id}"
+
+                sections.append(
+                    Section(
+                        id=section_id,
+                        section_type=SectionType.HEADING,
+                        content=heading_text,
+                        level=heading_level,
+                    )
+                )
+                logger.debug(f"Added heading: {heading_text}")
+
+                # Collect content until the next heading or end of document
+                content_lines = []
+                i += 1
+                while i < len(lines):
+                    next_heading, _ = self._match_heading(lines[i])
+                    is_next_list = bool(
+                        re.match(r"^\s*[-*+]\s+.+$", lines[i]) or re.match(r"^\s*\d+\.\s+.+$", lines[i])
+                    )
+                    is_code_block = lines[i].strip() == "```" or lines[i].strip().startswith("```")
+
+                    if (next_heading and self.config.split_on_headings) or is_next_list or is_code_block:
+                        break
+                    content_lines.append(lines[i])
+                    i += 1
+
+                # Create a section for the content if not empty
+                content = "\n".join(content_lines).strip()
+                if content and len(content) >= self.config.min_section_length:
+                    current_id += 1
+                    content_section_id = f"s{current_id}"
+                    sections.append(
+                        Section(
+                            id=content_section_id,
+                            section_type=SectionType.PARAGRAPH,
+                            content=content,
+                            parent_id=section_id,
+                        )
+                    )
+                    logger.debug(f"Added paragraph: {content[:30]}...")
+                    # Update the heading section with this child
+                    for section in sections:
+                        if section.id == section_id:
+                            if section.children is None:
+                                section.children = []
+                            section.children.append(content_section_id)
+                            break
+            else:
+                # Not a heading, list, or code block
+                # Collect content until blank line or next heading or list
+                content_lines = [lines[i]]
+                i += 1
+                while i < len(lines):
+                    next_heading, _ = self._match_heading(lines[i])
+                    is_next_list = bool(
+                        re.match(r"^\s*[-*+]\s+.+$", lines[i]) or re.match(r"^\s*\d+\.\s+.+$", lines[i])
+                    )
+                    is_code_block = lines[i].strip() == "```" or lines[i].strip().startswith("```")
+
+                    if (next_heading and self.config.split_on_headings) or is_next_list or is_code_block:
+                        break
+                    if self.config.split_on_blank_lines and not lines[i].strip():
+                        i += 1  # Skip the blank line
+                        break
+                    content_lines.append(lines[i])
+                    i += 1
+
+                # Create a section for the content if not empty
+                content = "\n".join(content_lines).strip()
+                if content and len(content) >= self.config.min_section_length:
+                    current_id += 1
+                    sections.append(
+                        Section(
+                            id=f"s{current_id}",
+                            section_type=SectionType.PARAGRAPH,
+                            content=content,
+                        )
+                    )
+                    logger.debug(f"Added paragraph: {content[:30]}...")
+
+        # Check for unclosed code block
+        if in_code_block:
+            # Extract code content
+            code_lines = lines[code_start + 1 :]
+
+            # Create code section
+            current_id += 1
+            code_content = "\n".join(code_lines)
+            sections.append(
+                Section(id=f"s{current_id}", section_type=SectionType.CODE, content=code_content, metadata=None)
+            )
+            logger.debug(f"Added unclosed code block: {code_content[:30]}...")
+
+        return sections
+
+    def _match_heading(self, line: str) -> Tuple[Optional[re.Match], Optional[int]]:
+        """Match a line against heading patterns.
+
+        Args:
+            line: The line to check for heading patterns.
+
+        Returns:
+            Tuple of (match_object, heading_level) or (None, None) if no match.
+
+        """
+        # Check ATX style headings (# Heading)
+        atx_match = re.match(r"^(#{1,6})\s+(.+)$", line)
+        if atx_match:
+            level = len(atx_match.group(1))
+            # Recreate match with the full heading text as group 1
+            return re.match(r"^#{1,6}\s+(.+)$", line), level
+
+        # Setext style headings need the next line, can't check in isolation
+        # This is a limitation of the current implementation
+
+        return None, None
+
+    def _parse_json(self, json_content: str) -> List[Section]:
+        """Parse JSON document into sections.
+
+        Args:
+            json_content: The JSON document as a string.
+
+        Returns:
+            List of document sections.
+
+        """
+        import json
+
+        sections = []
+        current_id = 0
+
+        try:
+            data = json.loads(json_content)
+
+            # If there's a title, add it as a heading
+            if "title" in data:
+                current_id += 1
+                sections.append(
+                    Section(id=f"s{current_id}", section_type=SectionType.HEADING, content=data["title"], level=1)
+                )
+
+            # Process sections if available
+            if "sections" in data and isinstance(data["sections"], list):
+                for section_data in data["sections"]:
+                    if "heading" in section_data:
+                        current_id += 1
+                        heading_id = f"s{current_id}"
+                        sections.append(
+                            Section(
+                                id=heading_id,
+                                section_type=SectionType.HEADING,
+                                content=section_data["heading"],
+                                level=2,
+                            )
+                        )
+
+                    if "content" in section_data:
+                        current_id += 1
+                        content_id = f"s{current_id}"
+                        parent_id = heading_id if "heading" in section_data else None
+                        sections.append(
+                            Section(
+                                id=content_id,
+                                section_type=SectionType.PARAGRAPH,
+                                content=section_data["content"],
+                                parent_id=parent_id,
+                            )
+                        )
+
+            # If no sections were added, create a section with the entire JSON
+            if not sections:
+                current_id += 1
+                sections.append(
+                    Section(id=f"s{current_id}", section_type=SectionType.PARAGRAPH, content=json.dumps(data, indent=2))
+                )
+
+            return sections
+
+        except json.JSONDecodeError:
+            # If not valid JSON, treat as text
+            current_id += 1
+            return [Section(id=f"s{current_id}", section_type=SectionType.PARAGRAPH, content=json_content)]
+
+    def _parse_text(self, text_content: str) -> List[Section]:
+        """Parse plain text document into sections.
+
+        Args:
+            text_content: The text document as a string.
+
+        Returns:
+            List of document sections.
+
+        """
+        sections = []
+        current_id = 0
+
+        # Simple paragraph splitting on blank lines
+        paragraphs = re.split(r"\n\s*\n", text_content)
+
+        for paragraph in paragraphs:
+            content = paragraph.strip()
+            if content and len(content) >= self.config.min_section_length:
+                current_id += 1
+                sections.append(
+                    Section(
+                        id=f"s{current_id}",
+                        section_type=SectionType.PARAGRAPH,
+                        content=content,
+                    )
+                )
+
+        return sections
 
     def _load_document(self, document_path: Union[str, Path]) -> str:
         """Load a document from a file path.
@@ -219,223 +582,6 @@ class DocumentParser:
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
-    def _parse_markdown(self, content: str) -> List[Section]:
-        """Parse Markdown content into logical sections.
-
-        Args:
-            content: Markdown content as a string.
-
-        Returns:
-            A list of Section objects representing the Markdown structure.
-
-        """
-        logger.debug("Parsing markdown content")
-        sections = []
-        current_section = None
-        current_text = ""
-        current_level = 0
-
-        # Make sure content is a string
-        if not isinstance(content, str):
-            content = str(content)
-
-        # Split content into lines for processing
-        lines = content.splitlines()
-
-        for line in lines:
-            # Check for heading
-            if line.startswith("#"):
-                # Save previous section if exists
-                if current_text and current_section:
-                    sections.append(Section(current_text.strip(), current_section, current_level))
-                    current_text = ""
-
-                # Determine heading level
-                level = len(line) - len(line.lstrip("#"))
-                heading_text = line[level:].strip().lstrip()
-
-                # Add heading as a section
-                sections.append(Section(heading_text, SectionType.HEADING, level))
-
-                # Reset current section tracking
-                current_section = SectionType.PARAGRAPH
-                current_level = 0
-
-            # Check for code block
-            elif line.startswith("```"):
-                if current_section == SectionType.CODE:
-                    # End of code block
-                    sections.append(Section(current_text.strip(), SectionType.CODE, 0))
-                    current_text = ""
-                    current_section = SectionType.PARAGRAPH
-                    current_level = 0
-                else:
-                    # Start of code block, save previous section if exists
-                    if current_text and current_section:
-                        sections.append(Section(current_text.strip(), current_section, current_level))
-                        current_text = ""
-
-                    current_section = SectionType.CODE
-                    current_level = 0
-
-            # Process bullet list items
-            elif line.strip().startswith(("- ", "* ", "+ ")):
-                if current_section != SectionType.LIST:
-                    # Save previous section if exists
-                    if current_text and current_section:
-                        sections.append(Section(current_text.strip(), current_section, current_level))
-                        current_text = ""
-
-                    current_section = SectionType.LIST
-                    current_level = 0
-
-                current_text += line + "\n"
-
-            # Handle paragraph breaks
-            elif not line.strip() and current_text and current_section:
-                # Empty line - save current section and start a new one
-                sections.append(Section(current_text.strip(), current_section, current_level))
-                current_text = ""
-                current_section = SectionType.PARAGRAPH
-                current_level = 0
-
-            # Add to current section
-            elif line.strip() or current_text:
-                if not current_section:
-                    current_section = SectionType.PARAGRAPH
-                    current_level = 0
-
-                current_text += line + "\n"
-
-        # Add the last section if there's one pending
-        if current_text and current_section:
-            sections.append(Section(current_text.strip(), current_section, current_level))
-
-        logger.debug(f"Parsed {len(sections)} sections from markdown")
-        return sections
-
-    def _parse_json(self, content: str) -> List[Section]:
-        """Parse JSON content into logical sections.
-
-        Args:
-            content: JSON content as a string.
-
-        Returns:
-            A list of Section objects representing the JSON structure.
-
-        """
-        logger.debug("Parsing JSON content")
-
-        # Ensure we have a string
-        if not isinstance(content, str):
-            content = str(content)
-
-        import json
-
-        try:
-            # Parse JSON
-            data = json.loads(content)
-            sections = []
-
-            # Process title directly if available
-            if isinstance(data, dict) and "title" in data:
-                sections.append(Section(str(data["title"]), SectionType.HEADING, 1))
-
-            # Process sections directly if available
-            if isinstance(data, dict) and "sections" in data and isinstance(data["sections"], list):
-                for section in data["sections"]:
-                    if isinstance(section, dict):
-                        # Add heading
-                        if "heading" in section:
-                            sections.append(Section(section["heading"], SectionType.HEADING, 2))
-                        # Add content
-                        if "content" in section:
-                            sections.append(Section(section["content"], SectionType.PARAGRAPH, 0))
-                        # Handle subsections
-                        if "subsections" in section and isinstance(section["subsections"], list):
-                            for subsection in section["subsections"]:
-                                if isinstance(subsection, dict):
-                                    if "heading" in subsection:
-                                        sections.append(Section(subsection["heading"], SectionType.HEADING, 3))
-                                    if "content" in subsection:
-                                        sections.append(Section(subsection["content"], SectionType.PARAGRAPH, 0))
-
-            # If sections list is still empty, use the generic conversion
-            if not sections:
-                sections = self._convert_json_to_sections(data)
-
-            logger.debug(f"Parsed {len(sections)} sections from JSON")
-            return sections
-        except json.JSONDecodeError as e:
-            error_msg = f"Invalid JSON format: {str(e)}"
-            logger.error(error_msg)
-            raise DocumentProcessingError(error_msg) from e
-
-    def _convert_json_to_sections(self, data: Union[Dict, List], prefix="", level=0) -> List[Section]:
-        """Convert a JSON object to sections recursively.
-
-        Args:
-            data: JSON data (dict or list).
-            prefix: Key prefix for nested data.
-            level: Current nesting level.
-
-        Returns:
-            List of Section objects representing the JSON structure.
-
-        """
-        sections = []
-
-        if isinstance(data, dict):
-            for key, value in data.items():
-                full_key = f"{prefix}.{key}" if prefix else key
-
-                if isinstance(value, (dict, list)):
-                    # Add the key as a heading
-                    sections.append(Section(full_key, SectionType.HEADING, level + 1))
-                    # Recursively process nested structures
-                    sections.extend(self._convert_json_to_sections(value, full_key, level + 1))
-                else:
-                    # Add leaf node as a section
-                    content = f"{full_key}: {value}"
-                    sections.append(Section(content, SectionType.PARAGRAPH, level))
-
-        elif isinstance(data, list):
-            for i, item in enumerate(data):
-                if isinstance(item, (dict, list)):
-                    # Add list index as pseudo-heading
-                    list_key = f"{prefix}[{i}]" if prefix else f"[{i}]"
-                    sections.append(Section(list_key, SectionType.HEADING, level + 1))
-                    # Recursively process nested structures
-                    sections.extend(self._convert_json_to_sections(item, list_key, level + 1))
-                else:
-                    # Add list item as a section
-                    content = f"{prefix}[{i}]: {item}" if prefix else f"[{i}]: {item}"
-                    sections.append(Section(content, SectionType.LIST, level))
-
-        return sections
-
-    def _parse_text(self, content: str) -> List[Section]:
-        """Parse plain text content into logical sections.
-
-        Args:
-            content: Plain text content as a string.
-
-        Returns:
-            A list of Section objects representing the text structure.
-
-        """
-        logger.debug("Parsing plain text content")
-        sections = []
-
-        # Split by double newlines (paragraph breaks)
-        paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
-
-        for paragraph in paragraphs:
-            sections.append(Section(paragraph, SectionType.PARAGRAPH, 0))
-
-        logger.debug(f"Parsed {len(sections)} sections from plain text")
-        return sections
-
     def segment_by_fixed_chunks(self, content: str, chunk_size: int = 1000) -> List[Section]:
         """Segment text into fixed-size chunks.
 
@@ -456,22 +602,29 @@ class DocumentParser:
 
         # If content is smaller than chunk_size, just return it as one chunk
         if len(content) <= chunk_size:
-            return [Section(content.strip(), SectionType.PARAGRAPH)]
+            return [Section(id="s1", section_type=SectionType.PARAGRAPH, content=content.strip())]
 
         # Split content into paragraphs first to maintain some coherence
         paragraphs = content.split("\n\n")
         current_chunk = ""
+        section_id = 0
 
         for paragraph in paragraphs:
             # If adding this paragraph would exceed chunk size and we already have content
             if current_chunk and len(current_chunk) + len(paragraph) + 2 > chunk_size:
                 # Add the current chunk and start a new one
-                sections.append(Section(current_chunk.strip(), SectionType.PARAGRAPH))
+                section_id += 1
+                sections.append(
+                    Section(id=f"s{section_id}", section_type=SectionType.PARAGRAPH, content=current_chunk.strip())
+                )
                 current_chunk = paragraph + "\n\n"
             elif len(paragraph) > chunk_size:
                 # If the paragraph itself is too long, split it by sentences or just characters
                 if current_chunk:
-                    sections.append(Section(current_chunk.strip(), SectionType.PARAGRAPH))
+                    section_id += 1
+                    sections.append(
+                        Section(id=f"s{section_id}", section_type=SectionType.PARAGRAPH, content=current_chunk.strip())
+                    )
                     current_chunk = ""
 
                 # Try to split by sentences first
@@ -481,25 +634,47 @@ class DocumentParser:
                 for sentence in sentences:
                     if len(current_sentence_chunk) + len(sentence) + 1 > chunk_size:
                         if current_sentence_chunk:
-                            sections.append(Section(current_sentence_chunk.strip(), SectionType.PARAGRAPH))
+                            section_id += 1
+                            sections.append(
+                                Section(
+                                    id=f"s{section_id}",
+                                    section_type=SectionType.PARAGRAPH,
+                                    content=current_sentence_chunk.strip(),
+                                )
+                            )
                             current_sentence_chunk = sentence + " "
                         else:
                             # Even a single sentence is too long, so split by characters
                             for i in range(0, len(sentence), chunk_size):
                                 chunk = sentence[i : i + chunk_size]
-                                sections.append(Section(chunk.strip(), SectionType.PARAGRAPH))
+                                section_id += 1
+                                sections.append(
+                                    Section(
+                                        id=f"s{section_id}", section_type=SectionType.PARAGRAPH, content=chunk.strip()
+                                    )
+                                )
                     else:
                         current_sentence_chunk += sentence + " "
 
                 if current_sentence_chunk:
-                    sections.append(Section(current_sentence_chunk.strip(), SectionType.PARAGRAPH))
+                    section_id += 1
+                    sections.append(
+                        Section(
+                            id=f"s{section_id}",
+                            section_type=SectionType.PARAGRAPH,
+                            content=current_sentence_chunk.strip(),
+                        )
+                    )
             else:
                 # This paragraph fits, add it to the current chunk
                 current_chunk += paragraph + "\n\n"
 
         # Add the last chunk if it's not empty
         if current_chunk.strip():
-            sections.append(Section(current_chunk.strip(), SectionType.PARAGRAPH))
+            section_id += 1
+            sections.append(
+                Section(id=f"s{section_id}", section_type=SectionType.PARAGRAPH, content=current_chunk.strip())
+            )
 
         logger.debug(f"Created {len(sections)} fixed-size chunks")
         return sections

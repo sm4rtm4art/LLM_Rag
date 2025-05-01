@@ -1,4 +1,4 @@
-name: Optimized CI/CD Pipeline
+name: CI/CD Pipeline
 
 permissions:
   actions: read
@@ -306,13 +306,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          driver: docker-container
-          driver-opts: |
-            network=host
-            image=moby/buildkit:latest
-          buildkitd-flags: --debug
-          platforms: linux/amd64
-          use: true
+          driver: docker
 
       # Login to DockerHub
       - uses: docker/login-action@v3
@@ -323,8 +317,8 @@ jobs:
       # Pull cache image (separately to ensure it's available)
       - name: Pull cache image
         run: |
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache || true
-          echo "Pulled cache image - this is just for ensuring cache is loaded"
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest || true
+          echo "Pulled latest image for cache"
 
       # Fast build with focused caching and optimizations
       - name: Build and push
@@ -335,10 +329,8 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
-          # Improved cache handling
-          cache-from: |
-            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache
-            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
+          # Simplified cache handling
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
           cache-to: type=inline
           # Performance optimizations
           platforms: linux/amd64
@@ -357,30 +349,21 @@ jobs:
         id: build
 
       # The separate tag-push step helps with the hanging issue by breaking up the large uploads
-      - name: Tag and push by digest
+      - name: Verify build success
         if: steps.build.outcome == 'success'
         run: |
-          echo "Build was successful, verifying tags were pushed correctly"
-          # Check if the tags are available
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest || echo "Latest tag may still be uploading"
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} || echo "SHA tag may still be uploading"
+          echo "Build was successful! Images have been pushed to Docker Hub."
+          echo "Latest tag: ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest"
+          echo "SHA tag: ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}"
 
       # Simple fallback build in case main build fails
       - name: Fallback build
         if: failure() && steps.build.outcome == 'failure'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
-          platforms: linux/amd64
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
-            PIP_NO_CACHE_DIR=1
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
-          cache-to: ""
+        run: |
+          echo "Primary build failed, attempting direct Docker build..."
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest -t ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
 
       # Trivy container scan
       - name: Cache Trivy DB

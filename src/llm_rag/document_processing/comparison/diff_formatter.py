@@ -1,5 +1,6 @@
 """Module for formatting document comparison results."""
 
+import difflib
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional
@@ -11,40 +12,48 @@ from llm_rag.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-class FormatStyle(Enum):
-    """Styles for formatting comparison results."""
+class DiffFormat(Enum):
+    """Supported formats for diff output."""
 
     MARKDOWN = "markdown"
     HTML = "html"
-    PLAIN = "plain"
+    TEXT = "text"
+
+
+class AnnotationStyle(Enum):
+    """Styles for annotating differences."""
+
+    STANDARD = "standard"
+    DETAILED = "detailed"
+    MINIMAL = "minimal"
 
 
 @dataclass
 class FormatterConfig:
-    """Configuration for the diff formatter.
+    """Configuration for diff formatting.
 
     Attributes:
-        style: Output format style.
-        show_similarity_scores: Whether to include similarity scores in output.
-        context_lines: Number of context lines to include in diffs.
-        color_output: Whether to include color in the output (for supported formats).
-        detail_level: Level of detail in the output (1=minimal, 3=detailed).
+        output_format: Format of the output (markdown, html, text).
+        annotation_style: Level of detail for annotations.
+        include_metadata: Whether to include additional metadata.
+        include_similarity_scores: Whether to include similarity scores.
+        wrap_width: Character width for wrapping text lines.
+        color_output: Whether to use terminal colors (for text output).
+        show_unchanged: Whether to include unchanged sections.
 
     """
 
-    style: FormatStyle = FormatStyle.MARKDOWN
-    show_similarity_scores: bool = True
-    context_lines: int = 2
-    color_output: bool = True
-    detail_level: int = 2
+    output_format: DiffFormat = DiffFormat.MARKDOWN
+    annotation_style: AnnotationStyle = AnnotationStyle.STANDARD
+    include_metadata: bool = False
+    include_similarity_scores: bool = True
+    wrap_width: int = 100
+    color_output: bool = False
+    show_unchanged: bool = True
 
 
 class DiffFormatter:
-    """Formats document comparison results into human-readable formats.
-
-    This class takes the output of the comparison engine and produces
-    formatted output in various styles (Markdown, HTML, etc.).
-    """
+    """Formatter for document comparison results."""
 
     def __init__(self, config: Optional[FormatterConfig] = None):
         """Initialize the diff formatter.
@@ -55,17 +64,20 @@ class DiffFormatter:
 
         """
         self.config = config or FormatterConfig()
-        logger.info(f"Initialized DiffFormatter with style: {self.config.style.value}")
+        logger.info(
+            f"Initialized DiffFormatter with format={self.config.output_format.value}, "
+            f"style={self.config.annotation_style.value}"
+        )
 
     def format_comparisons(self, comparisons: List[SectionComparison], title: Optional[str] = None) -> str:
-        """Format a list of section comparisons into a human-readable output.
+        """Format list of section comparisons into a human-readable diff.
 
         Args:
             comparisons: List of section comparisons to format.
-            title: Optional title for the diff output.
+            title: Optional title for the diff report.
 
         Returns:
-            Formatted comparison output as a string.
+            Formatted diff as a string.
 
         Raises:
             DocumentProcessingError: If formatting fails.
@@ -74,352 +86,417 @@ class DiffFormatter:
         try:
             logger.debug(f"Formatting {len(comparisons)} section comparisons")
 
-            # Choose formatter based on style
-            if self.config.style == FormatStyle.MARKDOWN:
+            if self.config.output_format == DiffFormat.MARKDOWN:
                 return self._format_markdown(comparisons, title)
-            elif self.config.style == FormatStyle.HTML:
+            elif self.config.output_format == DiffFormat.HTML:
                 return self._format_html(comparisons, title)
-            elif self.config.style == FormatStyle.PLAIN:
-                return self._format_plain(comparisons, title)
+            elif self.config.output_format == DiffFormat.TEXT:
+                return self._format_text(comparisons, title)
             else:
-                raise ValueError(f"Unsupported format style: {self.config.style}")
+                raise ValueError(f"Unsupported diff format: {self.config.output_format}")
 
         except Exception as e:
-            error_msg = f"Error formatting comparison results: {str(e)}"
+            error_msg = f"Error formatting diff: {str(e)}"
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
-    def _format_markdown(self, comparisons: List[SectionComparison], title: Optional[str]) -> str:
+    def _format_markdown(self, comparisons: List[SectionComparison], title: Optional[str] = None) -> str:
         """Format comparisons as Markdown.
 
         Args:
             comparisons: List of section comparisons to format.
-            title: Optional title for the output.
+            title: Optional title for the diff report.
 
         Returns:
-            Formatted Markdown string.
+            Markdown-formatted diff as a string.
 
         """
-        logger.debug("Formatting comparisons as Markdown")
-
         lines = []
 
-        # Add title if provided
+        # Add title
         if title:
             lines.append(f"# {title}")
             lines.append("")
 
         # Add summary
+        similar_count = sum(1 for c in comparisons if c.result == ComparisonResult.SIMILAR)
+        minor_changes_count = sum(1 for c in comparisons if c.result == ComparisonResult.MINOR_CHANGES)
+        major_changes_count = sum(1 for c in comparisons if c.result == ComparisonResult.MAJOR_CHANGES)
+        rewritten_count = sum(1 for c in comparisons if c.result == ComparisonResult.REWRITTEN)
+        new_count = sum(1 for c in comparisons if c.result == ComparisonResult.NEW)
+        deleted_count = sum(1 for c in comparisons if c.result == ComparisonResult.DELETED)
+
         lines.append("## Summary")
         lines.append("")
-        lines.extend(self._generate_summary(comparisons))
+        lines.append(f"- Similar sections: {similar_count}")
+        lines.append(f"- Minor changes: {minor_changes_count}")
+        lines.append(f"- Major changes: {major_changes_count}")
+        lines.append(f"- Rewritten: {rewritten_count}")
+        lines.append(f"- New: {new_count}")
+        lines.append(f"- Deleted: {deleted_count}")
+        lines.append("")
+        lines.append("## Details")
         lines.append("")
 
-        # Add detailed comparisons
-        lines.append("## Detailed Comparison")
-        lines.append("")
+        # Add each section comparison
+        for i, comparison in enumerate(comparisons, 1):
+            # Skip unchanged sections if configured
+            if not self.config.show_unchanged and comparison.result == ComparisonResult.SIMILAR:
+                continue
 
-        for i, comparison in enumerate(comparisons):
-            section_header = f"### Section {i + 1}"
-
-            if (
-                comparison.alignment_pair.source_section
-                and comparison.alignment_pair.source_section.section_type.value == "heading"
-            ):
-                # Use the heading text for the section header
-                heading_text = comparison.alignment_pair.source_section.content
-                section_header = f"### {heading_text}"
-            elif (
-                comparison.alignment_pair.target_section
-                and comparison.alignment_pair.target_section.section_type.value == "heading"
-            ):
-                heading_text = comparison.alignment_pair.target_section.content
-                section_header = f"### {heading_text}"
-
-            lines.append(section_header)
-
-            # Add result classification
-            result = comparison.result.value.upper()
-            if self.config.show_similarity_scores and comparison.similarity_score > 0:
-                result_line = f"**Result**: {result} (Similarity: {comparison.similarity_score:.2f})"
-            else:
-                result_line = f"**Result**: {result}"
-            lines.append(result_line)
+            # Section header
+            lines.append(f"### Section {i}: {comparison.result.value.upper()}")
             lines.append("")
 
-            # Format the section content based on the result
-            if comparison.result == ComparisonResult.SIMILAR:
-                if self.config.detail_level >= 2:
-                    lines.append("Content is similar in both documents:")
-                    lines.append("```")
-                    lines.append(comparison.alignment_pair.source_section.content)
-                    lines.append("```")
-            elif comparison.result == ComparisonResult.DELETED:
-                lines.append("Content present only in source document:")
-                lines.append("```diff")
-                lines.append("- " + comparison.alignment_pair.source_section.content.replace("\n", "\n- "))
+            # Add similarity score if configured
+            if self.config.include_similarity_scores and comparison.similarity_score > 0:
+                lines.append(f"*Similarity: {comparison.similarity_score:.2f}*")
+                lines.append("")
+
+            # Format based on result type
+            if comparison.result == ComparisonResult.NEW:
+                lines.append("**[NEW]**")
+                lines.append("")
                 lines.append("```")
-            elif comparison.result == ComparisonResult.NEW:
-                lines.append("Content present only in target document:")
-                lines.append("```diff")
-                lines.append("+ " + comparison.alignment_pair.target_section.content.replace("\n", "\n+ "))
+                lines.append(comparison.alignment_pair.target_section.content)
+                lines.append("```")
+            elif comparison.result == ComparisonResult.DELETED:
+                lines.append("**[DELETED]**")
+                lines.append("")
+                lines.append("```")
+                lines.append(comparison.alignment_pair.source_section.content)
+                lines.append("```")
+            elif comparison.result == ComparisonResult.SIMILAR:
+                lines.append("**[SIMILAR]**")
+                lines.append("")
+                lines.append("```")
+                lines.append(comparison.alignment_pair.source_section.content)
                 lines.append("```")
             else:
-                # Modified content - show diff
-                lines.append("Content differs between documents:")
-                lines.append("```diff")
-                lines.append("- " + comparison.alignment_pair.source_section.content.replace("\n", "\n- "))
-                lines.append("+ " + comparison.alignment_pair.target_section.content.replace("\n", "\n+ "))
+                # For sections with changes (MINOR_CHANGES, MAJOR_CHANGES, REWRITTEN)
+                lines.append(f"**[{comparison.result.value.upper()}]**")
+                lines.append("")
+
+                # Source content
+                lines.append("Source:")
+                lines.append("```")
+                lines.append(comparison.alignment_pair.source_section.content)
                 lines.append("```")
 
+                # Target content
+                lines.append("Target:")
+                lines.append("```")
+                lines.append(comparison.alignment_pair.target_section.content)
+                lines.append("```")
+
+                # Add diff using difflib if we're using detailed annotations
+                if self.config.annotation_style == AnnotationStyle.DETAILED:
+                    diff = self._generate_text_diff(
+                        comparison.alignment_pair.source_section.content,
+                        comparison.alignment_pair.target_section.content,
+                    )
+                    lines.append("Diff:")
+                    lines.append("```diff")
+                    lines.append(diff)
+                    lines.append("```")
+
+            # Add separator
+            lines.append("")
+            lines.append("---")
             lines.append("")
 
         return "\n".join(lines)
 
-    def _format_html(self, comparisons: List[SectionComparison], title: Optional[str]) -> str:
+    def _format_html(self, comparisons: List[SectionComparison], title: Optional[str] = None) -> str:
         """Format comparisons as HTML.
 
         Args:
             comparisons: List of section comparisons to format.
-            title: Optional title for the output.
+            title: Optional title for the diff report.
 
         Returns:
-            Formatted HTML string.
+            HTML-formatted diff as a string.
 
         """
-        logger.debug("Formatting comparisons as HTML")
-
-        lines = []
-
-        # HTML header
-        lines.append("<!DOCTYPE html>")
-        lines.append("<html>")
-        lines.append("<head>")
-        lines.append('  <meta charset="UTF-8">')
-        if title:
-            lines.append(f"  <title>{title}</title>")
-        else:
-            lines.append("  <title>Document Comparison</title>")
-
-        # Add some basic styling
-        lines.append("  <style>")
-        lines.append("    body { font-family: Arial, sans-serif; margin: 20px; }")
-        lines.append("    .similar { background-color: #e6ffe6; }")
-        lines.append("    .minor-changes { background-color: #ffffcc; }")
-        lines.append("    .major-changes { background-color: #ffe6cc; }")
-        lines.append("    .rewritten { background-color: #ffe6e6; }")
-        lines.append("    .new { background-color: #e6fff2; }")
-        lines.append("    .deleted { background-color: #f2e6ff; }")
-        lines.append("    .diff-source { color: #cc0000; text-decoration: line-through; }")
-        lines.append("    .diff-target { color: #00cc00; }")
-        lines.append("    .section { border: 1px solid #ddd; padding: 10px; margin-bottom: 20px; }")
-        lines.append("    .result { font-weight: bold; margin-bottom: 10px; }")
-        lines.append("    .summary { margin-bottom: 30px; }")
-        lines.append("    pre { white-space: pre-wrap; }")
-        lines.append("  </style>")
-        lines.append("</head>")
-        lines.append("<body>")
-
-        # Add title
-        if title:
-            lines.append(f"<h1>{title}</h1>")
+        # Basic HTML structure
+        html = [
+            "<!DOCTYPE html>",
+            "<html>",
+            "<head>",
+            "<meta charset='utf-8'>",
+            f"<title>{title or 'Document Comparison'}</title>",
+            "<style>",
+            "body { font-family: Arial, sans-serif; margin: 20px; }",
+            ".section { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; }",
+            ".similar { background-color: #f0f8ff; }",  # Light blue
+            ".minor_changes { background-color: #e6ffe6; }",  # Light green
+            ".major_changes { background-color: #fff0e6; }",  # Light orange
+            ".rewritten { background-color: #fff0f0; }",  # Light red
+            ".new { background-color: #e6ffee; }",  # Light mint
+            ".deleted { background-color: #ffe6e6; }",  # Light pink
+            ".header { font-weight: bold; margin-bottom: 10px; }",
+            ".content { white-space: pre-wrap; font-family: monospace; }",
+            ".source { border-left: 3px solid #555; padding-left: 10px; margin-bottom: 10px; }",
+            ".target { border-left: 3px solid #0077cc; padding-left: 10px; }",
+            ".diff { font-family: monospace; white-space: pre-wrap; margin-top: 10px; }",
+            ".diff-add { background-color: #e6ffec; color: #117700; }",
+            ".diff-remove { background-color: #ffebe9; color: #cc0000; }",
+            ".similarity { color: #777; font-style: italic; }",
+            ".summary { margin-bottom: 20px; }",
+            "</style>",
+            "</head>",
+            "<body>",
+            f"<h1>{title or 'Document Comparison'}</h1>",
+        ]
 
         # Add summary
-        lines.append('<div class="summary">')
-        lines.append("<h2>Summary</h2>")
-        summary_lines = self._generate_summary(comparisons)
-        lines.append("<ul>")
-        for line in summary_lines:
-            lines.append(f"  <li>{line}</li>")
-        lines.append("</ul>")
-        lines.append("</div>")
+        similar_count = sum(1 for c in comparisons if c.result == ComparisonResult.SIMILAR)
+        minor_changes_count = sum(1 for c in comparisons if c.result == ComparisonResult.MINOR_CHANGES)
+        major_changes_count = sum(1 for c in comparisons if c.result == ComparisonResult.MAJOR_CHANGES)
+        rewritten_count = sum(1 for c in comparisons if c.result == ComparisonResult.REWRITTEN)
+        new_count = sum(1 for c in comparisons if c.result == ComparisonResult.NEW)
+        deleted_count = sum(1 for c in comparisons if c.result == ComparisonResult.DELETED)
 
-        # Add detailed comparisons
-        lines.append("<h2>Detailed Comparison</h2>")
+        html.append("<div class='summary'>")
+        html.append("<h2>Summary</h2>")
+        html.append("<ul>")
+        html.append(f"<li>Similar sections: {similar_count}</li>")
+        html.append(f"<li>Minor changes: {minor_changes_count}</li>")
+        html.append(f"<li>Major changes: {major_changes_count}</li>")
+        html.append(f"<li>Rewritten: {rewritten_count}</li>")
+        html.append(f"<li>New: {new_count}</li>")
+        html.append(f"<li>Deleted: {deleted_count}</li>")
+        html.append("</ul>")
+        html.append("</div>")
 
-        for i, comparison in enumerate(comparisons):
-            result_class = comparison.result.value.replace("_", "-")
-            lines.append(f'<div class="section {result_class}">')
+        html.append("<h2>Details</h2>")
 
-            # Section header
-            if (
-                comparison.alignment_pair.source_section
-                and comparison.alignment_pair.source_section.section_type.value == "heading"
-            ):
-                heading_text = comparison.alignment_pair.source_section.content
-                lines.append(f"<h3>{heading_text}</h3>")
-            elif (
-                comparison.alignment_pair.target_section
-                and comparison.alignment_pair.target_section.section_type.value == "heading"
-            ):
-                heading_text = comparison.alignment_pair.target_section.content
-                lines.append(f"<h3>{heading_text}</h3>")
-            else:
-                lines.append(f"<h3>Section {i + 1}</h3>")
+        # Add each section comparison
+        for i, comparison in enumerate(comparisons, 1):
+            # Skip unchanged sections if configured
+            if not self.config.show_unchanged and comparison.result == ComparisonResult.SIMILAR:
+                continue
 
-            # Result classification
-            result = comparison.result.value.upper().replace("_", " ")
-            if self.config.show_similarity_scores and comparison.similarity_score > 0:
-                lines.append(
-                    f'<div class="result">Result: {result} (Similarity: {comparison.similarity_score:.2f})</div>'
-                )
-            else:
-                lines.append(f'<div class="result">Result: {result}</div>')
+            result_class = comparison.result.value.lower()
+            html.append(f"<div class='section {result_class}'>")
+            html.append(f"<div class='header'>Section {i}: {comparison.result.value.upper()}</div>")
 
-            # Format content based on result
-            if comparison.result == ComparisonResult.SIMILAR:
-                if self.config.detail_level >= 2:
-                    lines.append("<p>Content is similar in both documents:</p>")
-                    lines.append("<pre>")
-                    lines.append(self._escape_html(comparison.alignment_pair.source_section.content))
-                    lines.append("</pre>")
+            # Add similarity score if configured
+            if self.config.include_similarity_scores and comparison.similarity_score > 0:
+                html.append(f"<div class='similarity'>Similarity: {comparison.similarity_score:.2f}</div>")
+
+            # Format based on result type
+            if comparison.result == ComparisonResult.NEW:
+                html.append("<div class='content'>")
+                html.append(self._escape_html(comparison.alignment_pair.target_section.content))
+                html.append("</div>")
             elif comparison.result == ComparisonResult.DELETED:
-                lines.append("<p>Content present only in source document:</p>")
-                lines.append('<pre class="diff-source">')
-                lines.append(self._escape_html(comparison.alignment_pair.source_section.content))
-                lines.append("</pre>")
-            elif comparison.result == ComparisonResult.NEW:
-                lines.append("<p>Content present only in target document:</p>")
-                lines.append('<pre class="diff-target">')
-                lines.append(self._escape_html(comparison.alignment_pair.target_section.content))
-                lines.append("</pre>")
+                html.append("<div class='content'>")
+                html.append(self._escape_html(comparison.alignment_pair.source_section.content))
+                html.append("</div>")
+            elif comparison.result == ComparisonResult.SIMILAR:
+                html.append("<div class='content'>")
+                html.append(self._escape_html(comparison.alignment_pair.source_section.content))
+                html.append("</div>")
             else:
-                # Modified content - show both versions
-                lines.append("<p>Content differs between documents:</p>")
-                lines.append("<div>")
-                lines.append('<pre class="diff-source">')
-                lines.append(self._escape_html(comparison.alignment_pair.source_section.content))
-                lines.append("</pre>")
-                lines.append('<pre class="diff-target">')
-                lines.append(self._escape_html(comparison.alignment_pair.target_section.content))
-                lines.append("</pre>")
-                lines.append("</div>")
+                # For sections with changes (MINOR_CHANGES, MAJOR_CHANGES, REWRITTEN)
+                html.append("<div class='source'>")
+                html.append("<strong>Source:</strong>")
+                html.append("<div class='content'>")
+                html.append(self._escape_html(comparison.alignment_pair.source_section.content))
+                html.append("</div>")
+                html.append("</div>")
 
-            lines.append("</div>")
+                html.append("<div class='target'>")
+                html.append("<strong>Target:</strong>")
+                html.append("<div class='content'>")
+                html.append(self._escape_html(comparison.alignment_pair.target_section.content))
+                html.append("</div>")
+                html.append("</div>")
 
-        # HTML footer
-        lines.append("</body>")
-        lines.append("</html>")
+                # Add diff if using detailed annotations
+                if self.config.annotation_style == AnnotationStyle.DETAILED:
+                    html_diff = self._generate_html_diff(
+                        comparison.alignment_pair.source_section.content,
+                        comparison.alignment_pair.target_section.content,
+                    )
+                    html.append("<div class='diff'>")
+                    html.append("<strong>Diff:</strong>")
+                    html.append(html_diff)
+                    html.append("</div>")
 
-        return "\n".join(lines)
+            html.append("</div>")  # Close section div
 
-    def _format_plain(self, comparisons: List[SectionComparison], title: Optional[str]) -> str:
+        # Close HTML
+        html.append("</body>")
+        html.append("</html>")
+
+        return "\n".join(html)
+
+    def _format_text(self, comparisons: List[SectionComparison], title: Optional[str] = None) -> str:
         """Format comparisons as plain text.
 
         Args:
             comparisons: List of section comparisons to format.
-            title: Optional title for the output.
+            title: Optional title for the diff report.
 
         Returns:
-            Formatted plain text string.
+            Text-formatted diff as a string.
 
         """
-        logger.debug("Formatting comparisons as plain text")
-
         lines = []
 
-        # Add title if provided
+        # Add title
         if title:
-            lines.append(title)
+            lines.append(title.upper())
             lines.append("=" * len(title))
             lines.append("")
 
         # Add summary
+        similar_count = sum(1 for c in comparisons if c.result == ComparisonResult.SIMILAR)
+        minor_changes_count = sum(1 for c in comparisons if c.result == ComparisonResult.MINOR_CHANGES)
+        major_changes_count = sum(1 for c in comparisons if c.result == ComparisonResult.MAJOR_CHANGES)
+        rewritten_count = sum(1 for c in comparisons if c.result == ComparisonResult.REWRITTEN)
+        new_count = sum(1 for c in comparisons if c.result == ComparisonResult.NEW)
+        deleted_count = sum(1 for c in comparisons if c.result == ComparisonResult.DELETED)
+
         lines.append("SUMMARY")
         lines.append("=======")
         lines.append("")
-        lines.extend(self._generate_summary(comparisons))
+        lines.append(f"Similar sections: {similar_count}")
+        lines.append(f"Minor changes: {minor_changes_count}")
+        lines.append(f"Major changes: {major_changes_count}")
+        lines.append(f"Rewritten: {rewritten_count}")
+        lines.append(f"New: {new_count}")
+        lines.append(f"Deleted: {deleted_count}")
+        lines.append("")
+        lines.append("DETAILS")
+        lines.append("=======")
         lines.append("")
 
-        # Add detailed comparisons
-        lines.append("DETAILED COMPARISON")
-        lines.append("===================")
-        lines.append("")
+        # Add each section comparison
+        for i, comparison in enumerate(comparisons, 1):
+            # Skip unchanged sections if configured
+            if not self.config.show_unchanged and comparison.result == ComparisonResult.SIMILAR:
+                continue
 
-        for i, comparison in enumerate(comparisons):
-            section_header = f"Section {i + 1}"
-
-            if (
-                comparison.alignment_pair.source_section
-                and comparison.alignment_pair.source_section.section_type.value == "heading"
-            ):
-                heading_text = comparison.alignment_pair.source_section.content
-                section_header = heading_text
-            elif (
-                comparison.alignment_pair.target_section
-                and comparison.alignment_pair.target_section.section_type.value == "heading"
-            ):
-                heading_text = comparison.alignment_pair.target_section.content
-                section_header = heading_text
-
-            lines.append(section_header)
-            lines.append("-" * len(section_header))
-
-            # Add result classification
-            result = comparison.result.value.upper()
-            if self.config.show_similarity_scores and comparison.similarity_score > 0:
-                result_line = f"Result: {result} (Similarity: {comparison.similarity_score:.2f})"
-            else:
-                result_line = f"Result: {result}"
-            lines.append(result_line)
+            # Section header
+            section_title = f"Section {i}: {comparison.result.value.upper()}"
+            lines.append(section_title)
+            lines.append("-" * len(section_title))
             lines.append("")
 
-            # Format the section content based on the result
-            if comparison.result == ComparisonResult.SIMILAR:
-                if self.config.detail_level >= 2:
-                    lines.append("Content is similar in both documents:")
-                    lines.append(comparison.alignment_pair.source_section.content)
-            elif comparison.result == ComparisonResult.DELETED:
-                lines.append("Content present only in source document:")
-                lines.append("- " + comparison.alignment_pair.source_section.content.replace("\n", "\n- "))
-            elif comparison.result == ComparisonResult.NEW:
-                lines.append("Content present only in target document:")
-                lines.append("+ " + comparison.alignment_pair.target_section.content.replace("\n", "\n+ "))
-            else:
-                # Modified content - show diff
-                lines.append("Content differs between documents:")
-                lines.append("SOURCE:")
-                lines.append("- " + comparison.alignment_pair.source_section.content.replace("\n", "\n- "))
+            # Add similarity score if configured
+            if self.config.include_similarity_scores and comparison.similarity_score > 0:
+                lines.append(f"Similarity: {comparison.similarity_score:.2f}")
                 lines.append("")
-                lines.append("TARGET:")
-                lines.append("+ " + comparison.alignment_pair.target_section.content.replace("\n", "\n+ "))
 
+            # Format based on result type
+            if comparison.result == ComparisonResult.NEW:
+                lines.append("[NEW]")
+                lines.append("")
+                content = self._wrap_text(comparison.alignment_pair.target_section.content)
+                lines.extend(content.splitlines())
+            elif comparison.result == ComparisonResult.DELETED:
+                lines.append("[DELETED]")
+                lines.append("")
+                content = self._wrap_text(comparison.alignment_pair.source_section.content)
+                lines.extend(content.splitlines())
+            elif comparison.result == ComparisonResult.SIMILAR:
+                lines.append("[SIMILAR]")
+                lines.append("")
+                content = self._wrap_text(comparison.alignment_pair.source_section.content)
+                lines.extend(content.splitlines())
+            else:
+                # For sections with changes (MINOR_CHANGES, MAJOR_CHANGES, REWRITTEN)
+                lines.append(f"[{comparison.result.value.upper()}]")
+                lines.append("")
+
+                # Source content
+                lines.append("Source:")
+                content = self._wrap_text(comparison.alignment_pair.source_section.content)
+                lines.extend(content.splitlines())
+                lines.append("")
+
+                # Target content
+                lines.append("Target:")
+                content = self._wrap_text(comparison.alignment_pair.target_section.content)
+                lines.extend(content.splitlines())
+
+                # Add diff using difflib if we're using detailed annotations
+                if self.config.annotation_style == AnnotationStyle.DETAILED:
+                    lines.append("")
+                    lines.append("Diff:")
+                    diff = self._generate_text_diff(
+                        comparison.alignment_pair.source_section.content,
+                        comparison.alignment_pair.target_section.content,
+                    )
+                    lines.extend(diff.splitlines())
+
+            # Add separator
             lines.append("")
+            lines.append("=" * 80)
             lines.append("")
 
         return "\n".join(lines)
 
-    def _generate_summary(self, comparisons: List[SectionComparison]) -> List[str]:
-        """Generate a summary of the comparison results.
+    def _generate_text_diff(self, text1: str, text2: str) -> str:
+        """Generate a text diff between two strings.
 
         Args:
-            comparisons: List of section comparisons.
+            text1: First text string.
+            text2: Second text string.
 
         Returns:
-            List of summary text lines.
+            Diff output as a string.
 
         """
-        # Count by result type
-        counts = {result_type: 0 for result_type in ComparisonResult}
-        for comparison in comparisons:
-            counts[comparison.result] += 1
+        lines1 = text1.splitlines()
+        lines2 = text2.splitlines()
 
-        summary_lines = []
-        summary_lines.append(f"Total sections: {len(comparisons)}")
-        summary_lines.append(f"Similar sections: {counts[ComparisonResult.SIMILAR]}")
-        summary_lines.append(f"Sections with minor changes: {counts[ComparisonResult.MINOR_CHANGES]}")
-        summary_lines.append(f"Sections with major changes: {counts[ComparisonResult.MAJOR_CHANGES]}")
-        summary_lines.append(f"Rewritten sections: {counts[ComparisonResult.REWRITTEN]}")
-        summary_lines.append(f"New sections: {counts[ComparisonResult.NEW]}")
-        summary_lines.append(f"Deleted sections: {counts[ComparisonResult.DELETED]}")
+        diff = difflib.unified_diff(lines1, lines2, n=3, lineterm="", fromfile="source", tofile="target")
 
-        return summary_lines
+        return "\n".join(diff)
 
-    def _escape_html(self, text: str) -> str:
-        """Escape HTML special characters in a string.
+    def _generate_html_diff(self, text1: str, text2: str) -> str:
+        """Generate an HTML diff between two strings.
 
         Args:
-            text: The text to escape.
+            text1: First text string.
+            text2: Second text string.
+
+        Returns:
+            HTML diff output as a string.
+
+        """
+        # Use HtmlDiff class for side-by-side comparison
+        lines1 = text1.splitlines()
+        lines2 = text2.splitlines()
+
+        # For a more compact inline diff:
+        differ = difflib.Differ()
+        diff = list(differ.compare(lines1, lines2))
+
+        html_diff = []
+        for line in diff:
+            if line.startswith("+ "):
+                html_diff.append(f"<div class='diff-add'>{self._escape_html(line[2:])}</div>")
+            elif line.startswith("- "):
+                html_diff.append(f"<div class='diff-remove'>{self._escape_html(line[2:])}</div>")
+            elif line.startswith("? "):
+                # Skip the "?" lines which are just hints for the differ
+                continue
+            else:
+                # Unchanged line starting with "  "
+                html_diff.append(f"<div>{self._escape_html(line[2:])}</div>")
+
+        return "\n".join(html_diff)
+
+    def _escape_html(self, text: str) -> str:
+        """Escape HTML special characters.
+
+        Args:
+            text: Input text to escape.
 
         Returns:
             HTML-escaped text.
@@ -431,4 +508,23 @@ class DiffFormatter:
             .replace(">", "&gt;")
             .replace('"', "&quot;")
             .replace("'", "&#39;")
+        )
+
+    def _wrap_text(self, text: str) -> str:
+        """Wrap text to the configured width.
+
+        Args:
+            text: Input text to wrap.
+
+        Returns:
+            Wrapped text.
+
+        """
+        if not self.config.wrap_width:
+            return text
+
+        import textwrap
+
+        return "\n".join(
+            textwrap.fill(line, width=self.config.wrap_width, replace_whitespace=False) for line in text.splitlines()
         )
