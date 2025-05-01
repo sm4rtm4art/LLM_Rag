@@ -1,23 +1,45 @@
 # Makefile for LLM RAG Project
 # This file provides commands for easy setup, development, testing, and running of the project
 
-SHELL := /bin/bash
-PYTHON := python3
-PIP := pip
-VENV := .venv
-VENV_BIN := $(VENV)/bin
-VENV_PYTHON := $(VENV_BIN)/python
-VENV_PIP := $(VENV_BIN)/pip
-VENV_UVICORN := $(VENV_BIN)/uvicorn
+# Detect OS for platform-specific commands
+ifeq ($(OS),Windows_NT)
+    # Windows-specific settings
+    DETECTED_OS := Windows
+    PYTHON := python
+    PIP := pip
+    RM := powershell Remove-Item -Recurse -Force
+    MKDIR := powershell New-Item -ItemType Directory -Force
+    PATH_SEP := \\
+    VENV := .venv
+    VENV_BIN := $(VENV)\Scripts
+    ACTIVATE := $(VENV_BIN)\activate
+else
+    # Unix-like OS (Linux, macOS)
+    DETECTED_OS := $(shell uname -s)
+    PYTHON := python3
+    PIP := pip3
+    RM := rm -rf
+    MKDIR := mkdir -p
+    PATH_SEP := /
+    VENV := .venv
+    VENV_BIN := $(VENV)/bin
+    ACTIVATE := $(VENV_BIN)/activate
+endif
 
-SRC_DIR := src
-TEST_DIR := tests
-DOCKER_COMPOSE := docker-compose
+VENV_PYTHON := $(VENV_BIN)$(PATH_SEP)python
+VENV_PIP := $(VENV_BIN)$(PATH_SEP)pip
+
+# Container tools - provide defaults but allow override
+DOCKER_COMPOSE ?= docker-compose
 DOCKER_COMPOSE_FILE := docker-compose.yml
 DOCKER_COMPOSE_CI_FILE := docker-compose.ci.yml
 DOCKER_COMPOSE_API_FILE := docker-compose.api.yml
 
-.PHONY: help setup-venv install dev-install update clean test test-cov lint format mypy safety docker-build docker-run docker-test api-run api-docker all
+# Project directories
+SRC_DIR := src
+TEST_DIR := tests
+
+.PHONY: help setup-venv install dev-install update clean test test-ocr test-comparison test-cov lint format mypy safety docker-build docker-run docker-test api-run api-docker all setup-ocr-deps
 
 help:
 	@echo "Available commands:"
@@ -41,13 +63,20 @@ help:
 	@echo "  api-run              - Run the API server locally"
 	@echo "  api-docker           - Run the API server in Docker"
 	@echo "  all                  - Run lint, format, mypy, and test"
+	@echo "  setup-ocr-deps       - Install OCR dependencies for current OS ($(DETECTED_OS))"
 
 # Virtual environment setup
 setup-venv:
 	@echo "Creating virtual environment..."
+ifeq ($(DETECTED_OS),Windows)
 	@$(PYTHON) -m venv $(VENV)
 	@echo "Virtual environment created at $(VENV)"
-	@echo "Run 'source $(VENV)/bin/activate' to activate it"
+	@echo "Run '$(VENV_BIN)\activate' to activate it"
+else
+	@$(PYTHON) -m venv $(VENV)
+	@echo "Virtual environment created at $(VENV)"
+	@echo "Run 'source $(VENV_BIN)/activate' to activate it"
+endif
 
 # Install the package and its dependencies
 install: setup-venv
@@ -59,7 +88,11 @@ install: setup-venv
 dev-install: install
 	@echo "Installing development dependencies..."
 	@$(VENV_PIP) install -e ".[dev]"
+ifeq ($(DETECTED_OS),Windows)
+	@$(VENV_PYTHON) -m pre_commit install
+else
 	@$(VENV_BIN)/pre-commit install
+endif
 	@echo "Development installation complete"
 
 # Update dependencies
@@ -73,16 +106,16 @@ update: setup-venv
 # Clean up build artifacts and cache files
 clean:
 	@echo "Cleaning up..."
-	@rm -rf build/
-	@rm -rf dist/
-	@rm -rf *.egg-info/
-	@rm -rf .pytest_cache/
-	@rm -rf .coverage
-	@rm -rf htmlcov/
-	@rm -rf .ruff_cache/
-	@rm -rf .mypy_cache/
-	@find . -type d -name __pycache__ -exec rm -rf {} +
-	@find . -type f -name "*.pyc" -delete
+	@$(RM) build
+	@$(RM) dist
+	@$(RM) "*.egg-info"
+	@$(RM) .pytest_cache
+	@$(RM) .coverage
+	@$(RM) htmlcov
+	@$(RM) .ruff_cache
+	@$(RM) .mypy_cache
+	@$(RM) $(SRC_DIR)/**/__pycache__
+	@$(RM) $(TEST_DIR)/**/__pycache__
 	@echo "Cleanup complete"
 
 # Run all tests
@@ -109,22 +142,38 @@ test-cov:
 # Run linter
 lint:
 	@echo "Running linter..."
+ifeq ($(DETECTED_OS),Windows)
+	@$(VENV_PYTHON) -m ruff check $(SRC_DIR) $(TEST_DIR)
+else
 	@$(VENV_BIN)/ruff check $(SRC_DIR) $(TEST_DIR)
+endif
 
 # Format code
 format:
 	@echo "Formatting code..."
+ifeq ($(DETECTED_OS),Windows)
+	@$(VENV_PYTHON) -m ruff format $(SRC_DIR) $(TEST_DIR)
+else
 	@$(VENV_BIN)/ruff format $(SRC_DIR) $(TEST_DIR)
+endif
 
 # Run static type checking
 mypy:
 	@echo "Running mypy..."
+ifeq ($(DETECTED_OS),Windows)
+	@$(VENV_PYTHON) -m mypy
+else
 	@$(VENV_BIN)/mypy
+endif
 
 # Run security checks on dependencies
 safety:
 	@echo "Running safety checks..."
+ifeq ($(DETECTED_OS),Windows)
+	@$(VENV_PYTHON) -m safety check
+else
 	@$(VENV_BIN)/safety check
+endif
 
 # Build Docker image
 docker-build:
@@ -144,7 +193,11 @@ docker-test:
 # Run the API server locally
 api-run:
 	@echo "Running API server locally..."
-	@$(VENV_UVICORN) llm_rag.api.main:app --reload
+ifeq ($(DETECTED_OS),Windows)
+	@$(VENV_PYTHON) -m uvicorn llm_rag.api.main:app --reload
+else
+	@$(VENV_BIN)/uvicorn llm_rag.api.main:app --reload
+endif
 
 # Run the API server in Docker
 api-docker:
@@ -166,12 +219,20 @@ comparison-pipeline:
 
 # Setup OCR dependencies (Tesseract, etc.)
 setup-ocr-deps:
-	@echo "Setting up OCR dependencies..."
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		brew install tesseract; \
-	elif [ "$(shell uname)" = "Linux" ]; then \
-		sudo apt-get update && sudo apt-get install -y tesseract-ocr; \
-	else \
-		echo "Please install Tesseract OCR manually for your operating system"; \
-	fi
-	@echo "OCR dependencies setup complete"
+	@echo "Setting up OCR dependencies for $(DETECTED_OS)..."
+ifeq ($(DETECTED_OS),Darwin)
+	@echo "Installing Tesseract for macOS..."
+	@brew install tesseract
+	@echo "OCR dependencies setup complete for macOS"
+else ifeq ($(DETECTED_OS),Linux)
+	@echo "Installing Tesseract for Linux..."
+	@sudo apt-get update && sudo apt-get install -y tesseract-ocr
+	@echo "OCR dependencies setup complete for Linux"
+else ifeq ($(DETECTED_OS),Windows)
+	@echo "For Windows, please install Tesseract OCR manually:"
+	@echo "1. Download from https://github.com/UB-Mannheim/tesseract/wiki"
+	@echo "2. Add the installation directory to your PATH environment variable"
+else
+	@echo "Unsupported OS for automatic OCR dependency installation."
+	@echo "Please install Tesseract OCR manually for your operating system."
+endif
