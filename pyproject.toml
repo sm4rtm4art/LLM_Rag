@@ -85,6 +85,7 @@ markers = [
     "unit: marks tests as unit tests",
     "integration: marks tests as integration tests",
     "asyncio: mark test as async test",
+    "local_only: marks tests that should only run on local environments",
 ]
 
 [tool.coverage.run]

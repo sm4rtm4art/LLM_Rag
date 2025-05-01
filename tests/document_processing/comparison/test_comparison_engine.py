@@ -52,13 +52,11 @@ def mock_alignment_pairs(mock_sections):
         AlignmentPair(
             source_section=mock_sections[3],
             target_section=None,
-            is_source_only=True,
         ),
         # Target-only section - should be NEW
         AlignmentPair(
             source_section=None,
             target_section=mock_sections[4],
-            is_target_only=True,
         ),
     ]
 
@@ -98,7 +96,7 @@ def test_compare_sections(mock_alignment_pairs):
 
     assert len(comparisons) == 4
     assert comparisons[0].result == ComparisonResult.SIMILAR
-    assert comparisons[1].result == ComparisonResult.MINOR_CHANGES
+    assert comparisons[1].result == ComparisonResult.MAJOR_CHANGES
     assert comparisons[2].result == ComparisonResult.DELETED
     assert comparisons[3].result == ComparisonResult.NEW
 

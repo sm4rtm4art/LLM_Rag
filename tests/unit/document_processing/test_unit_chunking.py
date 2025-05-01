@@ -1,4 +1,4 @@
-"""Tests for the chunking module."""
+"""Tests for the chunking module (unit test version)."""
 
 import unittest
 from unittest.mock import MagicMock, patch
