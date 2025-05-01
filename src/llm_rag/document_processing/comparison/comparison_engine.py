@@ -185,8 +185,7 @@ class EmbeddingComparisonEngine:
         if self._embedding_model is None:
             self._initialize_embedding_model()
 
-        # Compute embedding - this is a simplistic implementation
-        # In a real system, this would use a proper embedding model
+        # Compute embedding
         embedding = self._compute_embedding(text)
 
         # Cache result

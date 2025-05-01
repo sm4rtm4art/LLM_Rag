@@ -234,7 +234,7 @@ def compare_preprocessing_methods(
             if base_metrics[metric] > 0:  # Avoid division by zero
                 improvement[metric] = (base_metrics[metric] - enhanced_metrics[metric]) / base_metrics[metric] * 100
             else:
-                improvement[metric] = 0.0
+                improvement[metric] = -1.0
         else:
             # For accuracy metrics, higher is better
             if base_metrics[metric] > 0:  # Avoid division by zero
