@@ -117,6 +117,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Cache Python venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
       - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
       - run: .venv/bin/python -m pip install bandit
       - run: bandit -r src -c pyproject.toml -f json -o bandit.json
@@ -133,6 +141,7 @@ jobs:
           key: trivy-cache-${{ github.workflow }}-${{ github.ref_name }}-${{ hashFiles('Dockerfile') }}-${{ format('{{yyyy-MM-dd}}', github.event.repository.updated_at) }}
           restore-keys: |
             trivy-cache-${{ github.workflow }}-${{ github.ref_name }}-
+            trivy-cache-${{ github.workflow }}-
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
@@ -205,6 +214,15 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
+
+      - name: Cache Python venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -221,6 +239,15 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
+
+      - name: Cache Python venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -260,6 +287,14 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "${{ env.PYTHON_VERSION }}"
+      - name: Cache Python venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -329,15 +364,15 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
-          # Simplified cache handling
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
-          cache-to: type=inline
+            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:buildcache
+          # Simplified cache handling - Use registry cache
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:buildcache,mode=max
           # Performance optimizations
           platforms: linux/amd64
           provenance: false
           # Build args for performance
           build-args: |
-            BUILDKIT_INLINE_CACHE=1
             PIP_NO_CACHE_DIR=1
             DOCKER_BUILDKIT=1
           # Better builder output and defaults
@@ -373,6 +408,7 @@ jobs:
           key: trivy-container-cache-${{ github.workflow }}-${{ github.ref_name }}-${{ hashFiles('Dockerfile') }}-${{ format('{{yyyy-MM-dd}}', github.event.repository.updated_at) }}
           restore-keys: |
             trivy-container-cache-${{ github.workflow }}-${{ github.ref_name }}-
+            trivy-container-cache-${{ github.workflow }}-
       - name: Run Trivy container scan (combined)
         run: |
           # Install Trivy CLI directly
