@@ -17,7 +17,7 @@ WORKDIR /app
 # Copy UV binary first (this rarely changes)
 COPY --from=uv /uv /usr/local/bin/uv
 
-# Install build dependencies - keep this early since it rarely changes
+# Install build dependencies - Combine steps and clean up
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     openjdk-17-jdk \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Setup Python venv early - this rarely changes
@@ -36,20 +37,13 @@ COPY pyproject.toml ./
 
 # Install dependencies (with explicit cache busting if needed)
 RUN echo "Installing dependencies with uv - $(date +%s)" && \
-    uv pip install -e . || true && \
+    uv pip install -e . && \
     pip install --no-cache-dir bitsandbytes==0.42.0
 
 # Now copy the rest of the code (this changes frequently)
-COPY . .
-
-# Create entrypoint script
-RUN echo '#!/bin/bash' > /app/entrypoint.sh && \
-    echo 'if [ "$1" = "api" ]; then' >> /app/entrypoint.sh && \
-    echo '  exec uvicorn llm_rag.api.main:app --host 0.0.0.0 --port 8000' >> /app/entrypoint.sh && \
-    echo 'else' >> /app/entrypoint.sh && \
-    echo '  exec "$@"' >> /app/entrypoint.sh && \
-    echo 'fi' >> /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh
+COPY src/ ./src/
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 # === Stage 3: Runtime ===
 FROM python:3.12-slim AS final
@@ -62,29 +56,25 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies - Combine steps and clean up
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     curl \
     ca-certificates \
     openjdk-17-jre \
     netcat-traditional \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) \
     && echo "export JAVA_HOME=$JAVA_HOME" >> /etc/environment
 
-# Copy the virtual environment and app code
+# Copy the virtual environment and entrypoint from builder
 COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/src /app/src
 COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
-COPY --from=builder /app/pyproject.toml /app/pyproject.toml
 
 # Add venv to path
 ENV PATH="/app/.venv/bin:${PATH}" \
-    PYTHONPATH="/app:${PYTHONPATH}"
-
-# Install the package in development mode
-RUN pip install -e .
+    PYTHONPATH="/app:${PYTHONPATH:-}"
 
 # Create a non-root user
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
