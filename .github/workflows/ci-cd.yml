@@ -358,7 +358,7 @@ jobs:
 
       # Fast build with focused caching and optimizations
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -395,6 +395,19 @@ jobs:
       # Simple fallback build in case main build fails
       - name: Fallback build
         if: failure() && steps.build.outcome == 'failure'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
+          platforms: linux/amd64
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            PIP_NO_CACHE_DIR=1
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
+          cache-to: ""
         run: |
           echo "Primary build failed, attempting direct Docker build..."
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest -t ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} .
