@@ -185,8 +185,7 @@ class EmbeddingComparisonEngine:
         if self._embedding_model is None:
             self._initialize_embedding_model()
 
-        # Compute embedding - this is a simplistic implementation
-        # In a real system, this would use a proper embedding model
+        # Compute embedding
         embedding = self._compute_embedding(text)
 
         # Cache result
@@ -247,6 +246,9 @@ class EmbeddingComparisonEngine:
         # Get a hash-based seed for reproducibility
         hash_obj = hashlib.md5(text.encode("utf-8"), usedforsecurity=False)
         hash_val = int(hash_obj.hexdigest(), 16)
+
+        # Ensure hash_val is within valid range for numpy's random seed (0 to 2^32-1)
+        hash_val = hash_val % (2**32)
 
         # Create a mock embedding with some simple features and some hash-based values
         np.random.seed(hash_val)

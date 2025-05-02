@@ -1,4 +1,4 @@
-name: Optimized CI/CD Pipeline
+name: CI/CD Pipeline
 
 permissions:
   actions: read
@@ -117,6 +117,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Cache Python venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
       - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
       - run: .venv/bin/python -m pip install bandit
       - run: bandit -r src -c pyproject.toml -f json -o bandit.json
@@ -133,6 +141,7 @@ jobs:
           key: trivy-cache-${{ github.workflow }}-${{ github.ref_name }}-${{ hashFiles('Dockerfile') }}-${{ format('{{yyyy-MM-dd}}', github.event.repository.updated_at) }}
           restore-keys: |
             trivy-cache-${{ github.workflow }}-${{ github.ref_name }}-
+            trivy-cache-${{ github.workflow }}-
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.3
@@ -205,7 +214,16 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
-      - uses: astral-sh/setup-uv@v5
+
+      - name: Cache Python venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
+      - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -221,7 +239,16 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
-      - uses: astral-sh/setup-uv@v5
+
+      - name: Cache Python venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
+      - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -260,7 +287,15 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "${{ env.PYTHON_VERSION }}"
-      - uses: astral-sh/setup-uv@v5
+      - name: Cache Python venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
+      - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -306,13 +341,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          driver: docker-container
-          driver-opts: |
-            network=host
-            image=moby/buildkit:latest
-          buildkitd-flags: --debug
-          platforms: linux/amd64
-          use: true
+          driver: docker-container # Use driver that supports cache export
+          driver-opts: image=moby/buildkit:latest # Specify BuildKit image
 
       # Login to DockerHub
       - uses: docker/login-action@v3
@@ -323,8 +353,8 @@ jobs:
       # Pull cache image (separately to ensure it's available)
       - name: Pull cache image
         run: |
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache || true
-          echo "Pulled cache image - this is just for ensuring cache is loaded"
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest || true
+          echo "Pulled latest image for cache"
 
       # Fast build with focused caching and optimizations
       - name: Build and push
@@ -335,17 +365,15 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
-          # Improved cache handling
-          cache-from: |
-            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:cache
-            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
-          cache-to: type=inline
+            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:buildcache
+          # Simplified cache handling - Use registry cache
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:buildcache,mode=max
           # Performance optimizations
           platforms: linux/amd64
           provenance: false
           # Build args for performance
           build-args: |
-            BUILDKIT_INLINE_CACHE=1
             PIP_NO_CACHE_DIR=1
             DOCKER_BUILDKIT=1
           # Better builder output and defaults
@@ -357,13 +385,12 @@ jobs:
         id: build
 
       # The separate tag-push step helps with the hanging issue by breaking up the large uploads
-      - name: Tag and push by digest
+      - name: Verify build success
         if: steps.build.outcome == 'success'
         run: |
-          echo "Build was successful, verifying tags were pushed correctly"
-          # Check if the tags are available
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest || echo "Latest tag may still be uploading"
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} || echo "SHA tag may still be uploading"
+          echo "Build was successful! Images have been pushed to Docker Hub."
+          echo "Latest tag: ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest"
+          echo "SHA tag: ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}"
 
       # Simple fallback build in case main build fails
       - name: Fallback build
@@ -381,6 +408,11 @@ jobs:
             PIP_NO_CACHE_DIR=1
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
           cache-to: ""
+        run: |
+          echo "Primary build failed, attempting direct Docker build..."
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest -t ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
 
       # Trivy container scan
       - name: Cache Trivy DB
@@ -390,6 +422,7 @@ jobs:
           key: trivy-container-cache-${{ github.workflow }}-${{ github.ref_name }}-${{ hashFiles('Dockerfile') }}-${{ format('{{yyyy-MM-dd}}', github.event.repository.updated_at) }}
           restore-keys: |
             trivy-container-cache-${{ github.workflow }}-${{ github.ref_name }}-
+            trivy-container-cache-${{ github.workflow }}-
       - name: Run Trivy container scan (combined)
         run: |
           # Install Trivy CLI directly

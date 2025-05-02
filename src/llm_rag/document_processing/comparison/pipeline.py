@@ -1,13 +1,17 @@
-"""Module for orchestrating the document comparison workflow."""
+"""Module for orchestrating document comparison workflow."""
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
-from llm_rag.document_processing.comparison.alignment import AlignmentConfig, AlignmentMethod, SectionAligner
-from llm_rag.document_processing.comparison.comparison_engine import ComparisonConfig, EmbeddingComparisonEngine
-from llm_rag.document_processing.comparison.diff_formatter import DiffFormatter, FormatStyle, FormatterConfig
-from llm_rag.document_processing.comparison.document_parser import DocumentFormat, DocumentParser, Section
+from llm_rag.document_processing.comparison.alignment import AlignmentConfig, SectionAligner
+from llm_rag.document_processing.comparison.comparison_engine import (
+    ComparisonConfig,
+    EmbeddingComparisonEngine,
+    SectionComparison,
+)
+from llm_rag.document_processing.comparison.diff_formatter import DiffFormatter, FormatterConfig
+from llm_rag.document_processing.comparison.document_parser import DocumentFormat, DocumentParser, ParserConfig, Section
 from llm_rag.utils.errors import DocumentProcessingError
 from llm_rag.utils.logging import get_logger
 
@@ -18,218 +22,274 @@ logger = get_logger(__name__)
 class ComparisonPipelineConfig:
     """Configuration for the document comparison pipeline.
 
-    This class encapsulates all configuration options for the document
-    comparison workflow.
+    Attributes:
+        parser_config: Configuration for document parsing.
+        alignment_config: Configuration for section alignment.
+        comparison_config: Configuration for section comparison.
+        formatter_config: Configuration for diff formatting.
+        cache_intermediate_results: Whether to cache results between
+            pipeline stages.
+
     """
 
-    # Document parser config
-    default_document_format: DocumentFormat = DocumentFormat.MARKDOWN
-
-    # Alignment config
-    alignment_method: AlignmentMethod = AlignmentMethod.HYBRID
-    similarity_threshold: float = 0.7
-    use_sequence_information: bool = True
-    heading_weight: float = 2.0
-    content_weight: float = 1.0
-
-    # Comparison engine config
-    similar_threshold: float = 0.9
-    minor_change_threshold: float = 0.8
-    major_change_threshold: float = 0.6
-    rewritten_threshold: float = 0.4
-    embedding_model: str = "default"
-
-    # Output formatter config
-    output_format: FormatStyle = FormatStyle.MARKDOWN
-    show_similarity_scores: bool = True
-    detail_level: int = 2
-    color_output: bool = True
+    parser_config: Optional[ParserConfig] = None
+    alignment_config: Optional[AlignmentConfig] = None
+    comparison_config: Optional[ComparisonConfig] = None
+    formatter_config: Optional[FormatterConfig] = None
+    cache_intermediate_results: bool = True
 
 
 class ComparisonPipeline:
     """Pipeline for comparing documents.
 
-    This class orchestrates the complete document comparison workflow:
-    1. Parsing documents into sections
-    2. Aligning corresponding sections
-    3. Comparing aligned sections
-    4. Formatting the comparison results
+    This class orchestrates the entire comparison workflow, from parsing
+    documents to generating a diff report.
     """
 
     def __init__(self, config: Optional[ComparisonPipelineConfig] = None):
-        """Initialize the document comparison pipeline.
+        """Initialize the comparison pipeline.
 
         Args:
-            config: Configuration for the pipeline. If None, defaults are used.
+            config: Configuration for the pipeline.
+                If None, default configuration will be used.
 
         """
         self.config = config or ComparisonPipelineConfig()
-        logger.info("Initializing document comparison pipeline")
+        logger.info("Initialized ComparisonPipeline")
 
         # Initialize components
-        self._init_components()
+        self.parser = DocumentParser(self.config.parser_config)
+        self.aligner = SectionAligner(self.config.alignment_config)
+        self.comparison_engine = EmbeddingComparisonEngine(self.config.comparison_config)
+        self.formatter = DiffFormatter(self.config.formatter_config)
 
-        logger.info("Document comparison pipeline initialized successfully")
-
-    def _init_components(self) -> None:
-        """Initialize the pipeline components with the appropriate configuration."""
-        # Document parser
-        self.parser = DocumentParser(default_format=self.config.default_document_format)
-
-        # Section aligner
-        alignment_config = AlignmentConfig(
-            method=self.config.alignment_method,
-            similarity_threshold=self.config.similarity_threshold,
-            use_sequence_information=self.config.use_sequence_information,
-            heading_weight=self.config.heading_weight,
-            content_weight=self.config.content_weight,
-        )
-        self.aligner = SectionAligner(config=alignment_config)
-
-        # Comparison engine
-        comparison_config = ComparisonConfig(
-            similar_threshold=self.config.similar_threshold,
-            minor_change_threshold=self.config.minor_change_threshold,
-            major_change_threshold=self.config.major_change_threshold,
-            rewritten_threshold=self.config.rewritten_threshold,
-            embedding_model=self.config.embedding_model,
-        )
-        self.comparison_engine = EmbeddingComparisonEngine(config=comparison_config)
-
-        # Diff formatter
-        formatter_config = FormatterConfig(
-            style=self.config.output_format,
-            show_similarity_scores=self.config.show_similarity_scores,
-            detail_level=self.config.detail_level,
-            color_output=self.config.color_output,
-        )
-        self.formatter = DiffFormatter(config=formatter_config)
+        # Cache for intermediate results
+        self._cache = {}
 
     def compare_documents(
         self,
         source_document: Union[str, Path],
         target_document: Union[str, Path],
-        source_format: Optional[DocumentFormat] = None,
-        target_format: Optional[DocumentFormat] = None,
-        output_title: Optional[str] = None,
+        source_format: DocumentFormat = DocumentFormat.MARKDOWN,
+        target_format: DocumentFormat = DocumentFormat.MARKDOWN,
+        title: Optional[str] = None,
     ) -> str:
         """Compare two documents and generate a diff report.
 
         Args:
-            source_document: Source document content or file path.
-            target_document: Target document content or file path.
-            source_format: Format of the source document (optional).
-            target_format: Format of the target document (optional).
-            output_title: Title for the diff report.
+            source_document: Source document content or path.
+            target_document: Target document content or path.
+            source_format: Format of the source document.
+            target_format: Format of the target document.
+            title: Optional title for the diff report.
 
         Returns:
-            Formatted comparison report.
+            Formatted diff report as a string.
 
         Raises:
-            DocumentProcessingError: If comparison fails at any stage.
+            DocumentProcessingError: If comparison fails.
 
         """
         try:
             logger.info("Starting document comparison")
 
             # Parse documents
-            logger.debug("Parsing source document")
-            source_sections = self.parser.parse(source_document, format=source_format)
-            logger.debug(f"Parsed {len(source_sections)} sections from source document")
-
-            logger.debug("Parsing target document")
-            target_sections = self.parser.parse(target_document, format=target_format)
-            logger.debug(f"Parsed {len(target_sections)} sections from target document")
+            source_sections = self._parse_document(source_document, source_format)
+            target_sections = self._parse_document(target_document, target_format)
 
             # Align sections
-            logger.debug("Aligning document sections")
-            aligned_pairs = self.aligner.align_sections(source_sections, target_sections)
-            logger.debug(f"Created {len(aligned_pairs)} section alignments")
+            aligned_pairs = self._align_sections(source_sections, target_sections)
 
             # Compare sections
-            logger.debug("Comparing aligned sections")
-            section_comparisons = self.comparison_engine.compare_sections(aligned_pairs)
-            logger.debug(f"Completed {len(section_comparisons)} section comparisons")
+            comparison_results = self._compare_sections(aligned_pairs)
 
-            # Format output
-            logger.debug("Formatting comparison results")
-            report = self.formatter.format_comparisons(section_comparisons, title=output_title)
+            # Format results
+            diff_report = self._format_results(comparison_results, title)
 
-            logger.info(f"Document comparison completed successfully, generated {len(report)} character report")
-            return report
+            logger.info("Document comparison completed successfully")
+            return diff_report
 
         except Exception as e:
-            error_msg = f"Error comparing documents: {str(e)}"
+            error_msg = f"Error in document comparison pipeline: {str(e)}"
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
-    def compare_document_sections(
-        self, source_sections: List[Section], target_sections: List[Section], output_title: Optional[str] = None
+    def compare_sections(
+        self,
+        source_sections: List[Section],
+        target_sections: List[Section],
+        title: Optional[str] = None,
     ) -> str:
         """Compare pre-parsed document sections.
 
-        This is useful when integrating with other document processing workflows.
-
         Args:
-            source_sections: Parsed source document sections.
-            target_sections: Parsed target document sections.
-            output_title: Title for the diff report.
+            source_sections: List of sections from the source document.
+            target_sections: List of sections from the target document.
+            title: Optional title for the diff report.
 
         Returns:
-            Formatted comparison report.
+            Formatted diff report as a string.
 
         Raises:
-            DocumentProcessingError: If comparison fails at any stage.
+            DocumentProcessingError: If comparison fails.
 
         """
         try:
-            logger.info("Starting comparison of pre-parsed document sections")
-            logger.debug(f"Source: {len(source_sections)} sections, Target: {len(target_sections)} sections")
+            logger.info("Starting section comparison")
 
             # Align sections
-            aligned_pairs = self.aligner.align_sections(source_sections, target_sections)
-            logger.debug(f"Created {len(aligned_pairs)} section alignments")
+            aligned_pairs = self._align_sections(source_sections, target_sections)
 
             # Compare sections
-            section_comparisons = self.comparison_engine.compare_sections(aligned_pairs)
-            logger.debug(f"Completed {len(section_comparisons)} section comparisons")
+            comparison_results = self._compare_sections(aligned_pairs)
 
-            # Format output
-            report = self.formatter.format_comparisons(section_comparisons, title=output_title)
+            # Format results
+            diff_report = self._format_results(comparison_results, title)
 
-            logger.info(f"Section comparison completed successfully, generated {len(report)} character report")
-            return report
+            logger.info("Section comparison completed successfully")
+            return diff_report
 
         except Exception as e:
-            error_msg = f"Error comparing document sections: {str(e)}"
+            error_msg = f"Error in section comparison: {str(e)}"
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
-    def save_comparison_report(self, report: str, output_path: Union[str, Path], overwrite: bool = False) -> None:
-        """Save the comparison report to a file.
+    def _load_document(self, document: Union[str, Path]) -> str:
+        """Load a document from a file path.
 
         Args:
-            report: The comparison report to save.
-            output_path: Path where the report should be saved.
-            overwrite: Whether to overwrite existing files.
+            document: Document path or content.
+
+        Returns:
+            Document content as a string.
 
         Raises:
-            DocumentProcessingError: If the report cannot be saved.
+            DocumentProcessingError: If document loading fails.
 
         """
         try:
-            path = Path(output_path)
-            logger.debug(f"Saving comparison report to {path}")
+            # Check if the document is a path
+            is_path = isinstance(document, Path)
+            is_str_path = (
+                isinstance(document, str)
+                and not document.startswith(("# ", "{", "<", "---"))
+                and "\n" not in document[:100]
+            )
 
-            if path.exists() and not overwrite:
-                raise ValueError(f"Output file already exists: {path}. Use overwrite=True to replace.")
+            path_exists = False
+            if is_str_path:
+                path_exists = Path(document).exists()
 
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(report)
+            is_likely_path = is_path or (is_str_path and path_exists)
 
-            logger.info(f"Comparison report saved to {path}")
+            if is_likely_path:
+                document_path = Path(document)
+                logger.debug(f"Loading document from path: {document_path}")
+                return document_path.read_text(encoding="utf-8")
+
+            # Assume it's already content
+            logger.debug("Using provided document content")
+            return str(document)
 
         except Exception as e:
-            error_msg = f"Error saving comparison report: {str(e)}"
+            error_msg = f"Error loading document: {str(e)}"
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
+
+    def _parse_document(self, document: Union[str, Path], format_type: DocumentFormat) -> List[Section]:
+        """Parse a document into sections.
+
+        Args:
+            document: Document content or path.
+            format_type: Format of the document.
+
+        Returns:
+            List of document sections.
+
+        """
+        cache_key = f"parsed_{document}"
+        if self.config.cache_intermediate_results and cache_key in self._cache:
+            logger.debug(f"Using cached parsed document: {cache_key}")
+            return self._cache[cache_key]
+
+        # Load document if it's a path
+        document_content = self._load_document(document)
+
+        # Parse document
+        logger.debug(f"Parsing document with format: {format_type.value}")
+        sections = self.parser.parse(document_content, format_type)
+
+        if self.config.cache_intermediate_results:
+            self._cache[cache_key] = sections
+
+        return sections
+
+    def _align_sections(
+        self, source_sections: List[Section], target_sections: List[Section]
+    ) -> List[Tuple[Optional[Section], Optional[Section]]]:
+        """Align sections between source and target documents.
+
+        Args:
+            source_sections: List of sections from the source document.
+            target_sections: List of sections from the target document.
+
+        Returns:
+            List of alignment pairs.
+
+        """
+        cache_key = f"aligned_{id(source_sections)}_{id(target_sections)}"
+        if self.config.cache_intermediate_results and cache_key in self._cache:
+            logger.debug(f"Using cached section alignment: {cache_key}")
+            return self._cache[cache_key]
+
+        logger.debug("Aligning document sections")
+        aligned_pairs = self.aligner.align_sections(source_sections, target_sections)
+
+        if self.config.cache_intermediate_results:
+            self._cache[cache_key] = aligned_pairs
+
+        return aligned_pairs
+
+    def _compare_sections(
+        self,
+        aligned_pairs: List[Tuple[Optional[Section], Optional[Section]]],
+    ) -> List[SectionComparison]:
+        """Compare aligned section pairs.
+
+        Args:
+            aligned_pairs: List of alignment pairs.
+
+        Returns:
+            List of section comparisons.
+
+        """
+        cache_key = f"compared_{id(aligned_pairs)}"
+        if self.config.cache_intermediate_results and cache_key in self._cache:
+            logger.debug(f"Using cached section comparisons: {cache_key}")
+            return self._cache[cache_key]
+
+        logger.debug("Comparing aligned section pairs")
+        comparisons = self.comparison_engine.compare_sections(aligned_pairs)
+
+        if self.config.cache_intermediate_results:
+            self._cache[cache_key] = comparisons
+
+        return comparisons
+
+    def _format_results(
+        self,
+        comparisons: List[SectionComparison],
+        title: Optional[str] = None,
+    ) -> str:
+        """Format comparison results.
+
+        Args:
+            comparisons: List of section comparisons.
+            title: Optional title for the diff report.
+
+        Returns:
+            Formatted diff report as a string.
+
+        """
+        logger.debug("Formatting comparison results")
+        return self.formatter.format_comparisons(comparisons, title)

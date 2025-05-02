@@ -177,16 +177,33 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 - **Goal**: Compare two processed documents (output from Phase 3+) section-by-section using embeddings, identifying major similarities/differences. Output basic annotated Markdown.
 - **Prerequisite**: Reliable structured text output (Markdown) from the core OCR pipeline (Phase 3+).
 - **Tasks**:
-  - [ ] **`document_parser.py`**: Develop a module to parse the structured output (Markdown/JSON) from the OCR pipeline into logical sections/paragraphs (e.g., based on headings, semantic breaks, or fixed chunks).
-  - [ ] **Alignment Logic**: Implement a basic strategy to align corresponding sections/paragraphs between the two documents (e.g., matching headings, sequence alignment on section titles/content).
-  - [ ] **`comparison_engine.py` (Embeddings)**:
-    - Integrate an embedding model (reuse from RAG or choose a suitable one like Sentence-BERT).
-    - Generate embeddings for each aligned section pair.
-    - Calculate cosine similarity between embeddings.
-  - [ ] **`diff_formatter.py` (Basic)**:
-    - Implement logic to classify aligned sections based on similarity thresholds (e.g., `SIMILAR`, `DIFFERENT`, `NEW`, `DELETED`).
-    - Generate a basic annotated Markdown output highlighting these classifications (e.g., `[DIFFERENT] \\n --- \\n Section A text \\n +++ \\n Section B text \\n`).
-  - [ ] **Orchestration**: Update the main pipeline/API to accept two documents, run them through the OCR pipeline (if not already processed), parse, align, compare (embeddings), and format the diff.
+  - [x] **`document_parser.py`**: Develop a module to parse the structured output (Markdown/JSON) from the OCR pipeline into logical sections/paragraphs (e.g., based on headings, semantic breaks, or fixed chunks).
+  - [ ] **`alignment.py`**:
+    - [x] Define core alignment interface and data structures
+    - [ ] Implement alignment strategy selection (heading-based, content-based, structural)
+    - [ ] Implement robust sequence alignment algorithms for document sections
+    - [ ] Add configuration options for alignment thresholds and behavior
+  - [x] **`comparison_engine.py` (Embeddings)**:
+    - [x] Integrate an embedding model (mock implementation for now)
+    - [x] Generate embeddings for each aligned section pair
+    - [x] Calculate cosine similarity between embeddings
+    - [x] Implement comparison result classification
+  - [x] **`diff_formatter.py` (Basic)**:
+    - [x] Implement logic to classify aligned sections based on similarity thresholds
+    - [x] Generate annotated output in multiple formats (Markdown, HTML, Text)
+    - [x] Add configuration for output format and detail level
+  - [x] **`pipeline.py` (Orchestration)**:
+    - [x] Implement pipeline to process documents through parsing, alignment, comparison, and formatting
+    - [x] Add caching mechanism for intermediate results
+    - [ ] Complete integration with OCR pipeline for end-to-end workflow
+  - [ ] **Architectural Enhancement**:
+    - [ ] Consider refactoring the comparison module to follow a more modular approach similar to the RAG pipeline
+    - [ ] Implement clear interfaces between components for better extensibility
+    - [ ] Design for progressive enhancement with LLM capabilities
+  - [ ] **S2 Chunking Integration**:
+    - [ ] Clarify how S2 Chunking from Phase 5.5 will integrate with document_parser.py
+    - [ ] Add adapter code to use chunked output for comparison
+    - [ ] Ensure consistent document representation between chunking and comparison
   - [ ] **Testing**: Create test cases with known document pairs (identical, slightly modified, significantly different) and evaluate alignment and similarity scoring.
 - **Outcome**: Ability to generate a basic Markdown diff indicating sections that are likely similar or different based on embedding similarity.
 
@@ -197,6 +214,8 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 - **Tasks**:
 
   - [ ] **`comparison_engine.py` (LLM Integration)**:
+    - [ ] Design modular architecture for embedding-based and LLM-based comparison
+    - [ ] Create a strategy pattern for selecting comparison method based on requirements
     - [ ] Integrate a local LLM (e.g., Gemma, Mistral) capable of comparing text snippets.
     - [ ] Use the LLM to analyze section pairs flagged as `DIFFERENT` by embeddings, or pairs with high similarity (>0.9) but low lexical overlap (e.g., low BLEU/ROUGE score).
     - [ ] **Prompt Engineering**: Design prompts for the LLM to:
@@ -366,6 +385,7 @@ Maintain modularity:
       - _Future Investigation:_ Integration with **ColBERT**.
       - Calculates similarity and/or performs LLM analysis on aligned pairs.
     - **`Diff Formatter`**: Generates the final report (Markdown/HTML).
+    - **Note on Architecture**: Consider refactoring this service to follow the modular pattern established in the RAG pipeline, with clear separation of responsibilities and well-defined interfaces between components.
 
 3.  **Modular Retrieval System**: (Input: Query and document collection -> Output: Relevant chunks/documents)
 
@@ -384,3 +404,49 @@ Maintain modularity:
     - **Task Queue (Celery/RQ)**: For handling long OCR or comparison jobs asynchronously.
 
 This simplified architecture focuses on delivering core advanced functionality first (SemanticChunker, LLM Comparison) while keeping more complex options (S2/Late Chunking, ColBERT) as potential future enhancements based on evaluation and need.
+
+## User Interface Implementation with Open WebUI
+
+- **Goal**: Integrate Open WebUI as a user-friendly frontend interface for the RAG system, providing a polished, ready-made solution for interacting with the backend.
+- **Tasks**:
+
+  - [ ] **Initial Setup & Integration**:
+    - [ ] Deploy Open WebUI alongside the existing FastAPI backend.
+    - [ ] Configure Open WebUI to connect to the RAG API endpoints.
+    - [ ] Test basic query functionality through the UI.
+  - [ ] **Adapter Development**:
+    - [ ] Create adapter endpoints in the FastAPI backend if needed to match Open WebUI's expected API format.
+    - [ ] Implement conversion between RAG response format and Open WebUI's expected response structure.
+    - [ ] Add support for conversation history persistence.
+  - [ ] **Custom Enhancements**:
+    - [ ] Configure Open WebUI to display document citations and sources retrieved by the RAG system.
+    - [ ] Customize the UI theme and branding if needed.
+    - [ ] Implement user authentication and access control if required.
+  - [ ] **Feature Integration**:
+    - [ ] Enable support for document comparison visualization through the UI.
+    - [ ] Add document upload functionality for processing new documents.
+    - [ ] Implement visualization of OCR results and document structuring.
+  - [ ] **Testing & Documentation**:
+    - [ ] Develop comprehensive end-to-end tests for the integrated system.
+    - [ ] Create documentation for users explaining the UI features.
+    - [ ] Document the integration process for developers.
+  - [ ] **Deployment Configuration**:
+    - [ ] Update Docker Compose and Kubernetes configurations to include Open WebUI.
+    - [ ] Configure proper networking between the frontend and backend services.
+    - [ ] Set up appropriate environment variables for connecting components.
+
+- **Outcome**: A fully functional, user-friendly web interface for interacting with the RAG system using Open WebUI's polished components, while maintaining the flexibility to switch to a different frontend solution in the future if needed.
+
+## Proposed Frontend Architecture
+
+The implementation will follow these architectural principles:
+
+1. **Loose Coupling**: The Open WebUI frontend will communicate with the backend exclusively through the API, ensuring minimal dependencies between systems.
+
+2. **API Contract**: Establish a clear API contract that defines the interface between frontend and backend, allowing for potential frontend replacement in the future.
+
+3. **Backend Storage**: Store user data like conversations in the backend database rather than in Open WebUI's storage, avoiding data migration challenges if frontend changes are needed later.
+
+4. **Independent Deployment**: Configure the system to allow independent deployment and scaling of frontend and backend components.
+
+This approach provides immediate access to a polished UI while preserving the flexibility to develop a custom frontend or integrate a different solution as requirements evolve.

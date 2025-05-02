@@ -33,6 +33,8 @@ ENV/
 .vscode/
 *.swp
 *.swo
+.cursor
+*.cursor
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -191,3 +193,16 @@ htmlcov/
 output/**/*
 !output/**/
 !output/**/.gitkeep
+
+# Ignore start prompts
+start_prompt*.md
+@start_prompt*.md
+
+# Mutation testing files
+parallel_mutation_results*/
+session.sqlite
+parallel_cosmic_ray.toml
+run_parallel_mutation.sh
+run_overnight_mutation_tests.sh
+cosmic-ray.toml
+mutants/

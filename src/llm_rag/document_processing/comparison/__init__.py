@@ -7,7 +7,12 @@ from llm_rag.document_processing.comparison.comparison_engine import (
     EmbeddingComparisonEngine,
     SectionComparison,
 )
-from llm_rag.document_processing.comparison.diff_formatter import DiffFormatter, FormatStyle, FormatterConfig
+from llm_rag.document_processing.comparison.diff_formatter import (
+    AnnotationStyle,
+    DiffFormat,
+    DiffFormatter,
+    FormatterConfig,
+)
 from llm_rag.document_processing.comparison.document_parser import DocumentFormat, DocumentParser, Section
 from llm_rag.document_processing.comparison.pipeline import ComparisonPipeline, ComparisonPipelineConfig
 
@@ -28,7 +33,8 @@ __all__ = [
     # Diff formatting
     "DiffFormatter",
     "FormatterConfig",
-    "FormatStyle",
+    "DiffFormat",
+    "AnnotationStyle",
     # Pipeline
     "ComparisonPipeline",
     "ComparisonPipelineConfig",
