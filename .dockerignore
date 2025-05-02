@@ -1,33 +1,47 @@
-.git
-.github
-.pytest_cache
-__pycache__
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Python cache and virtual environments
+__pycache__/
 *.pyc
-.coverage
-coverage.xml
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+build/
+dist/
+*.egg
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local configuration / secrets
 .env
-.venv
-.mypy_cache
-.ruff_cache
-.cache
-htmlcov
-dist
-build
-*.egg-info
-models/
+*.env
+secrets/
+
+# Test files and notebooks (if not needed in image)
+tests/
 notebooks/
 docs/
-tests/
-test_data/
-data/
-chroma_db/
-test_chroma_db/
-synthetic_test_db/
-.llm_rag/
-quarantine_backup/
-documents/
-demos/
-junit.xml
-*.lock
-.coverage*
-.trivyignore
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Other build artifacts
+coverage.xml
+bandit.json
+trivy-results.sarif
+trivy-summary.md
+trivy-summary.txt
+htmlcov/
