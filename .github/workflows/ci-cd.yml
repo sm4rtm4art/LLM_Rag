@@ -93,9 +93,12 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true # Don't fail if no scripts are found
     steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y shellcheck
-      - run: curl -sS https://webinstall.dev/shfmt | bash && echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Install shfmt
+        run: curl -sS https://webinstall.dev/shfmt | bash && echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Check if bash scripts exist
         id: check-scripts
         run: |
@@ -124,7 +127,8 @@ jobs:
     needs: [pre-cleanup]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Run actionlint
         uses: reviewdog/action-actionlint@v1
 
@@ -162,10 +166,14 @@ jobs:
           restore-keys: |
             venv-${{ runner.os }}-
 
-      - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-      - run: .venv/bin/python -m pip install bandit
-      - run: bandit -r src -c pyproject.toml -f json -o bandit.json
-      - uses: actions/upload-artifact@v4
+      - name: Create venv
+        run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+      - name: Install bandit
+        run: .venv/bin/python -m pip install bandit
+      - name: Run bandit
+        run: bandit -r src -c pyproject.toml -f json -o bandit.json
+      - name: Upload bandit results
+        uses: actions/upload-artifact@v4
         with:
           name: bandit-results
           path: bandit.json
@@ -250,8 +258,10 @@ jobs:
     needs: [pre-cleanup]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: "3.12"
 
@@ -263,7 +273,8 @@ jobs:
           restore-keys: |
             venv-${{ runner.os }}-
 
-      - uses: astral-sh/setup-uv@v6
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -282,8 +293,10 @@ jobs:
     needs: [pre-cleanup]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: "3.12"
 
@@ -299,9 +312,13 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
-      - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-      - run: uv pip install pytest pytest-cov pytest-asyncio sentence-transformers chromadb -e .[dev]
-      
+
+      - name: Initialize venv and install test dependencies
+        run: |
+          python -m venv .venv
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+          uv pip install pytest pytest-cov pytest-asyncio sentence-transformers chromadb -e .[dev]
+
       - name: Install Tesseract OCR
         run: |
           sudo apt-get update
@@ -331,10 +348,12 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: "${{ env.PYTHON_VERSION }}"
       - name: Cache Python venv
@@ -345,13 +364,20 @@ jobs:
           restore-keys: |
             venv-${{ runner.os }}-
 
-      - uses: astral-sh/setup-uv@v6
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
-      - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-      - run: uv pip install python-semantic-release
-      - env:
+
+      - name: Initialize venv and install semantic-release
+        run: |
+          python -m venv .venv
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+          uv pip install python-semantic-release
+
+      - name: Run semantic release
+        env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: .venv/bin/semantic-release publish
@@ -383,7 +409,8 @@ jobs:
           echo "Disk space after cleanup:"
           df -h
 
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1 # Shallow clone for faster checkout
 
@@ -449,19 +476,6 @@ jobs:
       # Simple fallback build in case main build fails
       - name: Fallback build
         if: failure() && steps.build.outcome == 'failure'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }}
-          platforms: linux/amd64
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
-            PIP_NO_CACHE_DIR=1
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest
-          cache-to: ""
         run: |
           echo "Primary build failed, attempting direct Docker build..."
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:latest -t ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ github.sha }} .
@@ -525,7 +539,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       # Check if Docker image exists
       - name: Check if Docker image exists
@@ -555,7 +570,8 @@ jobs:
           fi
 
       # Set up kubectl
-      - uses: azure/setup-kubectl@v3
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
         if: steps.check-image.outputs.image_exists == 'true'
 
       # Set up kubeconfig
