@@ -413,11 +413,13 @@ jobs:
           restore-keys: |
             trivy-container-cache-${{ github.workflow }}-${{ github.ref_name }}-
             trivy-container-cache-${{ github.workflow }}-
-      - name: Run Trivy container scan (combined)
+
+      - name: Install Trivy CLI
         run: |
-          # Install Trivy CLI directly
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 
+      - name: Run Trivy container scan
+        run: |
           # Run a single scan with all needed features
           trivy image \
             --severity HIGH,CRITICAL \
