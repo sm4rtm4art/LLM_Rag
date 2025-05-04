@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-rag
+spec:
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        dev.environment: "true"
+    spec:
+      containers:
+      - name: llm-rag
+        image: llm-rag:latest
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        # Development-specific settings: shorter timeouts for faster feedback
+        livenessProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        readinessProbe:
+          initialDelaySeconds: 2
+          periodSeconds: 3

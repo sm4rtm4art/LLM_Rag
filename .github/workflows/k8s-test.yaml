@@ -6,168 +6,379 @@ on:
     types:
       - completed
     branches: [main, KIND_cluster_running]
+  pull_request:
+    paths:
+      - "k8s/**"
+      - "Dockerfile"
+      - ".github/workflows/k8s-test.yaml"
   workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: "Enable verbose debug logs"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CLUSTER_NAME: llm-rag-test
+  NAMESPACE: llm-rag-test
+  IMAGE_NAME: llm-rag
+  KIND_VERSION: v0.20.0
+  KUBECTL_VERSION: v1.28.2
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test-kubernetes:
+  prepare:
     runs-on: ubuntu-latest
-    # Allow this job to fail without affecting the workflow result
-    continue-on-error: true
-    # Only run if the CI/CD workflow was successful
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
-
+    outputs:
+      image_tag: ${{ steps.set-image-tag.outputs.image_tag }}
+      cache_hit: ${{ steps.restore-kind-cache.outputs.cache-hit }}
     steps:
-      - name: Free disk space
-        run: |
-          echo "Freeing up disk space..."
-          # Remove unnecessary large packages
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          # Clear docker images
-          docker system prune -af
-          # Show available space
-          df -h
-
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # When triggered by workflow_run, we need to check out the same commit
           ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
-      # Instead of building the image, pull it from Docker Hub
-      - name: Login to Docker Hub
+      # Determine image tag based on trigger
+      - name: Set image tag
+        id: set-image-tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "${{ github.event_name }}" == "pull_request" ]; then
+            # For manual runs or PRs, use the current SHA
+            echo "image_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+          else
+            # For workflow_run triggers, use the SHA from the triggering workflow
+            echo "image_tag=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      # Optimize disk space
+      - name: Free disk space
+        run: |
+          echo "Freeing up disk space..."
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker system prune -af
+          df -h
+
+      # Cache KIND binary to avoid redownloads
+      - name: Cache KIND binary
+        id: restore-kind-cache
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/bin/kind
+          key: kind-${{ env.KIND_VERSION }}-${{ runner.os }}
+
+  build-or-pull:
+    needs: prepare
+    runs-on: ubuntu-latest
+    outputs:
+      image_exists: ${{ steps.check-image-existence.outputs.image_exists }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      # Check if image exists in Docker Hub
+      - name: Check if image exists in registry
+        id: check-image-existence
         if: github.event_name != 'pull_request'
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          IMAGE_TAG: ${{ needs.prepare.outputs.image_tag }}
+        run: |
+          # Check if image exists in Docker Hub without pulling it
+          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
+            -d '{"username": "'${DOCKERHUB_USERNAME}'", "password": "'${{ secrets.DOCKERHUB_TOKEN }}'"}' \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: JWT ${TOKEN}" \
+            https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${IMAGE_NAME}/tags/${IMAGE_TAG}/)
+
+          if [ "${HTTP_CODE}" == "200" ]; then
+            echo "image_exists=true" >> $GITHUB_OUTPUT
+            echo "Image ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} exists in Docker Hub"
+          else
+            echo "image_exists=false" >> $GITHUB_OUTPUT
+            echo "Image ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} does not exist in Docker Hub"
+          fi
+
+  pull-image:
+    needs: [prepare, build-or-pull]
+    runs-on: ubuntu-latest
+    if: needs.build-or-pull.outputs.image_exists == 'true' && github.event_name != 'pull_request'
+    steps:
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Determine Docker image tag
-        id: determine-tag
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            # For manual runs, use the current SHA
-            echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
-          else
-            # For workflow_run triggers, use the SHA from the triggering workflow
-            echo "IMAGE_TAG=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
-          fi
-
       - name: Pull Docker image
-        if: github.event_name != 'pull_request'
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          IMAGE_TAG: ${{ needs.prepare.outputs.image_tag }}
         run: |
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ steps.determine-tag.outputs.IMAGE_TAG }}
-          # Tag it as llm-rag:latest for KIND
-          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/llm-rag:${{ steps.determine-tag.outputs.IMAGE_TAG }} llm-rag:latest
+          docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}
+          # Tag as latest for KIND
+          docker tag ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+          # Save image for next job
+          mkdir -p /tmp/images
+          docker save ${IMAGE_NAME}:latest -o /tmp/images/image.tar
 
-      # Fallback to building the image for PRs or if pull fails
-      - name: Set up Docker Buildx (fallback)
-        if: github.event_name == 'pull_request' || failure()
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/images/image.tar
+          retention-days: 1
+
+  build-image:
+    needs: [prepare, build-or-pull]
+    runs-on: ubuntu-latest
+    if: needs.build-or-pull.outputs.image_exists != 'true' || github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image (fallback)
-        if: github.event_name == 'pull_request' || failure()
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: false
           load: true
-          tags: llm-rag:latest
+          tags: ${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
 
-      - name: Install KIND
+      - name: Save image for KIND
         run: |
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          mkdir -p /tmp/images
+          docker save ${IMAGE_NAME}:latest -o /tmp/images/image.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/images/image.tar
+          retention-days: 1
+
+  test-kubernetes:
+    runs-on: ubuntu-latest
+    # Run after either pull-image or build-image job
+    needs: [prepare, pull-image, build-image]
+    if: |
+      always() &&
+      (needs.pull-image.result == 'success' || needs.build-image.result == 'success')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      # Download cached image
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/images
+
+      - name: Load Docker image
+        run: |
+          docker load -i /tmp/images/image.tar
+          docker image ls
+
+      # Install KIND with caching
+      - name: Install KIND
+        if: needs.prepare.outputs.cache_hit != 'true'
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/${{ env.KIND_VERSION }}/kind-linux-amd64
           chmod +x ./kind
           sudo mv ./kind /usr/local/bin/kind
-          kind version
 
+      # Install kubectl
       - name: Install kubectl
         uses: azure/setup-kubectl@v3
         with:
-          version: "latest"
+          version: ${{ env.KUBECTL_VERSION }}
 
+      # Create cluster with optimized config
       - name: Create kind cluster
         run: |
-          # Create a smaller cluster with fewer resources
-          kind create cluster --name llm-rag-test --config ./k8s/kind-config.yaml --wait 120s
-
-      - name: Load Docker image into kind
-        run: |
-          kind load docker-image llm-rag:latest --name llm-rag-test
-
-      - name: Verify Kubernetes cluster
-        run: |
+          kind create cluster --name ${{ env.CLUSTER_NAME }} --config ./k8s/kind-config.yaml --wait 120s
           kubectl cluster-info
           kubectl get nodes -o wide
 
+      # Load image into KIND more efficiently
+      - name: Load Docker image into kind
+        run: |
+          kind load docker-image ${{ env.IMAGE_NAME }}:latest --name ${{ env.CLUSTER_NAME }}
+
+      # Create namespace
       - name: Create namespace
         run: |
-          kubectl create namespace llm-rag-test
+          kubectl create namespace ${{ env.NAMESPACE }}
 
+      # Deploy application with configurable timeouts
       - name: Deploy Kubernetes resources
         run: |
+          # Apply ConfigMap first as it's needed by the deployment
+          kubectl apply -f k8s/configmap.yaml -n ${{ env.NAMESPACE }}
+
+          # Apply PVC
+          kubectl apply -f k8s/pvc.yaml -n ${{ env.NAMESPACE }}
+
           # Update image reference in deployment if needed
           sed -i 's|image: .*llm-rag:.*|image: llm-rag:latest|g' k8s/deployment.yaml
 
-          # Deploy config map
-          kubectl apply -f k8s/configmap.yaml -n llm-rag-test
-
-          # Deploy PVC
-          kubectl apply -f k8s/pvc.yaml -n llm-rag-test
-
-          # Deploy application
-          kubectl apply -f k8s/deployment.yaml -n llm-rag-test
-
-          # Deploy service
-          kubectl apply -f k8s/service.yaml -n llm-rag-test
+          # Apply rest of resources
+          kubectl apply -f k8s/deployment.yaml -n ${{ env.NAMESPACE }}
+          kubectl apply -f k8s/service.yaml -n ${{ env.NAMESPACE }}
+          kubectl apply -f k8s/network-policy.yaml -n ${{ env.NAMESPACE }}
 
           # Install NGINX Ingress Controller
           kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 
-          # Wait for ingress controller to be ready
+          echo "Waiting for ingress controller to be ready..."
           kubectl wait --namespace ingress-nginx \
             --for=condition=ready pod \
             --selector=app.kubernetes.io/component=controller \
             --timeout=90s
 
-          # Deploy ingress
-          kubectl apply -f k8s/ingress.yaml -n llm-rag-test
+          # Apply Ingress
+          kubectl apply -f k8s/ingress.yaml -n ${{ env.NAMESPACE }}
 
-      - name: Wait for pods to be ready
+      # Wait for deployment with better diagnostics
+      - name: Wait for deployment
+        timeout-minutes: 5
         run: |
-          kubectl wait --for=condition=ready pod --selector=app=llm-rag -n llm-rag-test --timeout=180s
+          echo "Waiting for pods to be ready..."
 
-      - name: Run test
+          # Wait for deployment to be available
+          kubectl -n ${{ env.NAMESPACE }} rollout status deployment/llm-rag --timeout=180s
+
+          # Verify pods are running
+          kubectl get pods -n ${{ env.NAMESPACE }} -l app=llm-rag -o wide
+
+          # Check for any events
+          kubectl get events -n ${{ env.NAMESPACE }} --sort-by=.metadata.creationTimestamp
+
+      # Run test with a dedicated test job
+      - name: Create test job
         run: |
-          # Create a testing pod to simulate an LLM query
-          kubectl run test-client --image=curlimages/curl:8.1.2 -n llm-rag-test -- sleep 3600
-          kubectl wait --for=condition=ready pod/test-client -n llm-rag-test --timeout=60s
+          cat <<EOF | kubectl apply -f -
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: llm-rag-test
+            namespace: ${{ env.NAMESPACE }}
+          spec:
+            ttlSecondsAfterFinished: 100
+            template:
+              spec:
+                containers:
+                - name: test
+                  image: curlimages/curl:8.1.2
+                  command: ["/bin/sh", "-c"]
+                  args:
+                  - |
+                    cd /tests
+                    chmod +x ./test-script.sh
+                    ./test-script.sh
+                  volumeMounts:
+                  - name: test-scripts
+                    mountPath: /tests
+                volumes:
+                - name: test-scripts
+                  configMap:
+                    name: test-scripts
+                    defaultMode: 0777
+                restartPolicy: Never
+            backoffLimit: 0
+          EOF
 
-          # Copy test script to pod
-          kubectl cp k8s/test-script.sh test-client:/tmp/test-script.sh -n llm-rag-test
-          kubectl exec test-client -n llm-rag-test -- chmod +x /tmp/test-script.sh
+          # Create ConfigMap with test script
+          kubectl create configmap test-scripts -n ${{ env.NAMESPACE }} --from-file=test-script.sh=k8s/test-script.sh
 
-          # Run test script
-          kubectl exec test-client -n llm-rag-test -- /tmp/test-script.sh
-
-      - name: Get logs for debugging
-        if: ${{ failure() }}
+      # Wait for test job to complete and collect logs
+      - name: Wait for test job and collect results
         run: |
-          echo "=== Deployment logs ==="
-          kubectl get all -n llm-rag-test
-          kubectl describe pods -n llm-rag-test
-          kubectl logs -l app=llm-rag -n llm-rag-test --tail=100 || true
-          echo "=== Events ==="
-          kubectl get events -n llm-rag-test --sort-by=.metadata.creationTimestamp
+          echo "Waiting for test job to complete..."
+          kubectl wait --for=condition=complete --timeout=120s job/llm-rag-test -n ${{ env.NAMESPACE }} || true
 
+          # Collect logs into file
+          mkdir -p test-artifacts
+          kubectl logs -n ${{ env.NAMESPACE }} job/llm-rag-test > test-artifacts/test-logs.txt || true
+
+          # Check if job succeeded
+          if kubectl get job llm-rag-test -n ${{ env.NAMESPACE }} -o jsonpath='{.status.succeeded}' | grep -q "1"; then
+            echo "✅ Test job completed successfully"
+            echo "Test logs:"
+            cat test-artifacts/test-logs.txt
+            exit 0
+          else
+            echo "❌ Test job failed"
+            echo "Test logs:"
+            cat test-artifacts/test-logs.txt
+            exit 1
+          fi
+
+      # Collect detailed diagnostics on failure
+      - name: Collect diagnostics on failure
+        if: failure()
+        run: |
+          echo "Collecting cluster diagnostics..."
+          mkdir -p test-artifacts/diagnostics
+
+          # Collect pod details and logs
+          kubectl get all -n ${{ env.NAMESPACE }} -o wide > test-artifacts/diagnostics/all-resources.txt
+          kubectl describe pods -n ${{ env.NAMESPACE }} > test-artifacts/diagnostics/pod-details.txt
+          kubectl describe svc -n ${{ env.NAMESPACE }} > test-artifacts/diagnostics/service-details.txt
+          kubectl describe ingress -n ${{ env.NAMESPACE }} > test-artifacts/diagnostics/ingress-details.txt
+
+          # Collect container logs
+          kubectl logs -l app=llm-rag -n ${{ env.NAMESPACE }} --tail=100 > test-artifacts/diagnostics/app-logs.txt || true
+
+          # Collect events
+          kubectl get events -n ${{ env.NAMESPACE }} --sort-by=.metadata.creationTimestamp > test-artifacts/diagnostics/events.txt
+
+          # Collect node status
+          kubectl describe nodes > test-artifacts/diagnostics/nodes.txt
+
+          # Packet capture if debug enabled
+          if [ "${{ github.event.inputs.debug_enabled }}" == "true" ]; then
+            kubectl run tcpdump --image=nicolaka/netshoot -n ${{ env.NAMESPACE }} -- sleep 30
+            kubectl wait --for=condition=ready pod/tcpdump -n ${{ env.NAMESPACE }} --timeout=30s
+            kubectl exec tcpdump -n ${{ env.NAMESPACE }} -- tcpdump -i any -c 100 -nn > test-artifacts/diagnostics/network-capture.txt
+          fi
+
+      # Upload test logs and diagnostics as artifacts
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifacts
+          path: test-artifacts/
+          retention-days: 7
+
+      # Clean up
       - name: Clean up
-        if: ${{ always() }}
+        if: always()
         run: |
-          kubectl delete namespace llm-rag-test || true
-          kind delete cluster --name llm-rag-test || true
+          kind delete cluster --name ${{ env.CLUSTER_NAME }} || true

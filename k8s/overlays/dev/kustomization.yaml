@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reference the base directory
+resources:
+- ../../
+- ingress.yaml
+
+# Add dev-specific labels
+commonLabels:
+  environment: development
+
+# Generate ConfigMap with environment-specific values
+configMapGenerator:
+- name: llm-rag-env
+  behavior: merge
+  literals:
+  - APP_ENV=development
+  - LOG_LEVEL=DEBUG
+  - DEBUG_MODE=true
+  - MAX_CONCURRENT_REQUESTS=10
+
+# Patch resources with dev-specific configurations
+patchesStrategicMerge:
+- deployment-patch.yaml
+- hpa-patch.yaml
+
+# Set namespace for all resources
+namespace: llm-rag-dev

@@ -1,0 +1,12 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: llm-rag-hpa
+spec:
+  minReplicas: 1
+  maxReplicas: 3
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30  # Faster scaling for development
+    scaleDown:
+      stabilizationWindowSeconds: 60  # Faster scaling down for development

@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: llm-rag-ingress
+  annotations:
+    # Simplified settings for dev environment
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # Disable rate limiting in dev
+    nginx.ingress.kubernetes.io/limit-rps: "0"
+    nginx.ingress.kubernetes.io/limit-connections: "0"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+spec:
+  rules:
+  - host: dev.llm-rag.local
+    http:
+      paths:
+      - path: /api(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: llm-rag
+            port:
+              number: 80
+      # Additional dev-only endpoints
+      - path: /docs(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: llm-rag
+            port:
+              number: 80
