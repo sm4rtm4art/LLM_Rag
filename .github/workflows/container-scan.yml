@@ -12,7 +12,19 @@ on:
     paths:
       - "Dockerfile"
       - ".github/trivy-container.yml"
+      - "docker-compose*.yml"
+      - "**/requirements*.txt"
+      - "pyproject.toml"
   workflow_dispatch:
+    inputs:
+      scan_level:
+        description: "Scan level (quick/full)"
+        required: true
+        default: "full"
+        type: choice
+        options:
+          - quick
+          - full
   schedule:
     # Run weekly on Monday at 1:00 AM UTC
     - cron: "0 1 * * 1"
@@ -20,11 +32,24 @@ on:
 jobs:
   container-scan:
     runs-on: ubuntu-latest
+    # Define scan mode based on trigger type
+    env:
+      SCAN_MODE: ${{ github.event_name == 'pull_request' && 'quick' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scan_level) || 'full' }}
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      # Improved caching strategy with separate keys for PR vs scheduled scans
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
       - name: Build the Docker image
         id: docker_build
@@ -40,30 +65,48 @@ jobs:
       - name: Check image
         run: docker image ls | grep localhost/llm-rag
 
-      # Cache Trivy DB to speed up subsequent scans
+      # Optimized Trivy DB caching with dated versioning
       - name: Cache Trivy vulnerability database
         uses: actions/cache@v4
         with:
           path: .trivy-cache
-          key: trivy-${{ runner.os }}-${{ github.sha }}
+          key: trivy-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
-            trivy-${{ runner.os }}-
+            trivy-db-${{ runner.os }}-
 
-      # Basic scan for vulnerabilities
-      - name: Run Trivy vulnerability scanner
+      # Quick scan for PRs - exit on critical/high issues only
+      - name: Run quick vulnerability scan
+        if: env.SCAN_MODE == 'quick'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: localhost/llm-rag:${{ github.sha }}
           format: "sarif"
           output: "trivy-results.sarif"
           severity: "CRITICAL,HIGH"
+          timeout: "5m"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          cache-dir: .trivy-cache
+
+      # Full scan for scheduled runs or manual workflow with full option
+      - name: Run full vulnerability scan
+        if: env.SCAN_MODE == 'full'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: localhost/llm-rag:${{ github.sha }}
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH,MEDIUM"
           timeout: "10m"
           exit-code: "1"
           ignore-unfixed: true
           vuln-type: "os,library"
+          cache-dir: .trivy-cache
 
-      # Comprehensive scan including secrets and config
-      - name: Run comprehensive Trivy scan
+      # Only run secret and config scan on full mode
+      - name: Run secrets and config scan
+        if: env.SCAN_MODE == 'full' || github.event_name == 'schedule'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: localhost/llm-rag:${{ github.sha }}
@@ -73,7 +116,8 @@ jobs:
           timeout: "10m"
           exit-code: "0" # Don't fail on medium issues
           ignore-unfixed: true
-          scan-type: "vuln,secret,config"
+          scan-type: "config,secret"
+          cache-dir: .trivy-cache
 
       - name: Upload vulnerability scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -82,12 +126,13 @@ jobs:
           category: "trivy-container"
 
       - name: Upload comprehensive scan results
+        if: env.SCAN_MODE == 'full' || github.event_name == 'schedule'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: "trivy-comprehensive.sarif"
           category: "trivy-container-comprehensive"
 
-      # Generate report for PR comment
+      # Improved PR comment with vulnerability counts and remediation suggestions
       - name: Generate scan summary for PR comment
         if: github.event_name == 'pull_request'
         run: |
@@ -95,19 +140,40 @@ jobs:
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 
           # Generate table format report
-          trivy image --format table localhost/llm-rag:${{ github.sha }} > trivy-summary.txt
+          trivy image --cache-dir .trivy-cache --format table localhost/llm-rag:${{ github.sha }} > trivy-summary.txt
 
-          # Create markdown summary
+          # Count vulnerabilities by severity
+          CRITICAL=$(grep -c 'CRITICAL' trivy-summary.txt || echo 0)
+          HIGH=$(grep -c 'HIGH' trivy-summary.txt || echo 0)
+          MEDIUM=$(grep -c 'MEDIUM' trivy-summary.txt || echo 0)
+
+          # Create markdown summary with vulnerability counts
           {
             echo "## 🔒 Container Security Scan Results"
             echo "### Image: \`localhost/llm-rag:${{ github.sha }}\`"
             echo ""
+            echo "| Severity | Count |"
+            echo "|----------|-------|"
+            echo "| 🔴 CRITICAL | $CRITICAL |"
+            echo "| 🟠 HIGH | $HIGH |"
+            echo "| 🟡 MEDIUM | $MEDIUM |"
+            echo ""
+
+            if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+              echo "⚠️ **Action required**: Please address the critical/high vulnerabilities before merging."
+              echo ""
+            fi
+
             echo "<details><summary>View detailed scan results</summary>"
             echo ""
             echo '```'
             cat trivy-summary.txt
             echo '```'
             echo ""
+            echo "💡 **Remediation Tips:**"
+            echo "- Update base images to latest versions"
+            echo "- Use specific package versions instead of latest tags"
+            echo "- Consider multi-stage builds to reduce attack surface"
             echo "</details>"
           } > trivy-summary.md
 

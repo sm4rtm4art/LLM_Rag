@@ -74,7 +74,7 @@ COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
 
 # Add venv to path
 ENV PATH="/app/.venv/bin:${PATH}" \
-    PYTHONPATH="/app:${PYTHONPATH:-}"
+    PYTHONPATH="/app:${PYTHONPATH:+:$PYTHONPATH}"
 
 # Create a non-root user
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
