@@ -221,10 +221,11 @@ mypy:
 	@echo "Running mypy..."
 	@$(CMD_PREFIX) "$(VENV_PYTHON) -m mypy"
 
-# Run security checks on dependencies
+# Run security checks on dependencies with policy file
 safety:
-	@echo "Running safety checks..."
-	@$(CMD_PREFIX) "$(VENV_PYTHON) -m safety check"
+	@echo "Running safety checks with policy file..."
+	@$(CMD_PREFIX) "$(VENV_PYTHON) -m safety scan --policy-file=.safety-policy.yml"
+	@echo "Safety checks completed"
 
 # Build Docker image
 docker-build:
@@ -317,7 +318,7 @@ sync-deps:
 	@echo "Dependencies synced"
 
 # CI task that runs all checks
-ci: lint format mypy test-parallel safety
+ci: lint format mypy test-parallel safety docker-ci-build
 	@echo "All CI checks passed successfully"
 
 # Generate documentation using Sphinx
