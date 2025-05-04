@@ -67,7 +67,11 @@ TEST_DIR := tests
         # Test Makefile functionality
         test-makefile \
         # Comprehensive test suite
-        test-suite
+        test-suite \
+        # Docker development targets
+        docker-dev-build docker-dev-run \
+        # CI/CD compatible Docker build
+        docker-ci-build
 
 help:
 	@echo "LLM RAG Project Makefile"
@@ -127,6 +131,16 @@ help:
 	@echo
 	@echo "COMPREHENSIVE TEST SUITE:"
 	@echo "  test-suite           - Run a sequence of real tests to validate core functionality"
+	@echo
+	@echo "DOCKER DEVELOPMENT TARGETS:"
+	@echo "  docker-dev-build     - Build Docker image locally for development"
+	@echo "  docker-dev-run       - Run development Docker container"
+	@echo
+	@echo "CI/CD COMPATIBLE DOCKER BUILD:"
+	@echo "  docker-ci-build      - Build Docker image with buildx (CI/CD compatible)"
+	@echo
+	@echo "RUN QUICK DOCKER TESTS:"
+	@echo "  docker-test          - Run quick Docker tests"
 
 # Virtual environment setup
 setup-venv:
@@ -372,3 +386,33 @@ test-suite: test-makefile
 	@echo "Restoring original configuration..."
 	@$(eval VENV := $(ORIGINAL_VENV))
 	@echo "Test suite completed successfully"
+
+# Docker development targets
+docker-dev-build:
+	@echo "Building Docker image locally for development..."
+	@docker build -t llm-rag:dev --build-arg PIP_NO_CACHE_DIR=1 --build-arg DOCKER_BUILDKIT=1 .
+
+docker-dev-run:
+	@echo "Running development Docker container..."
+	@docker run -it --rm -p 8008:8008 -e PORT=8008 llm-rag:dev api
+
+# CI/CD compatible Docker build
+docker-ci-build:
+	@echo "Building Docker image with buildx (CI/CD compatible)..."
+	@docker buildx create --use --name llm-rag-builder --driver docker-container || true
+	@docker buildx inspect --bootstrap
+	@docker buildx build \
+		--tag llm-rag:ci \
+		--load \
+		--cache-from type=registry,ref=llm-rag:buildcache \
+		--cache-to type=inline \
+		--build-arg PIP_NO_CACHE_DIR=1 \
+		--build-arg DOCKER_BUILDKIT=1 \
+		--platform linux/amd64 \
+		.
+	@echo "Docker image built successfully with buildx"
+
+# Run quick Docker tests
+docker-test: docker-dev-build
+	@echo "Running tests in Docker container..."
+	@docker run --rm llm-rag:dev pytest -xvs tests
