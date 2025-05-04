@@ -145,9 +145,9 @@ jobs:
         continue-on-error: true # Don't fail the build on vulnerabilities
         run: |
           pip install safety
-          # Run the scan but don't let it fail the build
-          echo "Running safety check (informational only)..."
-          safety check --full-report || echo "Vulnerabilities found, but continuing build"
+          # Run the scan with policy file
+          echo "Running safety scan with policy file..."
+          safety scan --policy-file=.safety-policy.yml || echo "Vulnerabilities found, but continuing build"
           echo "::warning::Safety check found vulnerabilities, see logs for details"
         env:
           SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}

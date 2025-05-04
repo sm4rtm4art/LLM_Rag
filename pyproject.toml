@@ -40,6 +40,15 @@ dependencies = [
     "pytesseract>=0.3.10", # For OCR on images
     "Pillow>=10.0.0", # For image processing
     "PyMuPDF>=1.22.5", # For PDF processing and rendering
+    # Security-critical transitive dependencies
+    "jinja2>=3.1.6",     # Fix security vulnerabilities
+    "cryptography>=44.0.1", # Fix security vulnerabilities
+    "urllib3>=2.2.2",    # Fix security vulnerabilities
+    "twisted>=24.7.0",   # Fix security vulnerabilities
+    "requests>=2.32.2",  # Fix security vulnerabilities
+    "idna>=3.7",         # Fix security vulnerabilities
+    "certifi>=2024.7.4", # Fix security vulnerabilities
+    "configobj>=5.0.9",  # Fix security vulnerabilities
 ]
 
 [project.optional-dependencies]
