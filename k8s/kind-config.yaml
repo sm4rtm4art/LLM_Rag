@@ -23,7 +23,7 @@ nodes:
     hostPort: 443
     protocol: TCP
   extraMounts:
-  - hostPath: ./logs
+  - hostPath: /tmp/kind-logs
     containerPath: /var/log/pods
     readOnly: false
 
