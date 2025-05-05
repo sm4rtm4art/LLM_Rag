@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llm-rag-env
+  labels:
+    app: llm-rag
+    component: api
+data:
+  # Application settings
+  APP_ENV: "${APP_ENV:-development}"
+  LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+
+  # Performance settings
+  MAX_CONCURRENT_REQUESTS: "5"
+  QUERY_TIMEOUT_SECONDS: "30"
+
+  # Feature flags
+  ENABLE_CACHING: "true"
+  DEBUG_MODE: "${DEBUG_MODE:-false}"

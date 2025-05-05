@@ -3,12 +3,33 @@ kind: Ingress
 metadata:
   name: llm-rag-ingress
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    # Basic functionality
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+
+    # Enhanced performance
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+
+    # Security & rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "20"
+    nginx.ingress.kubernetes.io/limit-connections: "10"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+
+    # WebSocket support
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
 spec:
+  tls:
+  - hosts:
+    - ${INGRESS_HOST:-local.llm-rag.internal}
+    secretName: llm-rag-tls
   rules:
-  - http:
+  - host: ${INGRESS_HOST:-local.llm-rag.internal}
+    http:
       paths:
-      - path: /
+      - path: /api(/|$)(.*)
         pathType: Prefix
         backend:
           service:

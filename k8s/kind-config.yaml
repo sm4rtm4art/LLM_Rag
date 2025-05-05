@@ -1,6 +1,8 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
+# Performance-optimized single-node cluster for CI/CD
 nodes:
+# Single node (control-plane only) with ingress capabilities
 - role: control-plane
   kubeadmConfigPatches:
   - |
@@ -8,9 +10,11 @@ nodes:
     nodeRegistration:
       kubeletExtraArgs:
         node-labels: "ingress-ready=true"
-        system-reserved: "cpu=100m,memory=100Mi"
-        kube-reserved: "cpu=100m,memory=100Mi"
-        eviction-hard: "memory.available<5%"
+        system-reserved: "cpu=200m,memory=200Mi"
+        kube-reserved: "cpu=200m,memory=200Mi"
+        eviction-hard: "memory.available<100Mi,nodefs.available<5%"
+        max-pods: "20"
+  # Port mappings for ingress controller
   extraPortMappings:
   - containerPort: 8080
     hostPort: 80
@@ -18,31 +22,51 @@ nodes:
   - containerPort: 8443
     hostPort: 443
     protocol: TCP
-# Resource optimization for GitHub Actions
+  extraMounts:
+  - hostPath: ./logs
+    containerPath: /var/log/pods
+    readOnly: false
+
+# Global Kubernetes component configurations
 kubeadmConfigPatches:
 - |
   kind: ClusterConfiguration
   metadata:
     name: config
+  # Store etcd data in memory
   etcd:
     local:
       dataDir: "/tmp/etcd-data"
+  # Minimal apiserver config
   apiServer:
     extraArgs:
-      "v": "2"
+      "v": "1"
+      "alsologtostderr": "false"
+      "logtostderr": "false"
+  # Reduced overhead for scheduler
   scheduler:
     extraArgs:
-      "v": "2"
+      "v": "1"
+      "alsologtostderr": "false"
+      "logtostderr": "false"
+  # Reduced overhead for controller manager
   controllerManager:
     extraArgs:
-      "v": "2"
+      "v": "1"
+      "alsologtostderr": "false"
+      "logtostderr": "false"
 - |
   kind: KubeletConfiguration
   metadata:
     name: config
+  # Optimized for CI environments
   cgroupDriver: systemd
   failSwapOn: false
   memorySwap: {}
+  # Aggressive garbage collection
+  imageGCHighThresholdPercent: 90
+  imageGCLowThresholdPercent: 80
+  # Aggressive eviction for GitHub Actions
   evictionHard:
     memory.available: "100Mi"
     nodefs.available: "5%"
@@ -50,10 +74,9 @@ kubeadmConfigPatches:
     memory.available: "200Mi"
     nodefs.available: "10%"
   evictionSoftGracePeriod:
-    memory.available: "1m"
-    nodefs.available: "1m"
-  evictionMaxPodGracePeriod: 30
-  imageGCHighThresholdPercent: 85
-  imageGCLowThresholdPercent: 80
-- role: worker
-- role: worker
+    memory.available: "10s"
+    nodefs.available: "10s"
+  evictionMaxPodGracePeriod: 10
+  # Improved logging
+  logging:
+    verbosity: 1

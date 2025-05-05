@@ -4,17 +4,54 @@ metadata:
   name: llm-rag-network-policy
   labels:
     app: llm-rag
+    component: api
 spec:
   podSelector:
     matchLabels:
       app: llm-rag
   policyTypes:
   - Ingress
+  - Egress
   ingress:
+  # Allow traffic from ingress-nginx controller
   - from:
-    - podSelector:
+    - namespaceSelector:
         matchLabels:
-          app: ingress-nginx
+          kubernetes.io/metadata.name: ingress-nginx
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/component: controller
     ports:
     - protocol: TCP
       port: 8000
+  # Allow traffic from test jobs
+  - from:
+    - podSelector:
+        matchLabels:
+          job-name: llm-rag-test
+    ports:
+    - protocol: TCP
+      port: 8000
+  egress:
+  # Allow DNS resolution
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow outbound traffic for model/vector DB downloads or API calls
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+    ports:
+    - protocol: TCP
+      port: 443

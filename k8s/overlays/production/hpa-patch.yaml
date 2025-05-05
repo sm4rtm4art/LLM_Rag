@@ -1,0 +1,27 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: llm-rag-hpa
+spec:
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 65  # More conservative in production
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 180  # More stable scaling in production
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 600  # Slower scale down in production
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 300

@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: llm-rag-ingress
+  annotations:
+    # TLS and security settings
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # Performance optimizations for production
+    nginx.ingress.kubernetes.io/proxy-body-size: "5m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+
+    # Security rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+    nginx.ingress.kubernetes.io/limit-connections: "5"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+
+    # OWASP ModSecurity settings
+    nginx.ingress.kubernetes.io/enable-modsecurity: "true"
+    nginx.ingress.kubernetes.io/enable-owasp-core-rules: "true"
+
+    # Cache static content
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_cache_path /tmp/nginx-cache levels=1:2 keys_zone=static-cache:10m max_size=1g inactive=60m use_temp_path=off;
+      proxy_cache static-cache;
+      proxy_cache_valid 200 60m;
+spec:
+  tls:
+  - hosts:
+    - api.llm-rag.com
+    secretName: llm-rag-tls-prod
+  rules:
+  - host: api.llm-rag.com
+    http:
+      paths:
+      - path: /api(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: llm-rag
+            port:
+              number: 80

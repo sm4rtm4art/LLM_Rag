@@ -1,0 +1,53 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# The base resources used across all environments
+resources:
+- deployment.yaml
+- service.yaml
+- configmap.yaml
+- env-configmap.yaml
+- pvc.yaml
+- network-policy.yaml
+- hpa.yaml
+
+# Common labels to be applied to all resources
+commonLabels:
+  app.kubernetes.io/name: llm-rag
+  app.kubernetes.io/part-of: llm-rag-system
+
+# CommonAnnotations apply to all resources
+commonAnnotations:
+  app.kubernetes.io/managed-by: kustomize
+
+# Variables that will be substituted in the YAML files
+# This allows for environment-specific configuration
+vars:
+- name: IMAGE_PULL_POLICY
+  objref:
+    kind: Deployment
+    name: llm-rag
+    apiVersion: apps/v1
+  fieldref:
+    fieldpath: spec.template.spec.containers[0].imagePullPolicy
+- name: MIN_REPLICAS
+  objref:
+    kind: HorizontalPodAutoscaler
+    name: llm-rag-hpa
+    apiVersion: autoscaling/v2
+  fieldref:
+    fieldpath: spec.minReplicas
+- name: MAX_REPLICAS
+  objref:
+    kind: HorizontalPodAutoscaler
+    name: llm-rag-hpa
+    apiVersion: autoscaling/v2
+  fieldref:
+    fieldpath: spec.maxReplicas
+- name: INGRESS_HOST
+  objref:
+    kind: Ingress
+    name: llm-rag-ingress
+    apiVersion: networking.k8s.io/v1
+  fieldref:
+    fieldpath: spec.rules[0].host

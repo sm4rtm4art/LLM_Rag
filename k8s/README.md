@@ -1,177 +1,154 @@
-# Kubernetes Deployment for LLM-RAG
+# Kubernetes Deployment for LLM RAG Application
 
-[![Kubernetes Tests](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/k8s-test.yaml/badge.svg)](https://github.com/sm4rtm4art/LLM_Rag/actions/workflows/k8s-test.yaml)
+This directory contains Kubernetes manifests for deploying the LLM RAG application in various environments. The setup provides a robust, scalable, and secure deployment using Kubernetes best practices.
 
-This directory contains Kubernetes configuration files for deploying the LLM-RAG application.
+## Components
 
-## Local Development with KIND
+- **Deployment**: Manages the core application with configurable resources, probes, and security settings
+- **Service**: Exposes the application within the cluster
+- **Ingress**: Routes external traffic to the application
+- **ConfigMap**: Provides configuration for the application
+- **PVC**: Provides persistent storage for models and data
+- **HPA**: Horizontal Pod Autoscaler for automatic scaling
+- **NetworkPolicy**: Secures pod communication
 
-We've provided scripts to easily set up and test a local Kubernetes cluster using KIND (Kubernetes IN Docker).
+## Environment Configuration
 
-### Prerequisites
+The manifests support multiple environments (dev, staging, production) through parameterization. Environment-specific values can be provided in several ways:
 
-- [Docker](https://docs.docker.com/get-docker/)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-- [KIND](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
+### 1. Using Kustomize
 
-### Scripts
+Create a kustomization.yaml file for each environment:
 
-We provide three scripts to help you work with the local Kubernetes cluster:
-
-1. **Setup Script**: `scripts/setup_local_k8s.sh`
-
-   - Creates a KIND cluster
-   - Builds and loads the Docker image
-   - Deploys the application
-   - Sets up port forwarding
-
-2. **Test Script**: `scripts/test_local_k8s.sh`
-
-   - Tests the health endpoint
-   - Tests a simple query
-   - Verifies the deployment is working
-
-3. **Cleanup Script**: `scripts/cleanup_local_k8s.sh`
-   - Deletes the KIND cluster
-   - Cleans up all resources
-
-### Usage
-
-```bash
-# Set up the local Kubernetes cluster and deploy the application
-./scripts/setup_local_k8s.sh
-
-# Test the deployment
-./scripts/test_local_k8s.sh
-
-# Clean up when you're done
-./scripts/cleanup_local_k8s.sh
+```yaml
+# ./overlays/production/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+namePrefix: prod-
+commonLabels:
+  environment: production
+patchesStrategicMerge:
+  - deployment-patch.yaml
+configMapGenerator:
+  - name: llm-rag-env
+    behavior: merge
+    literals:
+      - APP_ENV=production
+      - DEBUG_MODE=false
+      - MIN_REPLICAS=2
+      - MAX_REPLICAS=10
 ```
 
-## Manual Deployment
+### 2. Using Helm
 
-You can also manually deploy the application to a Kubernetes cluster:
+Convert to Helm by replacing variables with template expressions:
 
-```bash
-# Create a KIND cluster
-kind create cluster --name llm-rag-cluster --config k8s/kind-config.yaml
-
-# Create a namespace
-kubectl create namespace llm-rag-dev
-
-# Apply the Kubernetes configurations
-kubectl apply -f k8s/configmap.yaml -n llm-rag-dev
-kubectl apply -f k8s/pvc.yaml -n llm-rag-dev
-kubectl apply -f k8s/deployment.yaml -n llm-rag-dev
-kubectl apply -f k8s/service.yaml -n llm-rag-dev
-kubectl apply -f k8s/ingress.yaml -n llm-rag-dev
-
-# Verify the deployment
-kubectl get pods -n llm-rag-dev
-kubectl get services -n llm-rag-dev
+```yaml
+# Example in deployment.yaml
+replicas: {{ .Values.replicaCount }}
+image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
 ```
 
-## Configuration Files
+### 3. Using CI Variables
 
-- `deployment.yaml`: Defines the Kubernetes Deployment
-- `service.yaml`: Defines the Kubernetes Service
-- `configmap.yaml`: Contains configuration data
-- `pvc.yaml`: Defines the Persistent Volume Claim for models
-- `ingress.yaml`: Defines the Ingress for external access
-- `hpa.yaml`: Horizontal Pod Autoscaler for scaling
-- `network-policy.yaml`: Network policies for security
-- `kind-config.yaml`: Configuration for the KIND cluster
+In CI/CD pipelines, use variable substitution:
 
-## CI/CD Integration
+```bash
+# GitHub Actions example
+envsubst < k8s/deployment.yaml > deployment-rendered.yaml
+```
 
-The CI/CD pipeline uses these configuration files to deploy the application to test, development, and staging environments.
+## Quick Start
 
-### Kubernetes Testing Workflow
+### Local Development with KIND
 
-The `k8s-test.yaml` workflow in GitHub Actions tests the Kubernetes deployment:
+1. Create a local cluster:
 
-1. **Setup**: Creates a KIND cluster with the configuration in `kind-config.yaml`
-2. **Build or Pull**: Either builds a new Docker image or pulls the image built by the CI/CD pipeline
-3. **Deploy**: Deploys the application to the KIND cluster
-4. **Test**: Runs tests against the deployed application
-5. **Cleanup**: Deletes the KIND cluster and cleans up resources
+```bash
+kind create cluster --config k8s/kind-config.yaml
+```
 
-This workflow is configured as non-blocking, so failures won't prevent merges to the main branch.
+2. Apply manifests:
 
-### Deployment Workflow
+```bash
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/pvc.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+```
 
-The main CI/CD pipeline (`ci-cd.yml`) includes deployment jobs that:
+### Production Deployment
 
-1. **Build and Push**: Build the Docker image and push it to Docker Hub
-2. **Deploy to Dev**: Deploy the application to the development environment
-3. **Deploy to Staging**: Deploy the application to the staging environment (on manual trigger)
+For production deployments:
 
-The deployment jobs use either:
+1. Adjust resource requests/limits:
 
-- A KIND cluster created during the workflow
-- An external Kubernetes cluster configured via GitHub Secrets
+```yaml
+resources:
+  requests:
+    memory: "1Gi"
+    cpu: "1000m"
+  limits:
+    memory: "2Gi"
+    cpu: "2000m"
+```
 
-### Environment-Specific Configurations
+2. Enable TLS:
 
-The deployment can be customized for different environments:
+```bash
+# Using cert-manager
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.yaml
+kubectl apply -f k8s/certificate.yaml
+```
 
-- **Development**: Uses the `llm-rag-dev` namespace
-- **Staging**: Uses the `llm-rag-staging` namespace
-- **Production**: (Not yet implemented)
+## Best Practices
+
+### Security
+
+- Non-root user with read-only filesystem
+- NetworkPolicy to restrict traffic
+- Resource limits to prevent DoS
+- Proper liveness/readiness probes
+- Seccomp profiles and capability restrictions
+
+### Scaling
+
+- HPA for automatic scaling
+- PodDisruptionBudget for reliability
+- Anti-affinity rules for distribution
+
+### Monitoring
+
+- Configure logging to stdout/stderr
+- Add Prometheus annotations
+- Pod lifecycle hooks for graceful shutdown
+
+## Migration to Production
+
+To migrate from CI testing to a production environment:
+
+1. Use a GitOps approach with ArgoCD or Flux
+2. Separate CI validation from CD deployment
+3. Create environment-specific overlays
+4. Replace `${VARIABLE}` placeholders with actual values using kustomize or a templating engine
+5. Consider using Helm for more complex deployments
 
 ## Troubleshooting
 
-If you encounter issues with the local Kubernetes deployment:
+- **Pod crashes**: Check liveness probe, resource limits
+- **Ingress issues**: Verify ingress controller, annotations
+- **Scaling problems**: Review HPA metrics, resource settings
+- **Network connectivity**: Check NetworkPolicy configuration
 
-1. Check if Docker is running
-2. Verify that KIND and kubectl are installed
-3. Check the logs of the pods:
-   ```bash
-   kubectl logs -l app=llm-rag -n llm-rag-test
-   ```
-4. Describe the pods to see any issues:
-   ```bash
-   kubectl describe pods -l app=llm-rag -n llm-rag-test
-   ```
-5. Check the events:
-   ```bash
-   kubectl get events -n llm-rag-test
-   ```
-6. Verify your kubectl context:
-   ```bash
-   kubectl config current-context
-   ```
-7. Check if the KIND cluster is running:
-   ```bash
-   kind get clusters
-   ```
+## Production Checklist
 
-## Common Issues and Solutions
-
-### No Space Left on Device
-
-If you encounter "No space left on device" errors in GitHub Actions:
-
-1. Use the free disk space step in the workflow
-2. Optimize your Docker image size
-3. Clean up Docker resources after use
-
-### Connection Refused
-
-If you see "connection refused" errors when trying to connect to the Kubernetes API:
-
-1. Make sure the KIND cluster is running
-2. Check your kubectl context
-3. Export the KIND kubeconfig:
-   ```bash
-   kind get kubeconfig --name llm-rag-cluster > ~/.kube/kind-config
-   export KUBECONFIG=~/.kube/kind-config
-   ```
-
-### Pod Startup Issues
-
-If pods are not starting or are crashing:
-
-1. Check the pod logs
-2. Verify the ConfigMap and PVC are correctly created
-3. Ensure the Docker image is accessible to the cluster
+- [ ] Set proper resource requests/limits
+- [ ] Enable TLS for Ingress
+- [ ] Configure proper node affinity
+- [ ] Implement PodDisruptionBudget
+- [ ] Set up monitoring and alerts
+- [ ] Configure backups for persistent volumes
+- [ ] Review security contexts and NetworkPolicies

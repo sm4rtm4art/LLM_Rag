@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-rag
+  annotations:
+    service.kubernetes.io/topology-aware-hints: auto
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+spec:
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800  # 3 hours
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: http
+      protocol: TCP
+      name: https

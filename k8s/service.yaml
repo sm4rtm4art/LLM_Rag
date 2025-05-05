@@ -4,12 +4,19 @@ metadata:
   name: llm-rag
   labels:
     app: llm-rag
+    component: api
+  annotations:
+    service.kubernetes.io/topology-aware-hints: auto
 spec:
   selector:
     app: llm-rag
   ports:
     - port: 80
-      targetPort: 8000
+      targetPort: http
       protocol: TCP
       name: http
   type: ClusterIP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800  # 3 hours

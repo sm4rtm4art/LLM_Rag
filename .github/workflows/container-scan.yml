@@ -12,58 +12,100 @@ on:
     paths:
       - "Dockerfile"
       - ".github/trivy-container.yml"
+      - "docker-compose*.yml"
+      - "**/requirements*.txt"
+      - "pyproject.toml"
   workflow_dispatch:
+    inputs:
+      scan_level:
+        description: "Scan level (quick/full)"
+        required: true
+        default: "full"
+        type: choice
+        options:
+          - quick
+          - full
   schedule:
-    # Run weekly on Monday at 1:00 AM UTC
-    - cron: "0 1 * * 1"
+    - cron: "0 1 * * 1" # Weekly Monday 1:00 AM UTC
 
 jobs:
   container-scan:
     runs-on: ubuntu-latest
+    env:
+      SCAN_MODE: ${{ github.event_name == 'pull_request' && 'quick' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scan_level) || 'full' }}
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Docker diagnostics (debug)
+        run: |
+          docker version
+          docker info
+          docker buildx version
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
       - name: Build the Docker image
         id: docker_build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: .
           load: true
           tags: localhost/llm-rag:${{ github.sha }}
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=container-scan
+          cache-to: type=gha,mode=max,scope=container-scan
 
-      - name: Check image
+      - name: Check image exists
         run: docker image ls | grep localhost/llm-rag
 
-      # Cache Trivy DB to speed up subsequent scans
       - name: Cache Trivy vulnerability database
         uses: actions/cache@v4
         with:
           path: .trivy-cache
-          key: trivy-${{ runner.os }}-${{ github.sha }}
+          key: trivy-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
-            trivy-${{ runner.os }}-
+            trivy-db-${{ runner.os }}-
 
-      # Basic scan for vulnerabilities
-      - name: Run Trivy vulnerability scanner
+      - name: Run quick vulnerability scan
+        if: env.SCAN_MODE == 'quick'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: localhost/llm-rag:${{ github.sha }}
           format: "sarif"
           output: "trivy-results.sarif"
           severity: "CRITICAL,HIGH"
+          timeout: "5m"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          cache-dir: .trivy-cache
+
+      - name: Run full vulnerability scan
+        if: env.SCAN_MODE == 'full'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: localhost/llm-rag:${{ github.sha }}
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH,MEDIUM"
           timeout: "10m"
           exit-code: "1"
           ignore-unfixed: true
           vuln-type: "os,library"
+          cache-dir: .trivy-cache
 
-      # Comprehensive scan including secrets and config
-      - name: Run comprehensive Trivy scan
+      - name: Run secrets and config scan
+        if: env.SCAN_MODE == 'full' || github.event_name == 'schedule'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: localhost/llm-rag:${{ github.sha }}
@@ -71,9 +113,10 @@ jobs:
           output: "trivy-comprehensive.sarif"
           severity: "CRITICAL,HIGH,MEDIUM"
           timeout: "10m"
-          exit-code: "0" # Don't fail on medium issues
+          exit-code: "0"
           ignore-unfixed: true
-          scan-type: "vuln,secret,config"
+          scan-type: "config,secret"
+          cache-dir: .trivy-cache
 
       - name: Upload vulnerability scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -82,32 +125,46 @@ jobs:
           category: "trivy-container"
 
       - name: Upload comprehensive scan results
+        if: env.SCAN_MODE == 'full' || github.event_name == 'schedule'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: "trivy-comprehensive.sarif"
           category: "trivy-container-comprehensive"
 
-      # Generate report for PR comment
       - name: Generate scan summary for PR comment
         if: github.event_name == 'pull_request'
         run: |
-          # Install trivy CLI for text report
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          trivy image --cache-dir .trivy-cache --format table localhost/llm-rag:${{ github.sha }} > trivy-summary.txt
 
-          # Generate table format report
-          trivy image --format table localhost/llm-rag:${{ github.sha }} > trivy-summary.txt
+          CRITICAL=$(grep -c 'CRITICAL' trivy-summary.txt || echo 0)
+          HIGH=$(grep -c 'HIGH' trivy-summary.txt || echo 0)
+          MEDIUM=$(grep -c 'MEDIUM' trivy-summary.txt || echo 0)
 
-          # Create markdown summary
           {
             echo "## 🔒 Container Security Scan Results"
             echo "### Image: \`localhost/llm-rag:${{ github.sha }}\`"
             echo ""
+            echo "| Severity | Count |"
+            echo "|----------|-------|"
+            echo "| 🔴 CRITICAL | $CRITICAL |"
+            echo "| 🟠 HIGH     | $HIGH |"
+            echo "| 🟡 MEDIUM   | $MEDIUM |"
+            echo ""
+            if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+              echo "⚠️ **Action required**: Please address the critical/high vulnerabilities before merging."
+              echo ""
+            fi
             echo "<details><summary>View detailed scan results</summary>"
             echo ""
             echo '```'
             cat trivy-summary.txt
             echo '```'
             echo ""
+            echo "💡 **Remediation Tips:**"
+            echo "- Update base images to latest versions"
+            echo "- Use specific package versions instead of latest tags"
+            echo "- Consider multi-stage builds to reduce attack surface"
             echo "</details>"
           } > trivy-summary.md
 
@@ -117,3 +174,8 @@ jobs:
         with:
           path: trivy-summary.md
           header: container-scan
+
+      - name: Fallback on Build Failure
+        if: failure()
+        run: |
+          echo "::error::Build failed. Please check your Dockerfile or image dependencies for issues."

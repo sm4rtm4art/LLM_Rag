@@ -4,13 +4,14 @@ metadata:
   name: llm-rag-hpa
   labels:
     app: llm-rag
+    component: api
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: llm-rag
-  minReplicas: 2
-  maxReplicas: 10
+  minReplicas: ${MIN_REPLICAS:-1}
+  maxReplicas: ${MAX_REPLICAS:-5}
   metrics:
   - type: Resource
     resource:
@@ -24,3 +25,20 @@ spec:
       target:
         type: Utilization
         averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
