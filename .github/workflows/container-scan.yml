@@ -26,13 +26,11 @@ on:
           - quick
           - full
   schedule:
-    # Run weekly on Monday at 1:00 AM UTC
-    - cron: "0 1 * * 1"
+    - cron: "0 1 * * 1" # Weekly Monday 1:00 AM UTC
 
 jobs:
   container-scan:
     runs-on: ubuntu-latest
-    # Define scan mode based on trigger type
     env:
       SCAN_MODE: ${{ github.event_name == 'pull_request' && 'quick' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scan_level) || 'full' }}
 
@@ -42,7 +40,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Improved caching strategy with separate keys for PR vs scheduled scans
+      - name: Docker diagnostics (debug)
+        run: |
+          docker version
+          docker info
+          docker buildx version
+
       - name: Cache Docker layers
         uses: actions/cache@v4
         with:
@@ -53,19 +56,18 @@ jobs:
 
       - name: Build the Docker image
         id: docker_build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: .
           load: true
           tags: localhost/llm-rag:${{ github.sha }}
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=container-scan
+          cache-to: type=gha,mode=max,scope=container-scan
 
-      - name: Check image
+      - name: Check image exists
         run: docker image ls | grep localhost/llm-rag
 
-      # Optimized Trivy DB caching with dated versioning
       - name: Cache Trivy vulnerability database
         uses: actions/cache@v4
         with:
@@ -74,7 +76,6 @@ jobs:
           restore-keys: |
             trivy-db-${{ runner.os }}-
 
-      # Quick scan for PRs - exit on critical/high issues only
       - name: Run quick vulnerability scan
         if: env.SCAN_MODE == 'quick'
         uses: aquasecurity/trivy-action@master
@@ -89,7 +90,6 @@ jobs:
           vuln-type: "os,library"
           cache-dir: .trivy-cache
 
-      # Full scan for scheduled runs or manual workflow with full option
       - name: Run full vulnerability scan
         if: env.SCAN_MODE == 'full'
         uses: aquasecurity/trivy-action@master
@@ -104,7 +104,6 @@ jobs:
           vuln-type: "os,library"
           cache-dir: .trivy-cache
 
-      # Only run secret and config scan on full mode
       - name: Run secrets and config scan
         if: env.SCAN_MODE == 'full' || github.event_name == 'schedule'
         uses: aquasecurity/trivy-action@master
@@ -114,7 +113,7 @@ jobs:
           output: "trivy-comprehensive.sarif"
           severity: "CRITICAL,HIGH,MEDIUM"
           timeout: "10m"
-          exit-code: "0" # Don't fail on medium issues
+          exit-code: "0"
           ignore-unfixed: true
           scan-type: "config,secret"
           cache-dir: .trivy-cache
@@ -132,22 +131,16 @@ jobs:
           sarif_file: "trivy-comprehensive.sarif"
           category: "trivy-container-comprehensive"
 
-      # Improved PR comment with vulnerability counts and remediation suggestions
       - name: Generate scan summary for PR comment
         if: github.event_name == 'pull_request'
         run: |
-          # Install trivy CLI for text report
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-
-          # Generate table format report
           trivy image --cache-dir .trivy-cache --format table localhost/llm-rag:${{ github.sha }} > trivy-summary.txt
 
-          # Count vulnerabilities by severity
           CRITICAL=$(grep -c 'CRITICAL' trivy-summary.txt || echo 0)
           HIGH=$(grep -c 'HIGH' trivy-summary.txt || echo 0)
           MEDIUM=$(grep -c 'MEDIUM' trivy-summary.txt || echo 0)
 
-          # Create markdown summary with vulnerability counts
           {
             echo "## 🔒 Container Security Scan Results"
             echo "### Image: \`localhost/llm-rag:${{ github.sha }}\`"
@@ -155,15 +148,13 @@ jobs:
             echo "| Severity | Count |"
             echo "|----------|-------|"
             echo "| 🔴 CRITICAL | $CRITICAL |"
-            echo "| 🟠 HIGH | $HIGH |"
-            echo "| 🟡 MEDIUM | $MEDIUM |"
+            echo "| 🟠 HIGH     | $HIGH |"
+            echo "| 🟡 MEDIUM   | $MEDIUM |"
             echo ""
-
             if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
               echo "⚠️ **Action required**: Please address the critical/high vulnerabilities before merging."
               echo ""
             fi
-
             echo "<details><summary>View detailed scan results</summary>"
             echo ""
             echo '```'
@@ -183,3 +174,8 @@ jobs:
         with:
           path: trivy-summary.md
           header: container-scan
+
+      - name: Fallback on Build Failure
+        if: failure()
+        run: |
+          echo "::error::Build failed. Please check your Dockerfile or image dependencies for issues."
