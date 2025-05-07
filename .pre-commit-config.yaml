@@ -37,12 +37,14 @@ repos:
       - id: ruff-format
 
   # Add shellcheck for bash script linting
-  - repo: https://github.com/koalaman/shellcheck-precommit
-    rev: v0.10.0
+  - repo: local
     hooks:
-      - id: shellcheck
-        args: ["--severity=warning", "--external-sources"]
+      - id: shellcheck-local
+        name: shellcheck
+        entry: shellcheck
+        language: system
         types: [shell]
+        args: ["--severity=warning", "--external-sources"]
 
   # Add shfmt for bash script formatting
   - repo: https://github.com/scop/pre-commit-shfmt

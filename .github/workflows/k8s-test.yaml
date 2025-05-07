@@ -40,7 +40,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          fetch-depth: 1
 
       # Determine image tag based on trigger
       - name: Set image tag
@@ -49,9 +49,16 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "${{ github.event_name }}" == "pull_request" ]; then
             # For manual runs or PRs, use the current SHA
             echo "image_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" == "workflow_run" ]; then
+            # For workflow_run triggers, use the SHA from the triggering workflow if available
+            if [ -n "${{ github.event.workflow_run.head_sha }}" ]; then
+              echo "image_tag=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+            else
+              echo "image_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+            fi
           else
-            # For workflow_run triggers, use the SHA from the triggering workflow
-            echo "image_tag=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+            # Default fallback
+            echo "image_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
       # Optimize disk space
@@ -78,8 +85,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       # Check if image exists in Docker Hub
       - name: Check if image exists in registry
@@ -144,7 +149,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          fetch-depth: 1
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -190,7 +195,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          fetch-depth: 1
 
       # Download cached image
       - name: Download image artifact
