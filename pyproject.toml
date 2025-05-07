@@ -136,12 +136,22 @@ ignore = [
     "D104",  # Missing docstring in public package
     "D203",  # One blank line before class (conflicts with D211)
     "D213",  # Multi-line summary second line (conflicts with D212)
+    "W191",  # Indentation contains tabs
+    "D206",  # Indentation with tabs instead of spaces
+    "E101",  # Indentation with mixed spaces and tabs
 ]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "tab"
+docstring-code-format = true
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "E402"]  # Ignore docstring issues and import order in tests
 "scripts/*" = ["E402"]  # Ignore import order in scripts
 ".llm_rag/bin/*" = ["D", "E", "W"]  # Ignore issues in virtual environment scripts
+"tests/document_processing/comparison/*" = ["W191", "D206"]  # Ignore tab indentation issues
+"src/llm_rag/document_processing/comparison/*" = ["W191", "D206"]  # Ignore tab indentation issues
 
 [tool.ruff.lint.isort]
 known-first-party = ["llm_rag"]
