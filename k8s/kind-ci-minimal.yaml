@@ -1,0 +1,62 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+# Ultra-minimal cluster for GitHub Actions with severe resource constraints
+nodes:
+- role: control-plane
+  # Minimal kubelet configuration for GitHub Actions
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        system-reserved: "cpu=100m,memory=100Mi"
+        kube-reserved: "cpu=100m,memory=100Mi"
+        eviction-hard: "memory.available<50Mi,nodefs.available<5%"
+        max-pods: "10"
+# Global minimal configuration
+kubeadmConfigPatches:
+- |
+  kind: ClusterConfiguration
+  metadata:
+    name: config
+  # Use tmpfs for etcd to improve performance
+  etcd:
+    local:
+      dataDir: "/tmp/etcd"
+  # Minimize API server resource usage
+  apiServer:
+    timeoutForControlPlane: "5m"
+    extraArgs:
+      "v": "1"
+      "max-mutating-requests-inflight": "25"
+      "max-requests-inflight": "50"
+      "profiling": "false"
+  # Minimal controller manager configuration
+  controllerManager:
+    extraArgs:
+      "v": "1"
+      "profiling": "false"
+      "controllers": "*,-cloud-node-lifecycle"
+- |
+  kind: KubeletConfiguration
+  metadata:
+    name: config
+  cgroupDriver: systemd
+  failSwapOn: false
+  # Very aggressive resource limits
+  imageGCHighThresholdPercent: 90
+  imageGCLowThresholdPercent: 85
+  # Aggressive eviction for GitHub Actions
+  evictionHard:
+    memory.available: "50Mi"
+    nodefs.available: "5%"
+  # Faster pod startup and shutdown
+  systemReserved:
+    memory: "100Mi"
+    cpu: "100m"
+  kubeReserved:
+    memory: "100Mi"
+    cpu: "100m"
+  # Minimal logging
+  logging:
+    verbosity: 1
