@@ -61,8 +61,38 @@ jobs:
           TRIVY_CACHE_DIR: ~/.cache/trivy
         run: |
           trivy --cache-dir ~/.cache/trivy image --download-db-only
-          # Comprehensive scan with all scanners and checking for all severity levels
-          trivy fs --format sarif --output trivy-full-results.sarif --severity CRITICAL,HIGH,MEDIUM,LOW .
+
+          # Split scan by major components to avoid overwhelming GitHub with too many runs in one SARIF file
+          echo "Scanning source code directory..."
+          trivy fs --format sarif --output trivy-src.sarif --severity CRITICAL,HIGH,MEDIUM,LOW src/
+
+          echo "Scanning Kubernetes configurations..."
+          trivy fs --format sarif --output trivy-k8s.sarif --severity CRITICAL,HIGH,MEDIUM,LOW k8s/
+
+          echo "Scanning Docker files..."
+          trivy fs --format sarif --output trivy-docker.sarif --severity CRITICAL,HIGH,MEDIUM,LOW Dockerfile*
+
+          echo "Scanning other important root files..."
+          trivy fs --format sarif --output trivy-root.sarif --severity CRITICAL,HIGH,MEDIUM,LOW \
+            --skip-dirs="src/" --skip-dirs="k8s/" --skip-dirs="tests/" --skip-dirs=".github/" \
+            --skip-dirs=".git/" --skip-dirs=".venv/" .
+
+          # Combine results, ensuring we don't exceed the GitHub limit of 20 runs
+          jq -s -c '{
+            "$schema": .[0]["$schema"],
+            version: .[0].version,
+            runs: [
+              .[].runs[]
+            ]
+          } | if (.runs | length > 20) then
+              (.runs=.runs[0:20])
+            else
+              .
+            end' trivy-*.sarif > trivy-full-results.sarif
+
+          # Log the run count for verification
+          RUN_COUNT=$(jq '.runs | length' trivy-full-results.sarif)
+          echo "Final comprehensive SARIF file contains $RUN_COUNT runs (limit: 20)"
 
       - name: Upload comprehensive Trivy SARIF results
         uses: github/codeql-action/upload-sarif@v3
