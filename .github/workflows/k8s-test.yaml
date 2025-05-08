@@ -10,6 +10,7 @@ on:
     paths:
       - "k8s/**"
       - "Dockerfile"
+      - "Dockerfile.k8s-test"
       - ".github/workflows/k8s-test.yaml"
   workflow_dispatch:
     inputs:
@@ -25,6 +26,7 @@ env:
   IMAGE_NAME: llm-rag
   KIND_VERSION: v0.20.0
   KUBECTL_VERSION: v1.28.2
+  USE_TEST_IMAGE: true # Flag to use the lightweight test image
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -181,6 +183,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ${{ env.USE_TEST_IMAGE == 'true' && 'Dockerfile.k8s-test' || 'Dockerfile' }}
           push: false
           load: true
           tags: ${{ env.IMAGE_NAME }}:latest
