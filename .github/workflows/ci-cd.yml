@@ -244,13 +244,31 @@ jobs:
                 fi
               done
 
-              # Scan each batch
+              # Scan each batch by scanning the root directory with --include-paths
               for batch_file in trivy-scans/batch_*.txt; do
                 BATCH_NAME=$(basename "$batch_file" .txt)
                 echo "Scanning batch: $BATCH_NAME"
-                DIRS_TO_SCAN=$(cat "$batch_file" | tr '\n' ' ')
-                trivy fs --format sarif --output "trivy-$BATCH_NAME.sarif" \
-                  --severity CRITICAL,HIGH $DIRS_TO_SCAN
+
+                # Prepare include paths - Trivy only allows a single target, but supports filtering
+                INCLUDE_ARGS=""
+                while read -r dir; do
+                  # Only include non-empty directories
+                  if [ -d "$dir" ] && [ "$(ls -A "$dir" 2>/dev/null)" ]; then
+                    # Normalize the path for include-path (should be relative to the repo root)
+                    normalized_path=$(realpath --relative-to="$PWD" "$dir")
+                    INCLUDE_ARGS="$INCLUDE_ARGS --include-path=$normalized_path"
+                  fi
+                done < "$batch_file"
+
+                # Scan the root directory with include filters
+                if [ -n "$INCLUDE_ARGS" ]; then
+                  echo "Running scan with include filters: $INCLUDE_ARGS"
+                  trivy fs --format sarif --output "trivy-$BATCH_NAME.sarif" \
+                    --severity CRITICAL,HIGH $INCLUDE_ARGS .
+                else
+                  echo "No valid paths to scan in this batch"
+                  echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}' > "trivy-$BATCH_NAME.sarif"
+                fi
               done
             else
               # We're under the limit, scan each directory separately
@@ -260,8 +278,15 @@ jobs:
                   echo "Scanning directory: $dir"
                   # Sanitize directory name for the output file
                   safe_name=$(echo "$dir" | tr '/' '_')
-                  trivy fs --format sarif --output "trivy-${safe_name}.sarif" \
-                    --severity CRITICAL,HIGH "$dir"
+
+                  # Scan only if directory contains files
+                  if [ "$(ls -A "$dir" 2>/dev/null)" ]; then
+                    trivy fs --format sarif --output "trivy-${safe_name}.sarif" \
+                      --severity CRITICAL,HIGH "$dir"
+                  else
+                    echo "Directory is empty, skipping scan"
+                    echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}' > "trivy-${safe_name}.sarif"
+                  fi
                 fi
               done
             fi

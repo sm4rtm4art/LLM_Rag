@@ -27,6 +27,7 @@ env:
   KIND_VERSION: v0.20.0
   KUBECTL_VERSION: v1.28.2
   USE_TEST_IMAGE: true # Flag to use the lightweight test image
+  KIND_KUBECONFIG: /tmp/kind-kubeconfig
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -241,10 +242,16 @@ jobs:
         with:
           version: ${{ env.KUBECTL_VERSION }}
 
-      # Create cluster with optimized config
+      # Create cluster with optimized config and explicit kubeconfig
       - name: Create kind cluster
         run: |
-          kind create cluster --name ${{ env.CLUSTER_NAME }} --config ./k8s/kind-config.yaml --wait 120s
+          # Create cluster with explicit kubeconfig path
+          kind create cluster --name ${{ env.CLUSTER_NAME }} --config ./k8s/kind-config.yaml --wait 120s --kubeconfig=${KIND_KUBECONFIG}
+
+          # Set KUBECONFIG for all subsequent kubectl commands
+          echo "KUBECONFIG=${KIND_KUBECONFIG}" >> $GITHUB_ENV
+
+          # Verify connection to cluster
           kubectl cluster-info
           kubectl get nodes -o wide
 
@@ -341,6 +348,7 @@ jobs:
 
       # Wait for test job to complete and collect logs
       - name: Wait for test job and collect results
+        id: test-results
         run: |
           echo "Waiting for test job to complete..."
           kubectl wait --for=condition=complete --timeout=120s job/llm-rag-test -n ${{ env.NAMESPACE }} || true
@@ -354,42 +362,69 @@ jobs:
             echo "✅ Test job completed successfully"
             echo "Test logs:"
             cat test-artifacts/test-logs.txt
-            exit 0
+            echo "test_success=true" >> $GITHUB_OUTPUT
           else
             echo "❌ Test job failed"
             echo "Test logs:"
             cat test-artifacts/test-logs.txt
-            exit 1
+            echo "test_success=false" >> $GITHUB_OUTPUT
+            # Don't exit with error here, we'll collect diagnostics first
           fi
 
-      # Collect detailed diagnostics on failure
+      # Collect detailed diagnostics on failure - always run but don't fail the workflow
       - name: Collect diagnostics on failure
-        if: failure()
+        if: steps.test-results.outputs.test_success != 'true'
+        continue-on-error: true
         run: |
           echo "Collecting cluster diagnostics..."
           mkdir -p test-artifacts/diagnostics
 
+          # Verify KIND cluster is still running
+          if ! kind get clusters | grep -q "${{ env.CLUSTER_NAME }}"; then
+            echo "KIND cluster is no longer running, cannot collect diagnostics"
+            exit 0
+          fi
+
+          # Check KUBECONFIG exists
+          if [ ! -f "${KUBECONFIG}" ]; then
+            echo "KUBECONFIG file not found at ${KUBECONFIG}"
+            exit 0
+          fi
+
+          # Verify cluster is reachable
+          if ! kubectl cluster-info > /dev/null 2>&1; then
+            echo "Kubernetes cluster is not reachable, cannot collect diagnostics"
+            exit 0
+          fi
+
           # Collect pod details and logs
-          kubectl get all -n ${{ env.NAMESPACE }} -o wide > test-artifacts/diagnostics/all-resources.txt
-          kubectl describe pods -n ${{ env.NAMESPACE }} > test-artifacts/diagnostics/pod-details.txt
-          kubectl describe svc -n ${{ env.NAMESPACE }} > test-artifacts/diagnostics/service-details.txt
-          kubectl describe ingress -n ${{ env.NAMESPACE }} > test-artifacts/diagnostics/ingress-details.txt
+          kubectl get all -n ${{ env.NAMESPACE }} -o wide > test-artifacts/diagnostics/all-resources.txt || true
+          kubectl describe pods -n ${{ env.NAMESPACE }} > test-artifacts/diagnostics/pod-details.txt || true
+          kubectl describe svc -n ${{ env.NAMESPACE }} > test-artifacts/diagnostics/service-details.txt || true
+          kubectl describe ingress -n ${{ env.NAMESPACE }} > test-artifacts/diagnostics/ingress-details.txt || true
 
           # Collect container logs
           kubectl logs -l app=llm-rag -n ${{ env.NAMESPACE }} --tail=100 > test-artifacts/diagnostics/app-logs.txt || true
 
           # Collect events
-          kubectl get events -n ${{ env.NAMESPACE }} --sort-by=.metadata.creationTimestamp > test-artifacts/diagnostics/events.txt
+          kubectl get events -n ${{ env.NAMESPACE }} --sort-by=.metadata.creationTimestamp > test-artifacts/diagnostics/events.txt || true
 
           # Collect node status
-          kubectl describe nodes > test-artifacts/diagnostics/nodes.txt
+          kubectl describe nodes > test-artifacts/diagnostics/nodes.txt || true
 
           # Packet capture if debug enabled
           if [ "${{ github.event.inputs.debug_enabled }}" == "true" ]; then
-            kubectl run tcpdump --image=nicolaka/netshoot -n ${{ env.NAMESPACE }} -- sleep 30
-            kubectl wait --for=condition=ready pod/tcpdump -n ${{ env.NAMESPACE }} --timeout=30s
-            kubectl exec tcpdump -n ${{ env.NAMESPACE }} -- tcpdump -i any -c 100 -nn > test-artifacts/diagnostics/network-capture.txt
+            kubectl run tcpdump --image=nicolaka/netshoot -n ${{ env.NAMESPACE }} -- sleep 30 || true
+            kubectl wait --for=condition=ready pod/tcpdump -n ${{ env.NAMESPACE }} --timeout=30s || true
+            kubectl exec tcpdump -n ${{ env.NAMESPACE }} -- tcpdump -i any -c 100 -nn > test-artifacts/diagnostics/network-capture.txt || true
           fi
+
+      # Check test results and fail if needed
+      - name: Check test results
+        if: always() && steps.test-results.outputs.test_success == 'false'
+        run: |
+          echo "Tests failed, see logs for details"
+          exit 1
 
       # Upload test logs and diagnostics as artifacts
       - name: Upload test artifacts
