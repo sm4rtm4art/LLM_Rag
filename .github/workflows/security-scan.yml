@@ -42,13 +42,14 @@ jobs:
           path: bandit.json
 
       # Comprehensive Trivy filesystem scan
-      - name: Cache Trivy DB
+      - name: Cache Trivy
         uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
-          key: trivy-security-${{ github.workflow }}-${{ github.ref_name }}-${{ hashFiles('Dockerfile') }}-${{ format('{{yyyy-MM-dd}}', github.event.repository.updated_at) }}
+          key: trivy-security-${{ github.workflow }}-${{ github.ref_name }}-${{ hashFiles('Dockerfile') }}-${{ github.run_id }}
           restore-keys: |
             trivy-security-${{ github.workflow }}-${{ github.ref_name }}-
+            trivy-security-${{ github.workflow }}-
 
       - name: Install Trivy
         run: |
