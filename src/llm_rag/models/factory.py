@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 class ModelBackend(str, Enum):
     """Available model backends."""
 
-    LLAMA_CPP = "llama_cpp"
-    HUGGINGFACE = "huggingface"
-    OLLAMA = "ollama"
+    LLAMA_CPP = 'llama_cpp'
+    HUGGINGFACE = 'huggingface'
+    OLLAMA = 'ollama'
 
 
 class ModelFactory:
@@ -30,7 +30,7 @@ class ModelFactory:
     def create_model(
         model_path_or_name: str,
         backend: Union[str, ModelBackend] = ModelBackend.LLAMA_CPP,
-        device: str = "cpu",
+        device: str = 'cpu',
         max_tokens: int = 512,
         temperature: float = 0.7,
         top_p: float = 0.95,
@@ -84,7 +84,7 @@ class ModelFactory:
                 **kwargs,
             )
         else:
-            raise ValueError(f"Unsupported backend: {backend}")
+            raise ValueError(f'Unsupported backend: {backend}')
 
     @staticmethod
     def _create_llama_cpp_model(
@@ -114,10 +114,10 @@ class ModelFactory:
 
         # Check if the model file exists
         if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Model file not found: {model_path}")
+            raise FileNotFoundError(f'Model file not found: {model_path}')
 
         # Create the model
-        logger.info(f"Creating llama-cpp model: {model_path}")
+        logger.info(f'Creating llama-cpp model: {model_path}')
         return CustomLlamaCpp(
             model_path=model_path,
             max_tokens=max_tokens,
@@ -130,7 +130,7 @@ class ModelFactory:
     @staticmethod
     def _create_huggingface_model(
         model_name: str,
-        device: str = "cpu",
+        device: str = 'cpu',
         max_tokens: int = 512,
         temperature: float = 0.7,
         top_p: float = 0.95,
@@ -158,13 +158,13 @@ class ModelFactory:
         from src.llm_rag.models.huggingface import HuggingFaceLLM
 
         # Create the model
-        logger.info(f"Creating Hugging Face model: {model_name}")
-        logger.info(f"Parameters: device={device}, max_tokens={max_tokens}")
-        logger.info(f"Additional kwargs: {kwargs}")
+        logger.info(f'Creating Hugging Face model: {model_name}')
+        logger.info(f'Parameters: device={device}, max_tokens={max_tokens}')
+        logger.info(f'Additional kwargs: {kwargs}')
 
         try:
             # Load the model and tokenizer
-            logger.info(f"Loading model {model_name} on {device}")
+            logger.info(f'Loading model {model_name} on {device}')
             tokenizer = AutoTokenizer.from_pretrained(model_name)
             model = AutoModelForCausalLM.from_pretrained(
                 model_name,
@@ -183,15 +183,15 @@ class ModelFactory:
                 **kwargs,
             )
         except Exception as e:
-            logger.error(f"Error creating HuggingFaceLLM: {e}")
+            logger.error(f'Error creating HuggingFaceLLM: {e}')
             # Print all parameters for debugging
-            logger.error(f"model_name: {model_name}")
-            logger.error(f"device: {device}")
-            logger.error(f"max_tokens: {max_tokens}")
-            logger.error(f"temperature: {temperature}")
-            logger.error(f"top_p: {top_p}")
-            logger.error(f"repetition_penalty: {repetition_penalty}")
-            logger.error(f"kwargs: {kwargs}")
+            logger.error(f'model_name: {model_name}')
+            logger.error(f'device: {device}')
+            logger.error(f'max_tokens: {max_tokens}')
+            logger.error(f'temperature: {temperature}')
+            logger.error(f'top_p: {top_p}')
+            logger.error(f'repetition_penalty: {repetition_penalty}')
+            logger.error(f'kwargs: {kwargs}')
             raise
 
     @staticmethod
@@ -217,16 +217,16 @@ class ModelFactory:
             An Ollama LLM instance
 
         """
-        logger.info(f"Creating Ollama model: {model_name}")
-        logger.info(f"Parameters: max_tokens={max_tokens}, temperature={temperature}")
-        logger.info(f"Additional kwargs: {kwargs}")
+        logger.info(f'Creating Ollama model: {model_name}')
+        logger.info(f'Parameters: max_tokens={max_tokens}, temperature={temperature}')
+        logger.info(f'Additional kwargs: {kwargs}')
 
         try:
             # Try importing from langchain_ollama first (preferred)
             try:
                 from langchain_ollama import OllamaLLM
 
-                logger.info("Using langchain_ollama.OllamaLLM")
+                logger.info('Using langchain_ollama.OllamaLLM')
                 # Map parameters to what OllamaLLM expects
                 # OllamaLLM uses 'model' instead of 'model_name'
                 return OllamaLLM(
@@ -234,14 +234,14 @@ class ModelFactory:
                     temperature=temperature,
                     top_p=top_p,
                     # Don't pass max_tokens as it's not supported
-                    **{k: v for k, v in kwargs.items() if k != "max_tokens"},
+                    **{k: v for k, v in kwargs.items() if k != 'max_tokens'},
                 )
             except ImportError:
                 # Fallback to langchain_community
                 try:
                     from langchain_community.llms.ollama import OllamaLLM
 
-                    logger.info("Using langchain_community.llms.ollama.OllamaLLM")
+                    logger.info('Using langchain_community.llms.ollama.OllamaLLM')
                     # Map parameters to what OllamaLLM expects
                     # OllamaLLM uses 'model' instead of 'model_name'
                     return OllamaLLM(
@@ -249,13 +249,13 @@ class ModelFactory:
                         temperature=temperature,
                         top_p=top_p,
                         # Don't pass max_tokens as it's not supported
-                        **{k: v for k, v in kwargs.items() if k != "max_tokens"},
+                        **{k: v for k, v in kwargs.items() if k != 'max_tokens'},
                     )
                 except ImportError:
                     # Final fallback to older API
                     from langchain_community.llms import Ollama
 
-                    logger.info("Using langchain_community.llms.Ollama")
+                    logger.info('Using langchain_community.llms.Ollama')
                     # Ollama class uses different parameter names
                     return Ollama(
                         model=model_name,
@@ -264,9 +264,9 @@ class ModelFactory:
                         # Older Ollama API might use "num_predict" instead of "max_tokens"
                         num_predict=max_tokens,
                         # Use this only if the API supports it
-                        repeat_penalty=repetition_penalty if kwargs.get("use_repeat_penalty", True) else None,
-                        **{k: v for k, v in kwargs.items() if k not in ("max_tokens", "use_repeat_penalty")},
+                        repeat_penalty=repetition_penalty if kwargs.get('use_repeat_penalty', True) else None,
+                        **{k: v for k, v in kwargs.items() if k not in ('max_tokens', 'use_repeat_penalty')},
                     )
         except Exception as e:
-            logger.error(f"Error creating Ollama model: {e}")
+            logger.error(f'Error creating Ollama model: {e}')
             raise

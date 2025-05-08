@@ -10,12 +10,12 @@ from unittest.mock import MagicMock
 from llm_rag.evaluation.metrics import calculate_factuality, calculate_relevance
 
 # Nur die problematischen Module mocken, bevor sie importiert werden
-if "sentence_transformers" not in sys.modules:
-    sys.modules["sentence_transformers"] = MagicMock()
-    sys.modules["sentence_transformers.SentenceTransformer"] = MagicMock()
+if 'sentence_transformers' not in sys.modules:
+    sys.modules['sentence_transformers'] = MagicMock()
+    sys.modules['sentence_transformers.SentenceTransformer'] = MagicMock()
 
-if "torch" not in sys.modules:
-    sys.modules["torch"] = MagicMock()
+if 'torch' not in sys.modules:
+    sys.modules['torch'] = MagicMock()
 
 
 class TestCalculateRelevance:
@@ -24,8 +24,8 @@ class TestCalculateRelevance:
     def test_relevance_with_matching_terms(self) -> None:
         """Test relevance calculation with matching terms in query and answer."""
         # Arrange
-        query = "What is retrieval augmented generation?"
-        answer = "Retrieval augmented generation is a technique that combines retrieval and generation."
+        query = 'What is retrieval augmented generation?'
+        answer = 'Retrieval augmented generation is a technique that combines retrieval and generation.'
 
         # Act
         score = calculate_relevance(query, answer)
@@ -39,8 +39,8 @@ class TestCalculateRelevance:
     def test_relevance_with_no_overlap(self) -> None:
         """Test relevance calculation with no term overlap."""
         # Arrange
-        query = "What is RAG?"
-        answer = "The system combines different techniques for improved results."
+        query = 'What is RAG?'
+        answer = 'The system combines different techniques for improved results.'
 
         # Act
         score = calculate_relevance(query, answer)
@@ -51,8 +51,8 @@ class TestCalculateRelevance:
     def test_relevance_with_empty_answer(self) -> None:
         """Test relevance calculation with empty answer."""
         # Arrange
-        query = "What is RAG?"
-        answer = ""
+        query = 'What is RAG?'
+        answer = ''
 
         # Act
         score = calculate_relevance(query, answer)
@@ -63,8 +63,8 @@ class TestCalculateRelevance:
     def test_relevance_with_empty_query(self) -> None:
         """Test relevance calculation with empty query."""
         # Arrange
-        query = ""
-        answer = "RAG is retrieval augmented generation."
+        query = ''
+        answer = 'RAG is retrieval augmented generation.'
 
         # Act
         score = calculate_relevance(query, answer)
@@ -75,8 +75,8 @@ class TestCalculateRelevance:
     def test_relevance_with_model(self) -> None:
         """Test relevance calculation with a model parameter."""
         # Arrange
-        query = "What is RAG?"
-        answer = "RAG is retrieval augmented generation."
+        query = 'What is RAG?'
+        answer = 'RAG is retrieval augmented generation.'
         mock_model = MagicMock()
 
         # Act - the current implementation ignores the model
@@ -90,9 +90,9 @@ class TestCalculateRelevance:
     def test_relevance_with_context(self) -> None:
         """Test relevance calculation with context parameter."""
         # Arrange
-        query = "What is RAG?"
-        answer = "RAG is retrieval augmented generation."
-        context = "RAG stands for Retrieval Augmented Generation which is a technique..."
+        query = 'What is RAG?'
+        answer = 'RAG is retrieval augmented generation.'
+        context = 'RAG stands for Retrieval Augmented Generation which is a technique...'
 
         # Act - the current implementation ignores context but we should test it
         score = calculate_relevance(query, answer, context=context)
@@ -107,8 +107,8 @@ class TestCalculateFactuality:
     def test_factuality_with_reference(self) -> None:
         """Test factuality calculation with reference answer."""
         # Arrange
-        answer = "RAG is retrieval augmented generation."
-        reference = "RAG stands for Retrieval Augmented Generation."
+        answer = 'RAG is retrieval augmented generation.'
+        reference = 'RAG stands for Retrieval Augmented Generation.'
 
         # Act
         score = calculate_factuality(answer, reference=reference)
@@ -122,8 +122,8 @@ class TestCalculateFactuality:
     def test_factuality_with_context(self) -> None:
         """Test factuality calculation with context."""
         # Arrange
-        answer = "RAG is retrieval augmented generation."
-        context = "RAG (Retrieval Augmented Generation) is a technique that..."
+        answer = 'RAG is retrieval augmented generation.'
+        context = 'RAG (Retrieval Augmented Generation) is a technique that...'
 
         # Act
         score = calculate_factuality(answer, context=context)
@@ -137,7 +137,7 @@ class TestCalculateFactuality:
     def test_factuality_with_no_reference_or_context(self) -> None:
         """Test factuality calculation with neither reference nor context."""
         # Arrange
-        answer = "RAG is retrieval augmented generation."
+        answer = 'RAG is retrieval augmented generation.'
 
         # Act
         score = calculate_factuality(answer)
@@ -148,8 +148,8 @@ class TestCalculateFactuality:
     def test_factuality_with_empty_answer(self) -> None:
         """Test factuality calculation with empty answer."""
         # Arrange
-        answer = ""
-        reference = "RAG is retrieval augmented generation."
+        answer = ''
+        reference = 'RAG is retrieval augmented generation.'
 
         # Act
         score = calculate_factuality(answer, reference=reference)
@@ -160,8 +160,8 @@ class TestCalculateFactuality:
     def test_factuality_with_empty_reference(self) -> None:
         """Test factuality calculation with empty reference."""
         # Arrange
-        answer = "RAG is retrieval augmented generation."
-        reference = ""
+        answer = 'RAG is retrieval augmented generation.'
+        reference = ''
 
         # Act
         score = calculate_factuality(answer, reference=reference)
@@ -172,8 +172,8 @@ class TestCalculateFactuality:
     def test_factuality_with_empty_context(self) -> None:
         """Test factuality calculation with empty context."""
         # Arrange
-        answer = "RAG is retrieval augmented generation."
-        context = ""
+        answer = 'RAG is retrieval augmented generation.'
+        context = ''
 
         # Act
         score = calculate_factuality(answer, context=context)
@@ -184,8 +184,8 @@ class TestCalculateFactuality:
     def test_factuality_with_model(self) -> None:
         """Test factuality calculation with model parameter."""
         # Arrange
-        answer = "RAG is retrieval augmented generation."
-        reference = "RAG stands for Retrieval Augmented Generation."
+        answer = 'RAG is retrieval augmented generation.'
+        reference = 'RAG stands for Retrieval Augmented Generation.'
         mock_model = MagicMock()
 
         # Act - current implementation ignores the model

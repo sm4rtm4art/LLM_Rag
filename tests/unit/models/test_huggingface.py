@@ -17,12 +17,12 @@ class TestHuggingFaceLLM(unittest.TestCase):
         self.mock_pipeline = MagicMock()
 
         # Configure the pipeline mock to return a valid response
-        self.mock_pipeline.return_value = [{"generated_text": "This is a test response"}]
+        self.mock_pipeline.return_value = [{'generated_text': 'This is a test response'}]
 
         # Patch the AutoTokenizer and AutoModelForCausalLM classes
-        self.tokenizer_patcher = patch("transformers.AutoTokenizer.from_pretrained", return_value=self.mock_tokenizer)
-        self.model_patcher = patch("transformers.AutoModelForCausalLM.from_pretrained", return_value=self.mock_model)
-        self.pipeline_patcher = patch("transformers.pipeline", return_value=self.mock_pipeline)
+        self.tokenizer_patcher = patch('transformers.AutoTokenizer.from_pretrained', return_value=self.mock_tokenizer)
+        self.model_patcher = patch('transformers.AutoModelForCausalLM.from_pretrained', return_value=self.mock_model)
+        self.pipeline_patcher = patch('transformers.pipeline', return_value=self.mock_pipeline)
 
         # Start the patchers
         self.mock_auto_tokenizer = self.tokenizer_patcher.start()
@@ -31,11 +31,11 @@ class TestHuggingFaceLLM(unittest.TestCase):
 
         # Patch the _load_model_and_tokenizer method to prevent it from
         # being called
-        self.load_model_patcher = patch.object(HuggingFaceLLM, "_load_model_and_tokenizer", return_value=None)
+        self.load_model_patcher = patch.object(HuggingFaceLLM, '_load_model_and_tokenizer', return_value=None)
         self.mock_load_model = self.load_model_patcher.start()
 
         # Create the LLM instance
-        self.llm = HuggingFaceLLM(model_name="gpt2", device="cpu", max_tokens=100, temperature=0.7)
+        self.llm = HuggingFaceLLM(model_name='gpt2', device='cpu', max_tokens=100, temperature=0.7)
 
         # Manually set the model, tokenizer, and pipeline attributes
         self.llm.model = self.mock_model
@@ -52,8 +52,8 @@ class TestHuggingFaceLLM(unittest.TestCase):
 
     def test_initialization(self):
         """Test that the LLM initializes correctly."""
-        self.assertEqual(self.llm.model_name, "gpt2")
-        self.assertEqual(self.llm.device, "cpu")
+        self.assertEqual(self.llm.model_name, 'gpt2')
+        self.assertEqual(self.llm.device, 'cpu')
         self.assertEqual(self.llm.max_tokens, 100)
         self.assertEqual(self.llm.temperature, 0.7)
 
@@ -64,8 +64,8 @@ class TestHuggingFaceLLM(unittest.TestCase):
         self.mock_auto_model.reset_mock()
 
         # Create a new LLM instance with a Llama model
-        with patch.object(HuggingFaceLLM, "_load_model_and_tokenizer"):
-            llama_llm = HuggingFaceLLM(model_name="meta-llama/Llama-2-7b-hf", device="cpu")
+        with patch.object(HuggingFaceLLM, '_load_model_and_tokenizer'):
+            llama_llm = HuggingFaceLLM(model_name='meta-llama/Llama-2-7b-hf', device='cpu')
 
             # Set up the model to simulate a Llama model
             llama_llm.model = self.mock_model
@@ -81,78 +81,78 @@ class TestHuggingFaceLLM(unittest.TestCase):
             # _load_model_and_tokenizer
             from transformers import AutoModelForCausalLM, AutoTokenizer
 
-            with patch.object(AutoTokenizer, "from_pretrained", return_value=self.mock_tokenizer) as mock_tokenizer_fn:
+            with patch.object(AutoTokenizer, 'from_pretrained', return_value=self.mock_tokenizer) as mock_tokenizer_fn:
                 with patch.object(
-                    AutoModelForCausalLM, "from_pretrained", return_value=self.mock_model
+                    AutoModelForCausalLM, 'from_pretrained', return_value=self.mock_model
                 ) as mock_model_fn:
                     # Simulate loading a Llama model - we don't need to
                     # store the return values
-                    AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf", use_fast=True)
+                    AutoTokenizer.from_pretrained('meta-llama/Llama-2-7b-hf', use_fast=True)
                     AutoModelForCausalLM.from_pretrained(
-                        "meta-llama/Llama-2-7b-hf", device_map="auto", torch_dtype="auto", trust_remote_code=True
+                        'meta-llama/Llama-2-7b-hf', device_map='auto', torch_dtype='auto', trust_remote_code=True
                     )
 
                     # Check that the tokenizer was loaded with
                     # Llama-specific params
-                    mock_tokenizer_fn.assert_called_once_with("meta-llama/Llama-2-7b-hf", use_fast=True)
+                    mock_tokenizer_fn.assert_called_once_with('meta-llama/Llama-2-7b-hf', use_fast=True)
 
                     # Check that the model was loaded with
                     # Llama-specific parameters
                     mock_model_fn.assert_called_once_with(
-                        "meta-llama/Llama-2-7b-hf", device_map="auto", torch_dtype="auto", trust_remote_code=True
+                        'meta-llama/Llama-2-7b-hf', device_map='auto', torch_dtype='auto', trust_remote_code=True
                     )
 
     def test_call_method(self):
         """Test the _call method."""
         # Configure the pipeline mock to return a valid response
-        self.mock_pipeline.return_value = [{"generated_text": "This is a test response"}]
+        self.mock_pipeline.return_value = [{'generated_text': 'This is a test response'}]
 
         # Call the LLM
-        response = self.llm._call("Test prompt")
+        response = self.llm._call('Test prompt')
 
         # Check that the pipeline was called with the correct parameters
         self.mock_pipeline.assert_called_once()
         call_args, call_kwargs = self.mock_pipeline.call_args
 
         # Check the arguments
-        self.assertEqual(call_args[0], "Test prompt")
-        self.assertEqual(call_kwargs["max_new_tokens"], 100)
-        self.assertEqual(call_kwargs["temperature"], 0.7)
-        self.assertTrue(call_kwargs["do_sample"])
-        self.assertFalse(call_kwargs["return_full_text"])
+        self.assertEqual(call_args[0], 'Test prompt')
+        self.assertEqual(call_kwargs['max_new_tokens'], 100)
+        self.assertEqual(call_kwargs['temperature'], 0.7)
+        self.assertTrue(call_kwargs['do_sample'])
+        self.assertFalse(call_kwargs['return_full_text'])
 
         # Check the response
-        self.assertEqual(response, "This is a test response")
+        self.assertEqual(response, 'This is a test response')
 
     def test_format_prompt(self):
         """Test the _format_prompt method."""
         # Test with a regular model
-        prompt = "Test prompt"
+        prompt = 'Test prompt'
         formatted_prompt = self.llm._format_prompt(prompt)
         self.assertEqual(formatted_prompt, prompt)
 
         # Test with a Llama model
         # We need to create a new instance with a Llama model name
-        llama_llm = HuggingFaceLLM(model_name="meta-llama/Llama-2-7b-hf", device="cpu")
+        llama_llm = HuggingFaceLLM(model_name='meta-llama/Llama-2-7b-hf', device='cpu')
         llama_llm.model = self.mock_model
         llama_llm.tokenizer = self.mock_tokenizer
         llama_llm.pipeline = self.mock_pipeline
 
         formatted_prompt = llama_llm._format_prompt(prompt)
-        expected = "<|begin_of_text|><|prompt|>Test prompt<|answer|>"
+        expected = '<|begin_of_text|><|prompt|>Test prompt<|answer|>'
         self.assertEqual(formatted_prompt, expected)
 
     def test_stop_sequences(self):
         """Test handling of stop sequences."""
         # Configure the pipeline mock to return a response with a stop sequence
-        self.mock_pipeline.return_value = [{"generated_text": "This is a test response. STOP here"}]
+        self.mock_pipeline.return_value = [{'generated_text': 'This is a test response. STOP here'}]
 
         # Call the LLM with a stop sequence
-        response = self.llm._call("Test prompt", stop=["STOP"])
+        response = self.llm._call('Test prompt', stop=['STOP'])
 
         # Check that the response was truncated at the stop sequence
-        self.assertEqual(response, "This is a test response. STOP")
+        self.assertEqual(response, 'This is a test response. STOP')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

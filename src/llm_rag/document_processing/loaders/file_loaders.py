@@ -28,17 +28,17 @@ try:
     PANDAS_AVAILABLE = True
 except ImportError:
     PANDAS_AVAILABLE = False
-    logger.warning("Pandas not available. Some CSV/Excel loading capabilities will be affected.")
+    logger.warning('Pandas not available. Some CSV/Excel loading capabilities will be affected.')
 
 # Check for PyMuPDF availability
-PYMUPDF_AVAILABLE = importlib.util.find_spec("fitz") is not None
+PYMUPDF_AVAILABLE = importlib.util.find_spec('fitz') is not None
 if not PYMUPDF_AVAILABLE:
-    logger.warning("PyMuPDF not available. PDF loading capabilities will be limited.")
+    logger.warning('PyMuPDF not available. PDF loading capabilities will be limited.')
 
 # Check for pypdf availability (formerly PyPDF2)
-PYPDF_AVAILABLE = importlib.util.find_spec("pypdf") is not None
+PYPDF_AVAILABLE = importlib.util.find_spec('pypdf') is not None
 if not PYPDF_AVAILABLE:
-    logger.warning("pypdf not available. PDF loading capabilities will be limited.")
+    logger.warning('pypdf not available. PDF loading capabilities will be limited.')
 
 # Optional imports for XML processing
 try:
@@ -53,8 +53,8 @@ try:
         import xml.etree.ElementTree as ET  # nosec B405
 
         warnings.warn(
-            "Using xml.etree.ElementTree for XML parsing, which is vulnerable to XML attacks. "
-            "Install defusedxml package for secure XML parsing.",
+            'Using xml.etree.ElementTree for XML parsing, which is vulnerable to XML attacks. '
+            'Install defusedxml package for secure XML parsing.',
             SecurityWarning,
             stacklevel=2,
         )
@@ -66,7 +66,7 @@ except ImportError:
     HAS_XML = False
     # For backward compatibility with tests
     XML_AVAILABLE = HAS_XML
-    logger.warning("XML processing libraries not available. XML loading capabilities will be affected.")
+    logger.warning('XML processing libraries not available. XML loading capabilities will be affected.')
 
 
 class TextFileLoader(DocumentLoader, FileLoader):
@@ -98,7 +98,7 @@ class TextFileLoader(DocumentLoader, FileLoader):
 
         """
         if not self.file_path:
-            raise ValueError("No file path provided. Either initialize with a file path or use load_from_file.")
+            raise ValueError('No file path provided. Either initialize with a file path or use load_from_file.')
 
         return self.load_from_file(self.file_path)
 
@@ -119,21 +119,21 @@ class TextFileLoader(DocumentLoader, FileLoader):
         file_path = Path(file_path)
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
             # Create metadata with file information
             metadata = {
-                "source": str(file_path),
-                "filename": file_path.name,
-                "filetype": "text",
-                "creation_date": None,  # Could add file stats here
+                'source': str(file_path),
+                'filename': file_path.name,
+                'filetype': 'text',
+                'creation_date': None,  # Could add file stats here
             }
 
             # Return a list with a single document
-            return [{"content": content, "metadata": metadata}]
+            return [{'content': content, 'metadata': metadata}]
         except Exception as e:
-            logger.error(f"Error loading text file {file_path}: {e}")
+            logger.error(f'Error loading text file {file_path}: {e}')
             raise
 
 
@@ -145,7 +145,7 @@ class CSVLoader(DocumentLoader, FileLoader):
         file_path: Optional[Union[str, Path]] = None,
         content_columns: Optional[List[str]] = None,
         metadata_columns: Optional[List[str]] = None,
-        delimiter: str = ",",
+        delimiter: str = ',',
         use_pandas: bool = True,
     ):
         """Initialize the CSV loader.
@@ -185,7 +185,7 @@ class CSVLoader(DocumentLoader, FileLoader):
 
         """
         if not self.file_path:
-            raise ValueError("No file path provided. Either initialize with a file path or use load_from_file.")
+            raise ValueError('No file path provided. Either initialize with a file path or use load_from_file.')
 
         return self.load_from_file(self.file_path)
 
@@ -211,7 +211,7 @@ class CSVLoader(DocumentLoader, FileLoader):
             else:
                 return self._load_with_csv(file_path)
         except Exception as e:
-            logger.error(f"Error loading CSV file {file_path}: {e}")
+            logger.error(f'Error loading CSV file {file_path}: {e}')
             raise
 
     def _load_with_pandas(self, file_path: Path) -> Documents:
@@ -235,17 +235,17 @@ class CSVLoader(DocumentLoader, FileLoader):
             # Handle content columns
             if self.content_columns:
                 # Create content from specified columns
-                content = " ".join(str(row[col]) for col in self.content_columns if col in row)
+                content = ' '.join(str(row[col]) for col in self.content_columns if col in row)
             else:
                 # Use all columns as content
-                content = " ".join(f"{col}: {val}" for col, val in row.items())
+                content = ' '.join(f'{col}: {val}' for col, val in row.items())
 
             # Create metadata
             metadata = {
-                "source": str(file_path),
-                "filename": file_path.name,
-                "filetype": "csv",
-                "row_index": _,
+                'source': str(file_path),
+                'filename': file_path.name,
+                'filetype': 'csv',
+                'row_index': _,
             }
 
             # Add specific metadata columns if requested
@@ -254,7 +254,7 @@ class CSVLoader(DocumentLoader, FileLoader):
                     if col in row:
                         metadata[col] = row[col]
 
-            documents.append({"content": content, "metadata": metadata})
+            documents.append({'content': content, 'metadata': metadata})
 
         return documents
 
@@ -274,24 +274,24 @@ class CSVLoader(DocumentLoader, FileLoader):
         """
         documents = []
 
-        with open(file_path, newline="", encoding="utf-8") as csvfile:
+        with open(file_path, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=self.delimiter)
 
             for i, row in enumerate(reader):
                 # Handle content columns
                 if self.content_columns:
                     # Create content from specified columns
-                    content = " ".join(str(row.get(col, "")) for col in self.content_columns)
+                    content = ' '.join(str(row.get(col, '')) for col in self.content_columns)
                 else:
                     # Use all columns as content
-                    content = " ".join(f"{col}: {val}" for col, val in row.items())
+                    content = ' '.join(f'{col}: {val}' for col, val in row.items())
 
                 # Create metadata
                 metadata = {
-                    "source": str(file_path),
-                    "filename": file_path.name,
-                    "filetype": "csv",
-                    "row_index": i,
+                    'source': str(file_path),
+                    'filename': file_path.name,
+                    'filetype': 'csv',
+                    'row_index': i,
                 }
 
                 # Add specific metadata columns if requested
@@ -300,7 +300,7 @@ class CSVLoader(DocumentLoader, FileLoader):
                         if col in row:
                             metadata[col] = row[col]
 
-                documents.append({"content": content, "metadata": metadata})
+                documents.append({'content': content, 'metadata': metadata})
 
         return documents
 
@@ -366,7 +366,7 @@ class XMLLoader(DocumentLoader, FileLoader):
 
         """
         if not self.file_path:
-            raise ValueError("No file path provided. Either initialize with a file path or use load_from_file.")
+            raise ValueError('No file path provided. Either initialize with a file path or use load_from_file.')
 
         return self.load_from_file(self.file_path)
 
@@ -392,17 +392,17 @@ class XMLLoader(DocumentLoader, FileLoader):
 
         """
         if not XML_AVAILABLE:
-            raise ImportError("XML processing libraries not available. Install required dependencies.")
+            raise ImportError('XML processing libraries not available. Install required dependencies.')
 
         file_path = Path(file_path)
         if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
+            raise FileNotFoundError(f'File not found: {file_path}')
 
         try:
             if not HAS_SECURE_XML:
                 warnings.warn(
-                    "Using xml.etree.ElementTree for XML parsing, which is vulnerable to XML attacks. "
-                    "Install defusedxml package for secure XML parsing.",
+                    'Using xml.etree.ElementTree for XML parsing, which is vulnerable to XML attacks. '
+                    'Install defusedxml package for secure XML parsing.',
                     SecurityWarning,
                     stacklevel=2,
                 )
@@ -411,9 +411,9 @@ class XMLLoader(DocumentLoader, FileLoader):
 
             # Generate metadata common to all documents from this file
             base_metadata = {
-                "source": str(file_path),
-                "filename": file_path.name,
-                "filetype": "xml",
+                'source': str(file_path),
+                'filename': file_path.name,
+                'filetype': 'xml',
             }
 
             # If splitting by tag, create multiple documents
@@ -424,7 +424,7 @@ class XMLLoader(DocumentLoader, FileLoader):
                 return self._process_whole_document(root, base_metadata)
 
         except Exception as e:
-            logger.error(f"Error parsing XML file {file_path}: {e}")
+            logger.error(f'Error parsing XML file {file_path}: {e}')
             raise
 
     def _process_whole_document(self, root, base_metadata: dict) -> Documents:
@@ -449,17 +449,17 @@ class XMLLoader(DocumentLoader, FileLoader):
         metadata = base_metadata.copy()
         if self.metadata_tags:
             for tag in self.metadata_tags:
-                elements = root.findall(f".//{tag}")
+                elements = root.findall(f'.//{tag}')
                 if elements:
                     # Just take the first occurrence as metadata
-                    metadata[tag] = elements[0].text.strip() if elements[0].text else ""
+                    metadata[tag] = elements[0].text.strip() if elements[0].text else ''
 
                     # Include attributes if specified
                     if self.flatten_attributes and elements[0].attrib:
                         for attr_name, attr_value in elements[0].attrib.items():
-                            metadata[f"{tag}_{attr_name}"] = attr_value
+                            metadata[f'{tag}_{attr_name}'] = attr_value
 
-        return [{"content": content, "metadata": metadata}]
+        return [{'content': content, 'metadata': metadata}]
 
     def _process_split_documents(self, root, base_metadata: dict) -> Documents:
         """Process the XML by splitting it into multiple documents.
@@ -480,7 +480,7 @@ class XMLLoader(DocumentLoader, FileLoader):
         documents = []
 
         # Find all elements with the specified tag
-        elements = root.findall(f".//{self.split_by_tag}")
+        elements = root.findall(f'.//{self.split_by_tag}')
 
         for i, element in enumerate(elements):
             # Extract content from this element
@@ -488,21 +488,21 @@ class XMLLoader(DocumentLoader, FileLoader):
 
             # Create metadata for this document
             metadata = base_metadata.copy()
-            metadata["index"] = i
+            metadata['index'] = i
 
             # Add any specific metadata from tags within this element
             if self.metadata_tags:
                 for tag in self.metadata_tags:
-                    sub_elements = element.findall(f".//{tag}")
+                    sub_elements = element.findall(f'.//{tag}')
                     if sub_elements:
-                        metadata[tag] = sub_elements[0].text.strip() if sub_elements[0].text else ""
+                        metadata[tag] = sub_elements[0].text.strip() if sub_elements[0].text else ''
 
                         # Include attributes if specified
                         if self.flatten_attributes and sub_elements[0].attrib:
                             for attr_name, attr_value in sub_elements[0].attrib.items():
-                                metadata[f"{tag}_{attr_name}"] = attr_value
+                                metadata[f'{tag}_{attr_name}'] = attr_value
 
-            documents.append({"content": content, "metadata": metadata})
+            documents.append({'content': content, 'metadata': metadata})
 
         return documents
 
@@ -522,40 +522,40 @@ class XMLLoader(DocumentLoader, FileLoader):
         """
         if self.text_tag:
             # Extract text from the specified tag
-            elements = element.findall(f".//{self.text_tag}")
+            elements = element.findall(f'.//{self.text_tag}')
             text_parts = []
 
             for el in elements:
                 if self.include_tags_in_text:
-                    text_parts.append(ET.tostring(el, encoding="unicode"))
+                    text_parts.append(ET.tostring(el, encoding='unicode'))
                 else:
                     if el.text:
                         text_parts.append(el.text.strip())
 
-            return "\n\n".join(text_parts)
+            return '\n\n'.join(text_parts)
 
         elif self.content_tags:
             # Extract text from the specified content tags
             text_parts = []
 
             for tag in self.content_tags:
-                elements = element.findall(f".//{tag}")
+                elements = element.findall(f'.//{tag}')
                 for el in elements:
                     if self.include_tags_in_text:
-                        text_parts.append(ET.tostring(el, encoding="unicode"))
+                        text_parts.append(ET.tostring(el, encoding='unicode'))
                     else:
                         if el.text:
                             # Add the tag name as a prefix
                             tag_text = el.text.strip()
                             if tag_text:
-                                text_parts.append(f"{tag}: {tag_text}")
+                                text_parts.append(f'{tag}: {tag_text}')
 
-            return "\n\n".join(text_parts)
+            return '\n\n'.join(text_parts)
 
         else:
             # Extract all text content
             if self.include_tags_in_text:
-                return ET.tostring(element, encoding="unicode")
+                return ET.tostring(element, encoding='unicode')
             else:
                 # Get all text without tags
                 def extract_text(elem):
@@ -569,7 +569,7 @@ class XMLLoader(DocumentLoader, FileLoader):
                     return result
 
                 text_parts = extract_text(element)
-                return "\n".join(filter(None, text_parts))
+                return '\n'.join(filter(None, text_parts))
 
 
 class PDFLoader(DocumentLoader, FileLoader):
@@ -616,7 +616,7 @@ class PDFLoader(DocumentLoader, FileLoader):
 
         """
         if not self.file_path:
-            raise ValueError("No file path provided. Either initialize with a file path or use load_from_file.")
+            raise ValueError('No file path provided. Either initialize with a file path or use load_from_file.')
 
         return self.load_from_file(self.file_path)
 
@@ -636,7 +636,7 @@ class PDFLoader(DocumentLoader, FileLoader):
         """
         file_path = Path(file_path)
         if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
+            raise FileNotFoundError(f'File not found: {file_path}')
 
         try:
             if PYPDF_AVAILABLE:
@@ -644,9 +644,9 @@ class PDFLoader(DocumentLoader, FileLoader):
             elif PYMUPDF_AVAILABLE:
                 return self._load_with_pymupdf(file_path)
             else:
-                raise ImportError("No PDF processing libraries available. Install pypdf or PyMuPDF.")
+                raise ImportError('No PDF processing libraries available. Install pypdf or PyMuPDF.')
         except Exception as e:
-            logger.error(f"Error loading PDF file {file_path}: {e}")
+            logger.error(f'Error loading PDF file {file_path}: {e}')
             raise
 
     def _load_with_pypdf(self, file_path: Path) -> Documents:
@@ -665,36 +665,36 @@ class PDFLoader(DocumentLoader, FileLoader):
         """
         import pypdf
 
-        with open(file_path, "rb") as f:
+        with open(file_path, 'rb') as f:
             pdf = pypdf.PdfReader(f)
             if self.password:
                 pdf.decrypt(self.password)
 
             documents = []
             metadata = {
-                "source": str(file_path),
-                "filename": file_path.name,
-                "filetype": "pdf",
-                "total_pages": len(pdf.pages),
+                'source': str(file_path),
+                'filename': file_path.name,
+                'filetype': 'pdf',
+                'total_pages': len(pdf.pages),
             }
 
             # Add PDF metadata if available
             if pdf.metadata:
                 for key, value in pdf.metadata.items():
-                    if key.startswith("/"):
+                    if key.startswith('/'):
                         key = key[1:]  # Remove leading slash from keys
-                    metadata[f"pdf_{key.lower()}"] = str(value)
+                    metadata[f'pdf_{key.lower()}'] = str(value)
 
             # Process each page
             for i, page in enumerate(pdf.pages):
                 text = page.extract_text()
                 if not text:
-                    text = f"[No extractable text on page {i + 1}]"
+                    text = f'[No extractable text on page {i + 1}]'
 
                 page_metadata = metadata.copy()
-                page_metadata["page_number"] = i + 1
+                page_metadata['page_number'] = i + 1
 
-                documents.append({"content": text, "metadata": page_metadata})
+                documents.append({'content': text, 'metadata': page_metadata})
 
             return documents
 
@@ -719,13 +719,13 @@ class PDFLoader(DocumentLoader, FileLoader):
 
         if self.password:
             if pdf.authenticate(self.password) != 0:
-                raise ValueError("Invalid PDF password")
+                raise ValueError('Invalid PDF password')
 
         metadata = {
-            "source": str(file_path),
-            "filename": file_path.name,
-            "filetype": "pdf",
-            "total_pages": len(pdf),
+            'source': str(file_path),
+            'filename': file_path.name,
+            'filetype': 'pdf',
+            'total_pages': len(pdf),
         }
 
         # Add PDF metadata if available
@@ -733,19 +733,19 @@ class PDFLoader(DocumentLoader, FileLoader):
         if pdf_metadata:
             for key, value in pdf_metadata.items():
                 if value:
-                    metadata[f"pdf_{key.lower()}"] = str(value)
+                    metadata[f'pdf_{key.lower()}'] = str(value)
 
         # Process each page
         for i in range(len(pdf)):
             page = pdf[i]
             text = page.get_text()
             if not text:
-                text = f"[No extractable text on page {i + 1}]"
+                text = f'[No extractable text on page {i + 1}]'
 
             page_metadata = metadata.copy()
-            page_metadata["page_number"] = i + 1
+            page_metadata['page_number'] = i + 1
 
-            documents.append({"content": text, "metadata": page_metadata})
+            documents.append({'content': text, 'metadata': page_metadata})
 
         return documents
 
@@ -761,7 +761,7 @@ class EnhancedPDFLoader(PDFLoader):
         password: Optional[str] = None,
         combine_pages: bool = False,
         use_ocr: bool = False,
-        ocr_languages: str = "eng",
+        ocr_languages: str = 'eng',
     ):
         """Initialize the enhanced PDF loader.
 
@@ -807,10 +807,10 @@ class EnhancedPDFLoader(PDFLoader):
 
         # If combining pages, merge all content into a single document
         if self.combine_pages:
-            combined_content = "\n\n".join(doc["content"] for doc in documents)
-            combined_metadata = documents[0]["metadata"].copy()
-            combined_metadata.pop("page_number", None)
-            return [{"content": combined_content, "metadata": combined_metadata}]
+            combined_content = '\n\n'.join(doc['content'] for doc in documents)
+            combined_metadata = documents[0]['metadata'].copy()
+            combined_metadata.pop('page_number', None)
+            return [{'content': combined_content, 'metadata': combined_metadata}]
 
         # If extracting tables and PyMuPDF is available, add table information
         if self.extract_tables and PYMUPDF_AVAILABLE:
@@ -822,7 +822,7 @@ class EnhancedPDFLoader(PDFLoader):
 
                 if self.password:
                     if pdf.authenticate(self.password) != 0:
-                        raise ValueError("Invalid PDF password")
+                        raise ValueError('Invalid PDF password')
 
                 for i, doc in enumerate(documents):
                     if i < len(pdf):
@@ -839,17 +839,17 @@ class EnhancedPDFLoader(PDFLoader):
                                         if cell.text:
                                             row_text.append(cell.text)
                                     if row_text:
-                                        table_text.append(" | ".join(row_text))
+                                        table_text.append(' | '.join(row_text))
                                 if table_text:
-                                    table_texts.append("\n".join(table_text))
+                                    table_texts.append('\n'.join(table_text))
 
                             if table_texts:
-                                doc["content"] += "\n\nTables:\n" + "\n\n".join(table_texts)
-                                doc["metadata"]["has_tables"] = True
-                                doc["metadata"]["table_count"] = len(table_texts)
+                                doc['content'] += '\n\nTables:\n' + '\n\n'.join(table_texts)
+                                doc['metadata']['has_tables'] = True
+                                doc['metadata']['table_count'] = len(table_texts)
 
             except Exception as e:
-                logger.warning(f"Error extracting tables: {e}")
+                logger.warning(f'Error extracting tables: {e}')
 
         return documents
 
@@ -860,7 +860,7 @@ class JSONLoader(DocumentLoader, FileLoader):
     def __init__(
         self,
         file_path: Optional[Union[str, Path]] = None,
-        jq_schema: str = ".",
+        jq_schema: str = '.',
         content_key: Optional[str] = None,
         metadata_keys: Optional[List[str]] = None,
         text_content: bool = True,
@@ -902,7 +902,7 @@ class JSONLoader(DocumentLoader, FileLoader):
 
         """
         if not self.file_path:
-            raise ValueError("No file path provided. Either initialize with a file path or use load_from_file.")
+            raise ValueError('No file path provided. Either initialize with a file path or use load_from_file.')
 
         return self.load_from_file(self.file_path)
 
@@ -922,18 +922,18 @@ class JSONLoader(DocumentLoader, FileLoader):
         """
         file_path = Path(file_path)
         if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
+            raise FileNotFoundError(f'File not found: {file_path}')
 
         try:
             import json
 
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
             # Apply jq-like schema (basic implementation)
-            if self.jq_schema != ".":
+            if self.jq_schema != '.':
                 # Split by dots and apply each key
-                keys = self.jq_schema.strip(".").split(".")
+                keys = self.jq_schema.strip('.').split('.')
                 current_data = data
                 for key in keys:
                     if key in current_data:
@@ -960,7 +960,7 @@ class JSONLoader(DocumentLoader, FileLoader):
             return documents
 
         except Exception as e:
-            logger.error(f"Error loading JSON file {file_path}: {e}")
+            logger.error(f'Error loading JSON file {file_path}: {e}')
             raise
 
     def _process_item(self, item: Any, index: int, file_path: Path) -> Optional[Dict[str, Any]]:
@@ -999,10 +999,10 @@ class JSONLoader(DocumentLoader, FileLoader):
 
         # Prepare metadata
         metadata = {
-            "source": str(file_path),
-            "filename": file_path.name,
-            "filetype": "json",
-            "index": index,
+            'source': str(file_path),
+            'filename': file_path.name,
+            'filetype': 'json',
+            'index': index,
         }
 
         # Add specific metadata if requested
@@ -1011,13 +1011,13 @@ class JSONLoader(DocumentLoader, FileLoader):
                 if key in item:
                     metadata[key] = item[key]
 
-        return {"content": content, "metadata": metadata}
+        return {'content': content, 'metadata': metadata}
 
 
 # Register the loaders
-registry.register(TextFileLoader, extensions=["txt", "text", "md", "rst", "log"])
-registry.register(CSVLoader, extensions=["csv", "tsv"])
-registry.register(XMLLoader, extensions=["xml"])
-registry.register(PDFLoader, extensions=["pdf"])
-registry.register(EnhancedPDFLoader, extensions=["pdf"])
-registry.register(JSONLoader, extensions=["json"])
+registry.register(TextFileLoader, extensions=['txt', 'text', 'md', 'rst', 'log'])
+registry.register(CSVLoader, extensions=['csv', 'tsv'])
+registry.register(XMLLoader, extensions=['xml'])
+registry.register(PDFLoader, extensions=['pdf'])
+registry.register(EnhancedPDFLoader, extensions=['pdf'])
+registry.register(JSONLoader, extensions=['json'])

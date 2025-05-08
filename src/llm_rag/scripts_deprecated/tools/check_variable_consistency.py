@@ -13,29 +13,29 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Check variable naming consistency across the codebase."""
-    parser = argparse.ArgumentParser(description="Check variable naming consistency")
+    parser = argparse.ArgumentParser(description='Check variable naming consistency')
     parser.add_argument(
-        "--path",
+        '--path',
         type=str,
-        default="src/llm_rag",
-        help="Path to the codebase to analyze",
+        default='src/llm_rag',
+        help='Path to the codebase to analyze',
     )
     parser.add_argument(
-        "--threshold",
+        '--threshold',
         type=float,
         default=0.7,
-        help="Similarity threshold for variable comparison (0.0-1.0)",
+        help='Similarity threshold for variable comparison (0.0-1.0)',
     )
     parser.add_argument(
-        "--output",
+        '--output',
         type=str,
-        help="Output file for the report (default: stdout)",
+        help='Output file for the report (default: stdout)',
     )
     args = parser.parse_args()
 
     code_path = Path(args.path)
     if not code_path.exists():
-        logger.error(f"Path {code_path} does not exist")
+        logger.error(f'Path {code_path} does not exist')
         return 1
 
     # Initialize and run the checker
@@ -44,14 +44,14 @@ def main():
     report = checker.generate_report(similar_vars)
 
     if args.output:
-        with open(args.output, "w", encoding="utf-8") as f:
+        with open(args.output, 'w', encoding='utf-8') as f:
             f.write(report)
-        logger.info(f"Report written to {args.output}")
+        logger.info(f'Report written to {args.output}')
     else:
         print(report)
 
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     exit(main())

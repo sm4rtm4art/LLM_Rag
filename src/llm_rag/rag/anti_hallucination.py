@@ -34,7 +34,7 @@ try:
 except ImportError as e:
     # If import fails, use stub/placeholder implementation
     warnings.warn(
-        f"Failed to import modular anti-hallucination components: {e}. Using stub implementations.", stacklevel=2
+        f'Failed to import modular anti-hallucination components: {e}. Using stub implementations.', stacklevel=2
     )
     _MODULAR_IMPORT_SUCCESS = False
 
@@ -47,7 +47,7 @@ except ImportError as e:
 
         entity_threshold: float = 0.7
         embedding_threshold: float = 0.75
-        model_name: str = "paraphrase-MiniLM-L6-v2"
+        model_name: str = 'paraphrase-MiniLM-L6-v2'
         entity_weight: float = 0.6
         human_review_threshold: float = 0.5
         entity_critical_threshold: float = 0.3
@@ -71,7 +71,7 @@ except ImportError as e:
         return None
 
     def embedding_based_verification(
-        response: str, context: str, threshold: float = 0.75, model_name: str = "paraphrase-MiniLM-L6-v2"
+        response: str, context: str, threshold: float = 0.75, model_name: str = 'paraphrase-MiniLM-L6-v2'
     ) -> Tuple[bool, float]:
         """Stub function."""
         return True, 1.0
@@ -114,7 +114,7 @@ except ImportError as e:
         human_review: bool = False,
     ) -> str:
         """Stub function."""
-        return ""
+        return ''
 
     def post_process_response(
         response: str,
@@ -132,7 +132,7 @@ except ImportError as e:
         """Stub function."""
         return response if not return_metadata else (response, {})
 
-    def load_stopwords(language: str = "en") -> Set[str]:
+    def load_stopwords(language: str = 'en') -> Set[str]:
         """Stub function."""
         return set()
 
@@ -142,9 +142,9 @@ _MODEL_CACHE: Dict[str, Any] = {}
 
 # And _DEFAULT_STOPWORDS
 _DEFAULT_STOPWORDS = {
-    "en": {"a", "an", "the", "and", "or", "but", "if", "then", "else", "when"},
-    "de": {"der", "die", "das", "und", "oder", "aber", "wenn", "dann", "sonst", "wann"},
+    'en': {'a', 'an', 'the', 'and', 'or', 'but', 'if', 'then', 'else', 'when'},
+    'de': {'der', 'die', 'das', 'und', 'oder', 'aber', 'wenn', 'dann', 'sonst', 'wann'},
 }
 
 # Suppress deprecation warnings about imports
-warnings.filterwarnings("ignore", category=DeprecationWarning, module=__name__)
+warnings.filterwarnings('ignore', category=DeprecationWarning, module=__name__)

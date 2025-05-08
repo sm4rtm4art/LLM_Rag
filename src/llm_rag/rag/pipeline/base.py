@@ -67,7 +67,7 @@ class RAGPipeline:
         if isinstance(prompt_template, str):
             self.prompt_template = PromptTemplate(
                 template=prompt_template,
-                input_variables=["context", "history", "query"],
+                input_variables=['context', 'history', 'query'],
             )
         else:
             self.prompt_template = prompt_template
@@ -78,7 +78,7 @@ class RAGPipeline:
         self._generator = create_generator(llm, self.prompt_template)
 
         logger.info(
-            "Initialized RAGPipeline with top_k=%d, history_size=%d",
+            'Initialized RAGPipeline with top_k=%d, history_size=%d',
             top_k,
             history_size,
         )
@@ -107,8 +107,8 @@ class RAGPipeline:
 
         # Return results
         return {
-            "query": query,
-            "response": response,
-            "documents": documents,
-            "context": context,
+            'query': query,
+            'response': response,
+            'documents': documents,
+            'context': context,
         }

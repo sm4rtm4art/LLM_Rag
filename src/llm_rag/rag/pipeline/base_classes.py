@@ -70,7 +70,7 @@ class BaseRAGPipeline:
         if isinstance(prompt_template, str):
             self.prompt_template = PromptTemplate(
                 template=prompt_template,
-                input_variables=["context", "history", "query"],
+                input_variables=['context', 'history', 'query'],
             )
         else:
             self.prompt_template = prompt_template

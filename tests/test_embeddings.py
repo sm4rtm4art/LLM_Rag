@@ -8,13 +8,13 @@ from llm_rag.models.embeddings import EmbeddingModel
 @pytest.fixture
 def embedding_model():
     """Create an embedding model for testing."""
-    return EmbeddingModel(model_name="all-MiniLM-L6-v2")
+    return EmbeddingModel(model_name='all-MiniLM-L6-v2')
 
 
 def test_embed_query(embedding_model):
     """Test embedding a single query."""
     # Given
-    query = "This is a test query"
+    query = 'This is a test query'
 
     # When
     embedding = embedding_model.embed_query(query)
@@ -29,9 +29,9 @@ def test_embed_documents(embedding_model):
     """Test embedding multiple documents."""
     # Given
     documents = [
-        "This is the first document",
-        "This is the second document",
-        "This is the third document",
+        'This is the first document',
+        'This is the second document',
+        'This is the third document',
     ]
 
     # When

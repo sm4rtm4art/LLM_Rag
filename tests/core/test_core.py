@@ -53,22 +53,22 @@ class MockRAGPipeline:
         self._generator = MagicMock()
 
         # Configure mock behavior
-        self._retriever.retrieve.return_value = [{"content": "test content", "metadata": {"source": "test.txt"}}]
-        self._formatter.format_context.return_value = "Formatted context: test content"
-        self._generator.generate.return_value = "Test response"
+        self._retriever.retrieve.return_value = [{'content': 'test content', 'metadata': {'source': 'test.txt'}}]
+        self._formatter.format_context.return_value = 'Formatted context: test content'
+        self._generator.generate.return_value = 'Test response'
 
         # Initialize conversation history
         self.conversation_history = {}
 
     def query(self, query, conversation_id=None):
         """Mock query method that returns predefined response for test query."""
-        docs = [{"content": "test content", "metadata": {"source": "test.txt"}}]
+        docs = [{'content': 'test content', 'metadata': {'source': 'test.txt'}}]
         return {
-            "response": "Test response",
-            "documents": docs,
-            "confidence": 0.9,
-            "conversation_id": conversation_id or "test-id",
-            "query": query,
+            'response': 'Test response',
+            'documents': docs,
+            'confidence': 0.9,
+            'conversation_id': conversation_id or 'test-id',
+            'query': query,
         }
 
     def add_to_history(self, query_or_id: str, response: str, query: str = None) -> None:
@@ -77,7 +77,7 @@ class MockRAGPipeline:
 
     def format_history(self, conversation_id: str = None) -> str:
         """Mock implementation of format_history."""
-        return ""
+        return ''
 
     def reset_history(self, conversation_id: str = None) -> None:
         """Mock implementation of reset_history."""
@@ -85,7 +85,7 @@ class MockRAGPipeline:
 
 
 # Now patch the EmbeddingModel before importing main
-with patch("llm_rag.models.embeddings.EmbeddingModel", MockEmbeddingModel):
+with patch('llm_rag.models.embeddings.EmbeddingModel', MockEmbeddingModel):
     try:
         # Import main directly from the module
         from llm_rag.main import main
@@ -102,10 +102,10 @@ with patch("llm_rag.models.embeddings.EmbeddingModel", MockEmbeddingModel):
 
         def create_test_data_directory():
             """Dummy function for linter."""
-            return Path("./test_data")
+            return Path('./test_data')
 
 
-@pytest.mark.skipif(os.getenv("CI") == "true", reason="Skipping test in CI environment as it requires PDF files")
+@pytest.mark.skipif(os.getenv('CI') == 'true', reason='Skipping test in CI environment as it requires PDF files')
 def test_main_output(capsys):
     """Test if main function prints the expected output.
 
@@ -116,11 +116,11 @@ def test_main_output(capsys):
     # Create test data directory if not in CI
     if not is_ci_environment():
         test_dir = create_test_data_directory()
-        print(f"Created test directory at {test_dir}")
+        print(f'Created test directory at {test_dir}')
 
     # Mock command line arguments
-    argv = ["main.py", "--data-dir", "./test_data", "--query", "test query"]
-    with patch.object(sys, "argv", argv):
+    argv = ['main.py', '--data-dir', './test_data', '--query', 'test query']
+    with patch.object(sys, 'argv', argv):
         # Mock ChromaDB client
         mock_client = MagicMock()
         mock_collection = MagicMock()
@@ -129,14 +129,14 @@ def test_main_output(capsys):
 
         # Mock vector store
         mock_vector_store = MagicMock()
-        mock_vector_store.search.return_value = [{"content": "test content", "metadata": {"source": "test.txt"}}]
+        mock_vector_store.search.return_value = [{'content': 'test content', 'metadata': {'source': 'test.txt'}}]
         mock_vector_store.similarity_search.return_value = [
-            {"content": "test content", "metadata": {"source": "test.txt"}}
+            {'content': 'test content', 'metadata': {'source': 'test.txt'}}
         ]
 
         # Mock DirectoryLoader
         mock_loader = MagicMock()
-        mock_loader.load.return_value = [{"content": "test content", "metadata": {}}]
+        mock_loader.load.return_value = [{'content': 'test content', 'metadata': {}}]
 
         # Mock SentenceTransformer
         mock_transformer = MagicMock()
@@ -144,72 +144,72 @@ def test_main_output(capsys):
 
         # Create LlamaCpp mock
         mock_llama = MagicMock()
-        mock_llama.invoke.return_value = "Test response"
-        mock_llama.return_value = {"choices": [{"text": "Test response"}]}
+        mock_llama.invoke.return_value = 'Test response'
+        mock_llama.return_value = {'choices': [{'text': 'Test response'}]}
 
         # Create a mock for the LLM with all required methods
         mock_llm = MagicMock()
-        mock_llm.predict.return_value = "Test response"
-        mock_llm.invoke.return_value = "Test response"
-        mock_llm._call.return_value = "Test response"
+        mock_llm.predict.return_value = 'Test response'
+        mock_llm.invoke.return_value = 'Test response'
+        mock_llm._call.return_value = 'Test response'
         mock_llm.callbacks = []
 
         # Mock ingest_documents function
         def mock_ingest(*args, **kwargs):
             import sys
 
-            sys.stdout.write("\n" + "=" * 40 + "\n")
-            sys.stdout.write("Ingesting documents...\n")
-            sys.stdout.write("=" * 40 + "\n")
+            sys.stdout.write('\n' + '=' * 40 + '\n')
+            sys.stdout.write('Ingesting documents...\n')
+            sys.stdout.write('=' * 40 + '\n')
             sys.stdout.flush()
             return mock_vector_store
 
         # Determine which patches to apply based on environment
         patches = [
-            patch("chromadb.PersistentClient", return_value=mock_client),
+            patch('chromadb.PersistentClient', return_value=mock_client),
             patch(
-                "llm_rag.vectorstore.chroma.ChromaVectorStore",
+                'llm_rag.vectorstore.chroma.ChromaVectorStore',
                 return_value=mock_vector_store,
             ),
             patch(
-                "langchain_community.llms.LlamaCpp.__init__",
+                'langchain_community.llms.LlamaCpp.__init__',
                 return_value=None,
             ),
             patch(
-                "langchain_community.llms.LlamaCpp.__call__",
-                return_value="Test response",
+                'langchain_community.llms.LlamaCpp.__call__',
+                return_value='Test response',
             ),
             patch(
-                "langchain_community.llms.LlamaCpp.invoke",
-                return_value="Test response",
+                'langchain_community.llms.LlamaCpp.invoke',
+                return_value='Test response',
             ),
             patch(
-                "sentence_transformers.SentenceTransformer.__init__",
+                'sentence_transformers.SentenceTransformer.__init__',
                 return_value=None,
             ),
             patch(
-                "sentence_transformers.SentenceTransformer",
+                'sentence_transformers.SentenceTransformer',
                 return_value=mock_transformer,
             ),
             patch(
-                "sentence_transformers.util.load_file_path",
+                'sentence_transformers.util.load_file_path',
                 return_value=None,
             ),
-            patch("os.makedirs"),
-            patch("sys.exit"),
-            patch("llama_cpp.Llama", return_value=mock_llama),
+            patch('os.makedirs'),
+            patch('sys.exit'),
+            patch('llama_cpp.Llama', return_value=mock_llama),
             patch(
-                "llm_rag.main.CustomLlamaCpp",
+                'llm_rag.main.CustomLlamaCpp',
                 return_value=mock_llm,
             ),
             # Add patch for RAGPipeline
             patch(
-                "llm_rag.main.RAGPipeline",
+                'llm_rag.main.RAGPipeline',
                 MockRAGPipeline,
             ),
             # Add patch for ingest_documents
             patch(
-                "llm_rag.main.ingest_documents",
+                'llm_rag.main.ingest_documents',
                 side_effect=mock_ingest,
             ),
         ]
@@ -220,19 +220,19 @@ def test_main_output(capsys):
             patches.extend(
                 [
                     patch(
-                        "llm_rag.document_processing.loaders.DirectoryLoader",
+                        'llm_rag.document_processing.loaders.DirectoryLoader',
                         return_value=mock_loader,
                     ),
                     patch(
-                        "os.path.exists",
-                        side_effect=lambda path: (path != "./models/llama-2-7b-chat.gguf" and path != "./test_data"),
+                        'os.path.exists',
+                        side_effect=lambda path: (path != './models/llama-2-7b-chat.gguf' and path != './test_data'),
                     ),
                     patch(
-                        "pathlib.Path.exists",
+                        'pathlib.Path.exists',
                         return_value=True,
                     ),
                     patch(
-                        "pathlib.Path.is_dir",
+                        'pathlib.Path.is_dir',
                         return_value=True,
                     ),
                 ]
@@ -242,8 +242,8 @@ def test_main_output(capsys):
             patches.extend(
                 [
                     patch(
-                        "os.path.exists",
-                        side_effect=lambda path: (path != "./models/llama-2-7b-chat.gguf"),
+                        'os.path.exists',
+                        side_effect=lambda path: (path != './models/llama-2-7b-chat.gguf'),
                     ),
                 ]
             )
@@ -255,10 +255,10 @@ def test_main_output(capsys):
         # Get captured output
         captured = capsys.readouterr()
         # Check for expected output patterns
-        assert "=" * 40 in captured.out
-        assert f"QUERY: {argv[4]}" in captured.out
-        assert "ANSWER:" in captured.out
-        assert "Retrieved" in captured.out
+        assert '=' * 40 in captured.out
+        assert f'QUERY: {argv[4]}' in captured.out
+        assert 'ANSWER:' in captured.out
+        assert 'Retrieved' in captured.out
 
 
 def nested_patch(*patches):

@@ -22,8 +22,8 @@ logger = get_logger(__name__)
 class PipelineType(enum.Enum):
     """Enum for pipeline types."""
 
-    STANDARD = "standard"
-    CONVERSATIONAL = "conversational"
+    STANDARD = 'standard'
+    CONVERSATIONAL = 'conversational'
 
 
 class RagPipelineFactory:
@@ -41,7 +41,7 @@ class RagPipelineFactory:
 
         """
         self.config = config or {}
-        logger.info(f"RagPipelineFactory initialized with {len(self.config)} configuration items")
+        logger.info(f'RagPipelineFactory initialized with {len(self.config)} configuration items')
 
     def create(self, pipeline_type: Union[str, PipelineType]) -> Union[RAGPipeline, ConversationalRAGPipeline]:
         """Create a pipeline of the specified type.
@@ -69,32 +69,32 @@ class RagPipelineFactory:
         ]:
             raise ValueError(
                 f"Unknown pipeline type: '{pipeline_type}'. "
-                f"Available types: {PipelineType.STANDARD.value}, "
-                f"{PipelineType.CONVERSATIONAL.value}"
+                f'Available types: {PipelineType.STANDARD.value}, '
+                f'{PipelineType.CONVERSATIONAL.value}'
             )
 
         try:
             # Extract key components from config
-            vectorstore = self.config.get("vectorstore")
+            vectorstore = self.config.get('vectorstore')
             if not vectorstore or not isinstance(vectorstore, VectorStore):
-                raise ValueError("A vectorstore is required for pipeline creation")
+                raise ValueError('A vectorstore is required for pipeline creation')
 
-            llm = self.config.get("llm")
+            llm = self.config.get('llm')
             if not llm or not isinstance(llm, BaseLanguageModel):
-                raise ValueError("A language model (llm) is required for pipeline creation")
+                raise ValueError('A language model (llm) is required for pipeline creation')
 
             # Create the appropriate pipeline type
             if pipeline_type == PipelineType.STANDARD.value:
-                logger.info("Creating standard RAG pipeline")
+                logger.info('Creating standard RAG pipeline')
                 return RAGPipeline(vectorstore=vectorstore, llm=llm, **self.config)
             else:  # pipeline_type == PipelineType.CONVERSATIONAL.value
-                logger.info("Creating conversational RAG pipeline")
+                logger.info('Creating conversational RAG pipeline')
                 return ConversationalRAGPipeline(vectorstore=vectorstore, llm=llm, **self.config)
 
         except Exception as e:
-            logger.error(f"Error creating {pipeline_type} pipeline: {str(e)}")
+            logger.error(f'Error creating {pipeline_type} pipeline: {str(e)}')
             raise PipelineError(
-                f"Failed to create {pipeline_type} pipeline: {str(e)}",
+                f'Failed to create {pipeline_type} pipeline: {str(e)}',
                 original_exception=e,
             ) from e
 

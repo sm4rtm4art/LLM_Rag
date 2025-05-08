@@ -31,23 +31,23 @@ Documents = List[Dict[str, Any]]
 
 # Export all the loader classes
 __all__ = [
-    "DocumentLoader",
-    "FileLoader",
-    "DirectoryLoader",
-    "CSVLoader",
-    "EnhancedPDFLoader",
-    "JSONLoader",
-    "PDFLoader",
-    "TextFileLoader",
-    "WebLoader",
-    "WebPageLoader",
-    "XMLLoader",
-    "LoaderRegistry",
-    "registry",
-    "load_documents_from_directory",
-    "load_document",
-    "get_available_loader_extensions",
+    'DocumentLoader',
+    'FileLoader',
+    'DirectoryLoader',
+    'CSVLoader',
+    'EnhancedPDFLoader',
+    'JSONLoader',
+    'PDFLoader',
+    'TextFileLoader',
+    'WebLoader',
+    'WebPageLoader',
+    'XMLLoader',
+    'LoaderRegistry',
+    'registry',
+    'load_documents_from_directory',
+    'load_document',
+    'get_available_loader_extensions',
 ]
 
 # Suppress deprecation warnings for backward compatibility
-warnings.filterwarnings("ignore", category=DeprecationWarning, module="langchain")
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='langchain')

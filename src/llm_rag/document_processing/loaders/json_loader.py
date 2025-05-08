@@ -61,12 +61,12 @@ class JSONLoader(DocumentLoader, FileLoader):
             try:
                 import importlib.util
 
-                if importlib.util.find_spec("jq") is not None:
+                if importlib.util.find_spec('jq') is not None:
                     self._has_jq = True
                 else:
-                    raise ImportError("jq module not found")
+                    raise ImportError('jq module not found')
             except ImportError:
-                logger.warning("jq library not available. JQ filtering will be disabled.")
+                logger.warning('jq library not available. JQ filtering will be disabled.')
                 self._has_jq = False
         else:
             self._has_jq = False
@@ -86,7 +86,7 @@ class JSONLoader(DocumentLoader, FileLoader):
 
         """
         if not self.file_path:
-            raise ValueError("No file path provided. Either initialize with a file path or use load_from_file.")
+            raise ValueError('No file path provided. Either initialize with a file path or use load_from_file.')
 
         return self.load_from_file(self.file_path)
 
@@ -114,10 +114,10 @@ class JSONLoader(DocumentLoader, FileLoader):
         file_path = Path(file_path)
 
         if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
+            raise FileNotFoundError(f'File not found: {file_path}')
 
         # Base metadata
-        base_metadata = {"source": str(file_path)}
+        base_metadata = {'source': str(file_path)}
 
         try:
             # Handle JSON Lines / NDJSON format
@@ -125,7 +125,7 @@ class JSONLoader(DocumentLoader, FileLoader):
                 return self._load_json_lines(file_path, base_metadata)
 
             # Handle regular JSON
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
             # Apply JQ filter if provided
@@ -138,7 +138,7 @@ class JSONLoader(DocumentLoader, FileLoader):
             return self._process_json_data(data, base_metadata)
 
         except json.JSONDecodeError as e:
-            logger.error(f"Error decoding JSON from {file_path}: {e}")
+            logger.error(f'Error decoding JSON from {file_path}: {e}')
             raise
 
     def _load_json_lines(self, file_path: Path, base_metadata: Dict) -> Documents:
@@ -159,7 +159,7 @@ class JSONLoader(DocumentLoader, FileLoader):
         """
         documents = []
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             for line_num, line in enumerate(f, 1):
                 line = line.strip()
                 if not line:
@@ -176,18 +176,18 @@ class JSONLoader(DocumentLoader, FileLoader):
                         # If the filter returns multiple items, add each as a document
                         if isinstance(filtered_data, list) and filtered_data:
                             for item in filtered_data:
-                                docs = self._process_json_data(item, {**base_metadata, "line": line_num})
+                                docs = self._process_json_data(item, {**base_metadata, 'line': line_num})
                                 documents.extend(docs)
                             continue
                         else:
                             data = filtered_data
 
                     # Process the line data
-                    line_docs = self._process_json_data(data, {**base_metadata, "line": line_num})
+                    line_docs = self._process_json_data(data, {**base_metadata, 'line': line_num})
                     documents.extend(line_docs)
 
                 except json.JSONDecodeError as e:
-                    logger.warning(f"Error decoding JSON at line {line_num}: {e}. Skipping.")
+                    logger.warning(f'Error decoding JSON at line {line_num}: {e}. Skipping.')
 
         return documents
 
@@ -213,7 +213,7 @@ class JSONLoader(DocumentLoader, FileLoader):
         if isinstance(data, list):
             for i, item in enumerate(data):
                 # Add index to metadata
-                item_metadata = {**metadata, "index": i}
+                item_metadata = {**metadata, 'index': i}
 
                 # Process each item
                 if isinstance(item, dict):
@@ -221,7 +221,7 @@ class JSONLoader(DocumentLoader, FileLoader):
                     documents.append(doc)
                 else:
                     # If item is not a dict, use its string representation as content
-                    documents.append({"content": str(item), "metadata": item_metadata})
+                    documents.append({'content': str(item), 'metadata': item_metadata})
             return documents
 
         # Handle single dict
@@ -230,7 +230,7 @@ class JSONLoader(DocumentLoader, FileLoader):
             return documents
 
         # Handle primitive value
-        documents.append({"content": str(data), "metadata": metadata})
+        documents.append({'content': str(data), 'metadata': metadata})
 
         return documents
 
@@ -267,8 +267,8 @@ class JSONLoader(DocumentLoader, FileLoader):
             # Use entire JSON as content
             content = json.dumps(data, ensure_ascii=False)
 
-        return {"content": content, "metadata": doc_metadata}
+        return {'content': content, 'metadata': doc_metadata}
 
 
 # Register the loader
-registry.register(JSONLoader, extensions=["json", "jsonl", "ndjson"])
+registry.register(JSONLoader, extensions=['json', 'jsonl', 'ndjson'])

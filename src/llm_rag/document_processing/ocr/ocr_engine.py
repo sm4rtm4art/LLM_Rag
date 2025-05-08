@@ -47,11 +47,11 @@ class PageSegmentationMode(Enum):
 class OCROutputFormat(Enum):
     """OCR output formats supported by the engine."""
 
-    TEXT = "text"  # Plain text output
-    HOCR = "hocr"  # hOCR format (HTML with position information)
-    TSV = "tsv"  # Tab-separated values with confidence and position
-    JSON = "json"  # JSON output with detailed information
-    ALTO = "alto"  # ALTO XML format
+    TEXT = 'text'  # Plain text output
+    HOCR = 'hocr'  # hOCR format (HTML with position information)
+    TSV = 'tsv'  # Tab-separated values with confidence and position
+    JSON = 'json'  # JSON output with detailed information
+    ALTO = 'alto'  # ALTO XML format
 
 
 @dataclass
@@ -80,15 +80,15 @@ class TesseractConfig:
     def __post_init__(self):
         """Initialize default values and validate configuration."""
         if self.languages is None:
-            self.languages = ["deu"]  # German language model as default
+            self.languages = ['deu']  # German language model as default
 
         # Validate tesseract_cmd if provided
         if self.tesseract_cmd:
             # Ensure the path contains only valid characters
-            if not re.match(r"^[a-zA-Z0-9_\-./\\]+$", self.tesseract_cmd):
+            if not re.match(r'^[a-zA-Z0-9_\-./\\]+$', self.tesseract_cmd):
                 raise ValueError(
-                    "tesseract_cmd contains invalid characters. Only alphanumeric, "
-                    "underscore, hyphen, dot, slash, and backslash are allowed."
+                    'tesseract_cmd contains invalid characters. Only alphanumeric, '
+                    'underscore, hyphen, dot, slash, and backslash are allowed.'
                 )
             # Set the Tesseract command if it exists and is accessible
             if not os.path.isfile(self.tesseract_cmd) and not shutil.which(self.tesseract_cmd):
@@ -107,7 +107,7 @@ class TesseractOCREngine:
     def __init__(
         self,
         tesseract_path: Optional[str] = None,
-        languages: Union[str, List[str]] = "eng",
+        languages: Union[str, List[str]] = 'eng',
         psm: int = 3,
         oem: int = 3,
         config_params: Optional[Dict[str, str]] = None,
@@ -140,10 +140,10 @@ class TesseractOCREngine:
                 custom_parts = config.custom_config.split()
                 i = 0
                 while i < len(custom_parts):
-                    if custom_parts[i].startswith("--"):
+                    if custom_parts[i].startswith('--'):
                         # Get the key without the leading dashes
                         key = custom_parts[i][2:]
-                        if i + 1 < len(custom_parts) and not custom_parts[i + 1].startswith("--"):
+                        if i + 1 < len(custom_parts) and not custom_parts[i + 1].startswith('--'):
                             # Next part is the value
                             value = custom_parts[i + 1]
                             # Store with the key and value separated
@@ -151,7 +151,7 @@ class TesseractOCREngine:
                             i += 2
                         else:
                             # No value, just a flag
-                            config_params[key] = ""
+                            config_params[key] = ''
                             i += 1
                     else:
                         # Skip unknown parts
@@ -163,7 +163,7 @@ class TesseractOCREngine:
 
         # Convert language list to comma-separated string if needed
         if isinstance(languages, list):
-            self.languages = "+".join(languages)
+            self.languages = '+'.join(languages)
         else:
             self.languages = languages
 
@@ -176,11 +176,11 @@ class TesseractOCREngine:
         self.tesseract_cmd = tesseract_path
 
         # Build Tesseract config string
-        self.config_string = f"--psm {psm} --oem {oem}"
+        self.config_string = f'--psm {psm} --oem {oem}'
         for key, value in self.config_params.items():
-            self.config_string += f" -{key} {value}"
+            self.config_string += f' -{key} {value}'
 
-        logger.info(f"Initialized TesseractOCREngine with languages={self.languages}, psm={psm}, oem={oem}")
+        logger.info(f'Initialized TesseractOCREngine with languages={self.languages}, psm={psm}, oem={oem}')
 
         # Verify Tesseract is available
         self._verify_tesseract_installation()
@@ -189,9 +189,9 @@ class TesseractOCREngine:
         """Verify that Tesseract is properly installed and accessible."""
         try:
             pytesseract.get_tesseract_version()
-            logger.debug("Tesseract installation verified successfully")
+            logger.debug('Tesseract installation verified successfully')
         except Exception as e:
-            error_msg = f"Tesseract is not installed or not accessible. Error: {str(e)}"
+            error_msg = f'Tesseract is not installed or not accessible. Error: {str(e)}'
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
@@ -212,14 +212,14 @@ class TesseractOCREngine:
 
         """
         try:
-            logger.debug("Processing image with Tesseract OCR")
+            logger.debug('Processing image with Tesseract OCR')
             text = pytesseract.image_to_string(image, lang=self.languages, config=self.config_string)
 
-            logger.debug(f"OCR processing complete, extracted {len(text)} characters")
+            logger.debug(f'OCR processing complete, extracted {len(text)} characters')
             return text
 
         except Exception as e:
-            error_msg = f"OCR processing failed: {str(e)}"
+            error_msg = f'OCR processing failed: {str(e)}'
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
@@ -239,11 +239,11 @@ class TesseractOCREngine:
         results = []
         for i, image in enumerate(images):
             try:
-                logger.debug(f"Processing image {i + 1} of {len(images)}")
+                logger.debug(f'Processing image {i + 1} of {len(images)}')
                 text = self.process_image(image)
                 results.append(text)
             except Exception as e:
-                error_msg = f"OCR processing failed for image {i + 1}: {str(e)}"
+                error_msg = f'OCR processing failed for image {i + 1}: {str(e)}'
                 logger.error(error_msg)
                 raise DocumentProcessingError(error_msg) from e
 
@@ -261,13 +261,13 @@ class TesseractOCREngine:
         """
         try:
             # Get the tesseract command
-            tesseract_cmd = self.tesseract_cmd or pytesseract.pytesseract.tesseract_cmd or "tesseract"
+            tesseract_cmd = self.tesseract_cmd or pytesseract.pytesseract.tesseract_cmd or 'tesseract'
 
             # Validate tesseract_cmd
-            if not re.match(r"^[a-zA-Z0-9_\-./\\]+$", tesseract_cmd):
+            if not re.match(r'^[a-zA-Z0-9_\-./\\]+$', tesseract_cmd):
                 raise ValueError(
-                    "tesseract_cmd contains invalid characters. Only alphanumeric, "
-                    "underscore, hyphen, dot, slash, and backslash are allowed."
+                    'tesseract_cmd contains invalid characters. Only alphanumeric, '
+                    'underscore, hyphen, dot, slash, and backslash are allowed.'
                 )
 
             # Check if command exists
@@ -281,27 +281,27 @@ class TesseractOCREngine:
 
             # Execute command safely with the validated path
             output = subprocess.check_output(
-                [tesseract_cmd, "--list-langs"],  # nosec B603
+                [tesseract_cmd, '--list-langs'],  # nosec B603
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
                 timeout=5,
             )
 
             # Parse the output to extract language codes
-            lines = output.strip().split("\n")
+            lines = output.strip().split('\n')
             # Skip the header line which usually says "List of available languages (xx):"
             languages = [line.strip() for line in lines[1:] if line.strip()]
 
             return languages
         except ValueError as ve:
-            error_msg = f"Invalid tesseract command: {str(ve)}"
+            error_msg = f'Invalid tesseract command: {str(ve)}'
             logger.error(error_msg, exc_info=True)
             raise ExternalServiceError(
                 error_msg,
                 error_code=ErrorCode.SERVICE_UNAVAILABLE,
             ) from ve
         except subprocess.SubprocessError as se:
-            error_msg = f"Failed to execute tesseract: {str(se)}"
+            error_msg = f'Failed to execute tesseract: {str(se)}'
             logger.error(error_msg, exc_info=True)
             raise ExternalServiceError(
                 error_msg,
@@ -309,7 +309,7 @@ class TesseractOCREngine:
                 original_exception=se,
             ) from se
         except Exception as e:
-            error_msg = "Failed to get supported languages from Tesseract"
+            error_msg = 'Failed to get supported languages from Tesseract'
             logger.error(error_msg, exc_info=True)
             raise ExternalServiceError(
                 error_msg,
@@ -326,14 +326,14 @@ class TesseractOCREngine:
 
         """
         # Start with the base config
-        config_string = f"--psm {self.psm} --oem {self.oem}"
+        config_string = f'--psm {self.psm} --oem {self.oem}'
 
         # Add any additional parameters with double dashes
         for key, value in self.config_params.items():
             if value:
-                config_string += f" --{key} {value}"
+                config_string += f' --{key} {value}'
             else:
-                config_string += f" --{key}"
+                config_string += f' --{key}'
 
         return config_string
 
@@ -353,18 +353,18 @@ class TesseractOCREngine:
 
         """
         try:
-            logger.debug("Processing image with Tesseract OCR")
+            logger.debug('Processing image with Tesseract OCR')
             # Get timeout from config if available, otherwise use default
             timeout = 10  # Fixed timeout for test compatibility
 
             # Call pytesseract with explicit timeout parameter
             text = pytesseract.image_to_string(image, lang=self.languages, config=self.config_string, timeout=timeout)
 
-            logger.debug(f"OCR processing complete, extracted {len(text)} characters")
+            logger.debug(f'OCR processing complete, extracted {len(text)} characters')
             return text
 
         except Exception as e:
-            error_msg = f"OCR processing failed: {str(e)}"
+            error_msg = f'OCR processing failed: {str(e)}'
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
@@ -385,14 +385,14 @@ class TesseractOCREngine:
 
         """
         try:
-            logger.debug(f"Extracting OCR data in {output_format.value} format")
+            logger.debug(f'Extracting OCR data in {output_format.value} format')
 
             if output_format == OCROutputFormat.TEXT:
                 return pytesseract.image_to_string(
                     image,
                     lang=self.languages,
                     config=self.config_string,
-                    timeout=self.config.timeout if hasattr(self, "config") and self.config else 30,
+                    timeout=self.config.timeout if hasattr(self, 'config') and self.config else 30,
                 )
 
             elif output_format == OCROutputFormat.HOCR:
@@ -400,8 +400,8 @@ class TesseractOCREngine:
                     image,
                     lang=self.languages,
                     config=self.config_string,
-                    extension="hocr",
-                    timeout=self.config.timeout if hasattr(self, "config") and self.config else 30,
+                    extension='hocr',
+                    timeout=self.config.timeout if hasattr(self, 'config') and self.config else 30,
                 )
 
             elif output_format == OCROutputFormat.TSV:
@@ -409,7 +409,7 @@ class TesseractOCREngine:
                     image,
                     lang=self.languages,
                     config=self.config_string,
-                    timeout=self.config.timeout if hasattr(self, "config") and self.config else 30,
+                    timeout=self.config.timeout if hasattr(self, 'config') and self.config else 30,
                 )
 
             elif output_format == OCROutputFormat.JSON:
@@ -419,7 +419,7 @@ class TesseractOCREngine:
                     lang=self.languages,
                     config=self.config_string,
                     output_type=output_type,
-                    timeout=self.config.timeout if hasattr(self, "config") and self.config else 30,
+                    timeout=self.config.timeout if hasattr(self, 'config') and self.config else 30,
                 )
 
             elif output_format == OCROutputFormat.ALTO:
@@ -427,13 +427,13 @@ class TesseractOCREngine:
                     image,
                     lang=self.languages,
                     config=self.config_string,
-                    timeout=self.config.timeout if hasattr(self, "config") and self.config else 30,
+                    timeout=self.config.timeout if hasattr(self, 'config') and self.config else 30,
                 )
 
             else:
-                raise ValueError(f"Unsupported output format: {output_format}")
+                raise ValueError(f'Unsupported output format: {output_format}')
 
         except Exception as e:
-            error_msg = f"OCR data extraction failed: {str(e)}"
+            error_msg = f'OCR data extraction failed: {str(e)}'
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e

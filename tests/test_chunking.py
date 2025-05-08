@@ -12,7 +12,7 @@ def test_character_chunker_basic():
     """Test basic functionality of character chunker."""
     # Given
     chunker = CharacterTextChunker(chunk_size=10, chunk_overlap=2)
-    text = "This is a test text for chunking"
+    text = 'This is a test text for chunking'
 
     # When
     chunks = chunker.split_text(text)
@@ -23,7 +23,7 @@ def test_character_chunker_basic():
     assert len(chunks[0]) <= 10
 
     # Check content is preserved (accounting for possible different chunk boundaries)
-    joined = "".join(chunks)
+    joined = ''.join(chunks)
     # The joined chunks may have duplicated content at the overlaps
     assert len(joined) >= len(text)
 
@@ -33,7 +33,7 @@ def test_recursive_chunker_basic():
     # Given
     # Increase chunk_size to 30 to accommodate the longest sentence (26 chars)
     chunker = RecursiveTextChunker(chunk_size=30, chunk_overlap=5)
-    text = "This is a test. It has multiple sentences. Some are short. Others might be longer."
+    text = 'This is a test. It has multiple sentences. Some are short. Others might be longer.'
 
     # When
     chunks = chunker.split_text(text)
@@ -44,13 +44,13 @@ def test_recursive_chunker_basic():
         assert len(chunk) <= 35  # chunk_size + possible overlap
 
     # Verify we can recover original sentences
-    for sentence in ["This is a test.", "It has multiple sentences.", "Some are short.", "Others might be longer."]:
+    for sentence in ['This is a test.', 'It has multiple sentences.', 'Some are short.', 'Others might be longer.']:
         found = False
         for chunk in chunks:
             if sentence in chunk:
                 found = True
                 break
-        assert found, f"Sentence not found in any chunk: {sentence}"
+        assert found, f'Sentence not found in any chunk: {sentence}'
 
 
 def test_split_documents():
@@ -59,8 +59,8 @@ def test_split_documents():
     chunker = CharacterTextChunker(chunk_size=10, chunk_overlap=0)
     documents = [
         {
-            "content": "This is a longer document that should be split",
-            "metadata": {"source": "test.txt", "custom": "value"},
+            'content': 'This is a longer document that should be split',
+            'metadata': {'source': 'test.txt', 'custom': 'value'},
         }
     ]
 
@@ -72,11 +72,11 @@ def test_split_documents():
 
     # Check metadata is preserved and augmented
     for i, doc in enumerate(chunked_docs):
-        assert "metadata" in doc
-        assert doc["metadata"]["source"] == "test.txt"
-        assert doc["metadata"]["custom"] == "value"
-        assert doc["metadata"]["chunk_index"] == i
-        assert doc["metadata"]["chunk_count"] == len(chunked_docs)
+        assert 'metadata' in doc
+        assert doc['metadata']['source'] == 'test.txt'
+        assert doc['metadata']['custom'] == 'value'
+        assert doc['metadata']['chunk_index'] == i
+        assert doc['metadata']['chunk_count'] == len(chunked_docs)
 
 
 def test_chunker_validation():

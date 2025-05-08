@@ -17,7 +17,7 @@ from llm_rag.vectorstore.chroma import ChromaVectorStore
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
@@ -31,29 +31,29 @@ def setup_argument_parser() -> argparse.ArgumentParser:
         argparse.ArgumentParser: The configured argument parser.
 
     """
-    parser = argparse.ArgumentParser(description="Demo script for RAG queries with HuggingFace LLM.")
+    parser = argparse.ArgumentParser(description='Demo script for RAG queries with HuggingFace LLM.')
     parser.add_argument(
-        "--model_name",
+        '--model_name',
         type=str,
-        default="microsoft/phi-2",
-        help="HuggingFace model to use",
+        default='microsoft/phi-2',
+        help='HuggingFace model to use',
     )
     parser.add_argument(
-        "--collection",
+        '--collection',
         type=str,
-        default="documents",
-        help="ChromaDB collection name",
+        default='documents',
+        help='ChromaDB collection name',
     )
     parser.add_argument(
-        "--db_path",
+        '--db_path',
         type=str,
-        default="chroma_db",
-        help="Path to ChromaDB database",
+        default='chroma_db',
+        help='Path to ChromaDB database',
     )
     parser.add_argument(
-        "--query",
+        '--query',
         type=str,
-        help="Query to ask the RAG system",
+        help='Query to ask the RAG system',
     )
     return parser
 
@@ -78,25 +78,25 @@ def run_rag_query(
         A dictionary containing the RAG system's response and metadata.
 
     """
-    logger.info(f"Loading LLM model: {model_name}")
+    logger.info(f'Loading LLM model: {model_name}')
 
     # Create the LLM
     factory = ModelFactory()
     llm = factory.create_model(
         model_path_or_name=model_name,
         backend=ModelBackend.HUGGINGFACE,
-        device="mps",  # Use MPS for Mac with Apple Silicon, or "cuda" for NVIDIA GPUs
+        device='mps',  # Use MPS for Mac with Apple Silicon, or "cuda" for NVIDIA GPUs
     )
 
     # Load the vector store
-    logger.info(f"Loading vector store from {db_path}, collection {collection_name}")
+    logger.info(f'Loading vector store from {db_path}, collection {collection_name}')
     vector_store = ChromaVectorStore(
         collection_name=collection_name,
         persist_directory=db_path,
     )
 
     # Create the RAG pipeline
-    logger.info("Creating RAG pipeline")
+    logger.info('Creating RAG pipeline')
     rag_pipeline = RAGPipeline(
         vectorstore=vector_store,
         llm=llm,
@@ -104,7 +104,7 @@ def run_rag_query(
     )
 
     # Run the query
-    logger.info(f"Running query: {query}")
+    logger.info(f'Running query: {query}')
     result = rag_pipeline.query(query)
 
     return result
@@ -116,7 +116,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if not args.query:
-        query = input("Enter your query: ")
+        query = input('Enter your query: ')
     else:
         query = args.query
 
@@ -128,43 +128,43 @@ def main() -> None:
             collection_name=args.collection,
         )
 
-        response = result["response"]
-        confidence = result.get("confidence", 0.0)
-        documents = result.get("documents", [])
+        response = result['response']
+        confidence = result.get('confidence', 0.0)
+        documents = result.get('documents', [])
 
-        print("\nRAG System Response:")
-        print("-------------------")
+        print('\nRAG System Response:')
+        print('-------------------')
         print(response)
-        print("-------------------")
+        print('-------------------')
 
         # Display confidence score
-        confidence_level = "High" if confidence >= 0.8 else "Medium" if confidence >= 0.5 else "Low"
-        print(f"\nRetrieval Confidence: {confidence:.2f} ({confidence_level})")
+        confidence_level = 'High' if confidence >= 0.8 else 'Medium' if confidence >= 0.5 else 'Low'
+        print(f'\nRetrieval Confidence: {confidence:.2f} ({confidence_level})')
 
         # Display document sources
         if documents:
-            print("\nRetrieved from:")
+            print('\nRetrieved from:')
             for i, doc in enumerate(documents):
-                metadata = doc.get("metadata", {})
-                source = metadata.get("source", "Unknown")
-                filename = metadata.get("filename", "")
-                page = metadata.get("page", "")
+                metadata = doc.get('metadata', {})
+                source = metadata.get('source', 'Unknown')
+                filename = metadata.get('filename', '')
+                page = metadata.get('page', '')
 
                 source_info = []
-                if source and source != "Unknown":
-                    source_info.append(f"Source: {source}")
+                if source and source != 'Unknown':
+                    source_info.append(f'Source: {source}')
                 if filename:
-                    source_info.append(f"File: {filename}")
+                    source_info.append(f'File: {filename}')
                 if page:
-                    source_info.append(f"Page: {page}")
+                    source_info.append(f'Page: {page}')
 
-                source_display = ", ".join(source_info) if source_info else "Unknown source"
-                print(f"  {i + 1}. {source_display}")
+                source_display = ', '.join(source_info) if source_info else 'Unknown source'
+                print(f'  {i + 1}. {source_display}')
 
     except Exception as e:
-        logger.error(f"Error running RAG query: {e}")
+        logger.error(f'Error running RAG query: {e}')
         sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

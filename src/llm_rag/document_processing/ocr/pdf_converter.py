@@ -48,7 +48,7 @@ class PDFImageConverterConfig:
     """
 
     dpi: int = 300
-    output_format: str = "png"
+    output_format: str = 'png'
     use_alpha_channel: bool = False
     zoom_factor: float = 1.0
     first_page: Optional[int] = None
@@ -56,7 +56,7 @@ class PDFImageConverterConfig:
     preprocessing_enabled: bool = False
     deskew_enabled: bool = False
     threshold_enabled: bool = False
-    threshold_method: str = "adaptive"
+    threshold_method: str = 'adaptive'
     contrast_adjust: float = 1.0
     sharpen_enabled: bool = False
     denoise_enabled: bool = False
@@ -87,13 +87,13 @@ class PDFImageConverter:
 
         if self.config.preprocessing_enabled and not OPENCV_AVAILABLE:
             logger.warning(
-                "OpenCV is not available but preprocessing is enabled. "
+                'OpenCV is not available but preprocessing is enabled. '
                 "Install it with 'pip install opencv-python' for preprocessing features."
             )
             self.config.preprocessing_enabled = False
 
         logger.info(
-            f"Initialized PDFImageConverter with DPI: {self.dpi}, preprocessing: {self.config.preprocessing_enabled}"
+            f'Initialized PDFImageConverter with DPI: {self.dpi}, preprocessing: {self.config.preprocessing_enabled}'
         )
 
     def pdf_to_images(self, pdf_path: Union[str, Path]) -> Generator[Image.Image, None, None]:
@@ -111,17 +111,17 @@ class PDFImageConverter:
         """
         try:
             path = Path(pdf_path)
-            logger.debug(f"Converting PDF to images: {path}")
+            logger.debug(f'Converting PDF to images: {path}')
 
             if not path.exists():
-                raise FileNotFoundError(f"PDF file not found: {path}")
+                raise FileNotFoundError(f'PDF file not found: {path}')
 
             # Open the PDF file
             doc = fitz.open(str(path))  # Convert path to string
 
             # Process each page
             for page_num, page in enumerate(doc):
-                logger.debug(f"Processing page {page_num + 1} of {len(doc)}")
+                logger.debug(f'Processing page {page_num + 1} of {len(doc)}')
 
                 # Set the rendering matrix for the desired DPI
                 zoom = self.dpi / 72  # 72 DPI is the default PDF resolution
@@ -131,7 +131,7 @@ class PDFImageConverter:
                 pixmap = page.get_pixmap(matrix=matrix, alpha=False)
 
                 # Convert pixmap to PIL image
-                image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
+                image = Image.frombytes('RGB', [pixmap.width, pixmap.height], pixmap.samples)
 
                 # Apply preprocessing if enabled
                 if self.config.preprocessing_enabled:
@@ -140,10 +140,10 @@ class PDFImageConverter:
                 yield image
 
             doc.close()
-            logger.info(f"Completed converting PDF {path} to images")
+            logger.info(f'Completed converting PDF {path} to images')
 
         except Exception as e:
-            error_msg = f"Error processing PDF {pdf_path}: {str(e)}"
+            error_msg = f'Error processing PDF {pdf_path}: {str(e)}'
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
@@ -163,16 +163,16 @@ class PDFImageConverter:
         """
         pdf_path = Path(pdf_path)
         if not pdf_path.exists():
-            error_msg = f"PDF file not found: {pdf_path}"
+            error_msg = f'PDF file not found: {pdf_path}'
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg)
 
         try:
-            logger.info(f"Opening PDF file to extract page {page_number}: {pdf_path}")
+            logger.info(f'Opening PDF file to extract page {page_number}: {pdf_path}')
             pdf_document = fitz.open(pdf_path)
 
             if page_number < 0 or page_number >= len(pdf_document):
-                logger.warning(f"Page {page_number} out of range (0-{len(pdf_document) - 1})")
+                logger.warning(f'Page {page_number} out of range (0-{len(pdf_document) - 1})')
                 return None
 
             page = pdf_document[page_number]
@@ -185,19 +185,19 @@ class PDFImageConverter:
             pixmap = page.get_pixmap(matrix=matrix, alpha=False)
 
             # Convert pixmap to PIL image
-            image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
+            image = Image.frombytes('RGB', [pixmap.width, pixmap.height], pixmap.samples)
 
             # Apply preprocessing if enabled
             if self.config.preprocessing_enabled:
                 image = self._preprocess_image(image)
 
             pdf_document.close()
-            logger.info(f"Successfully extracted page {page_number} from {pdf_path}")
+            logger.info(f'Successfully extracted page {page_number} from {pdf_path}')
 
             return image
 
         except Exception as e:
-            error_msg = f"Error extracting page {page_number} from PDF {pdf_path}: {str(e)}"
+            error_msg = f'Error extracting page {page_number} from PDF {pdf_path}: {str(e)}'
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
@@ -216,7 +216,7 @@ class PDFImageConverter:
             DocumentProcessingError: If page rendering fails.
 
         """
-        logger.info(f"Converting PDF to images: {pdf_path}")
+        logger.info(f'Converting PDF to images: {pdf_path}')
         doc = self._open_pdf_document(pdf_path)
 
         try:
@@ -226,13 +226,13 @@ class PDFImageConverter:
 
             # Validate page range
             if first_page < 0 or first_page >= doc.page_count:
-                raise ValueError(f"Invalid first_page {first_page + 1}. Valid range: 1-{doc.page_count}")
+                raise ValueError(f'Invalid first_page {first_page + 1}. Valid range: 1-{doc.page_count}')
             if last_page > doc.page_count:
-                raise ValueError(f"Invalid last_page {last_page}. Valid range: 1-{doc.page_count}")
+                raise ValueError(f'Invalid last_page {last_page}. Valid range: 1-{doc.page_count}')
 
             # Process each page in the specified range
             for page_num in range(first_page, last_page):
-                logger.debug(f"Processing PDF page {page_num + 1}/{doc.page_count}")
+                logger.debug(f'Processing PDF page {page_num + 1}/{doc.page_count}')
                 page = doc.load_page(page_num)
                 image = self._render_page_to_image(page)
                 yield page_num, image
@@ -243,12 +243,12 @@ class PDFImageConverter:
                 str(ve),
                 error_code=ErrorCode.INVALID_INPUT,
                 original_exception=ve,
-                details={"pdf_path": str(pdf_path)},
+                details={'pdf_path': str(pdf_path)},
             ) from ve
         finally:
             # Always close the document
             doc.close()
-            logger.debug(f"Closed PDF document: {pdf_path}")
+            logger.debug(f'Closed PDF document: {pdf_path}')
 
     def convert_pdf_page_to_image(self, pdf_path: Union[str, Path], page_number: int) -> Image.Image:
         """Convert a specific PDF page to an image.
@@ -266,7 +266,7 @@ class PDFImageConverter:
             ValueError: If the page number is invalid.
 
         """
-        logger.info(f"Converting PDF page {page_number} from {pdf_path}")
+        logger.info(f'Converting PDF page {page_number} from {pdf_path}')
         doc = self._open_pdf_document(pdf_path)
 
         try:
@@ -275,7 +275,7 @@ class PDFImageConverter:
 
             # Validate page number
             if page_idx < 0 or page_idx >= doc.page_count:
-                raise ValueError(f"Invalid page number {page_number}. Valid range: 1-{doc.page_count}")
+                raise ValueError(f'Invalid page number {page_number}. Valid range: 1-{doc.page_count}')
 
             # Load and render the page
             page = doc.load_page(page_idx)
@@ -287,12 +287,12 @@ class PDFImageConverter:
                 str(ve),
                 error_code=ErrorCode.INVALID_INPUT,
                 original_exception=ve,
-                details={"pdf_path": str(pdf_path), "page_number": page_number},
+                details={'pdf_path': str(pdf_path), 'page_number': page_number},
             ) from ve
         finally:
             # Always close the document
             doc.close()
-            logger.debug(f"Closed PDF document: {pdf_path}")
+            logger.debug(f'Closed PDF document: {pdf_path}')
 
     def get_pdf_page_count(self, pdf_path: Union[str, Path]) -> int:
         """Get the number of pages in a PDF document.
@@ -311,7 +311,7 @@ class PDFImageConverter:
         if doc is None:
             # If _open_pdf_document returns None, the error is already logged,
             # and the handle_exceptions decorator should handle reraise_for_testing
-            raise DataAccessError(f"Failed to open PDF file: {pdf_path}", error_code=ErrorCode.FILE_NOT_FOUND)
+            raise DataAccessError(f'Failed to open PDF file: {pdf_path}', error_code=ErrorCode.FILE_NOT_FOUND)
 
         try:
             return doc.page_count
@@ -334,7 +334,7 @@ class PDFImageConverter:
             DocumentProcessingError: If page rendering fails.
 
         """
-        logger.info(f"Converting PDF pages from {pdf_path}")
+        logger.info(f'Converting PDF pages from {pdf_path}')
         doc = self._open_pdf_document(pdf_path)
         images = []
 
@@ -345,7 +345,7 @@ class PDFImageConverter:
 
             # Process each requested page
             for page_num in page_numbers:
-                logger.debug(f"Processing PDF page {page_num + 1}/{doc.page_count}")
+                logger.debug(f'Processing PDF page {page_num + 1}/{doc.page_count}')
                 page = doc.load_page(page_num)
                 image = self._render_page_to_image(page, dpi=dpi)
                 images.append(image)
@@ -354,7 +354,7 @@ class PDFImageConverter:
         finally:
             # Always close the document
             doc.close()
-            logger.debug(f"Closed PDF document: {pdf_path}")
+            logger.debug(f'Closed PDF document: {pdf_path}')
 
     def _preprocess_image(self, image: Image.Image) -> Image.Image:
         """Apply preprocessing to improve OCR quality.
@@ -369,7 +369,7 @@ class PDFImageConverter:
         if not self.config.preprocessing_enabled:
             return image
 
-        logger.debug("Applying image preprocessing")
+        logger.debug('Applying image preprocessing')
 
         # Apply PIL-based preprocessing (always available)
         # Adjust contrast if needed
@@ -383,7 +383,7 @@ class PDFImageConverter:
 
         # Skip OpenCV preprocessing if not available
         if not OPENCV_AVAILABLE:
-            logger.debug("OpenCV not available, skipping advanced preprocessing")
+            logger.debug('OpenCV not available, skipping advanced preprocessing')
             return image
 
         # Convert PIL to OpenCV format
@@ -425,7 +425,7 @@ class PDFImageConverter:
         if not OPENCV_AVAILABLE:
             return img
 
-        logger.debug("Applying deskew operation")
+        logger.debug('Applying deskew operation')
 
         try:
             # Apply threshold to get a binary image
@@ -477,7 +477,7 @@ class PDFImageConverter:
             # If no valid angles or insignificant skew, return original
             return img
         except Exception as e:
-            logger.warning(f"Deskew operation failed: {str(e)}")
+            logger.warning(f'Deskew operation failed: {str(e)}')
             return img
 
     def _apply_threshold(self, img: np.ndarray) -> np.ndarray:
@@ -493,30 +493,30 @@ class PDFImageConverter:
         if not OPENCV_AVAILABLE:
             return img
 
-        logger.debug(f"Applying {self.config.threshold_method} thresholding")
+        logger.debug(f'Applying {self.config.threshold_method} thresholding')
 
         try:
-            if self.config.threshold_method == "adaptive":
+            if self.config.threshold_method == 'adaptive':
                 # Apply adaptive thresholding
                 # This works well for varying lighting conditions
                 binary = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
                 return binary
 
-            elif self.config.threshold_method == "otsu":
+            elif self.config.threshold_method == 'otsu':
                 # Apply Otsu's thresholding
                 # Good for bimodal images (clear foreground/background)
                 _, binary = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
                 return binary
 
-            elif self.config.threshold_method == "simple":
+            elif self.config.threshold_method == 'simple':
                 # Apply simple binary thresholding
                 _, binary = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)
                 return binary
 
             else:
-                logger.warning(f"Unknown threshold method: {self.config.threshold_method}")
+                logger.warning(f'Unknown threshold method: {self.config.threshold_method}')
                 return img
 
         except Exception as e:
-            logger.warning(f"Thresholding operation failed: {str(e)}")
+            logger.warning(f'Thresholding operation failed: {str(e)}')
             return img

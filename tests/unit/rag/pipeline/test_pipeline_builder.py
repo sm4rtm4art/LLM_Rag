@@ -27,7 +27,7 @@ class TestPipelineBuilder:
         builder = RAGPipelineBuilder()
 
         # Check default pipeline type
-        assert builder._pipeline_type == "standard"
+        assert builder._pipeline_type == 'standard'
 
         # Check default component values
         assert builder._retriever is None
@@ -47,7 +47,7 @@ class TestPipelineBuilder:
         builder = RAGPipelineBuilder()
         result = builder.with_standard_pipeline()
 
-        assert builder._pipeline_type == "standard"
+        assert builder._pipeline_type == 'standard'
         assert result is builder  # Check method chaining
 
     def test_with_conversational_pipeline(self):
@@ -55,7 +55,7 @@ class TestPipelineBuilder:
         builder = RAGPipelineBuilder()
         result = builder.with_conversational_pipeline()
 
-        assert builder._pipeline_type == "conversational"
+        assert builder._pipeline_type == 'conversational'
         assert result is builder  # Check method chaining
 
     def test_with_vector_retriever(self):
@@ -65,7 +65,7 @@ class TestPipelineBuilder:
         builder = RAGPipelineBuilder()
         result = builder.with_vector_retriever(vectorstore=mock_vectorstore, top_k=10)
 
-        assert builder._retriever_config == {"type": "vector", "source": mock_vectorstore, "top_k": 10}
+        assert builder._retriever_config == {'type': 'vector', 'source': mock_vectorstore, 'top_k': 10}
         assert result is builder  # Check method chaining
 
     def test_with_hybrid_retriever(self):
@@ -76,7 +76,7 @@ class TestPipelineBuilder:
         builder = RAGPipelineBuilder()
         result = builder.with_hybrid_retriever(retrievers=mock_retrievers, weights=weights)
 
-        assert builder._retriever_config == {"type": "hybrid", "source": mock_retrievers, "weights": weights}
+        assert builder._retriever_config == {'type': 'hybrid', 'source': mock_retrievers, 'weights': weights}
         assert result is builder  # Check method chaining
 
     def test_with_custom_retriever(self):
@@ -94,7 +94,7 @@ class TestPipelineBuilder:
         builder = RAGPipelineBuilder()
         result = builder.with_simple_formatter(include_metadata=False, max_length=1000)
 
-        assert builder._formatter_config == {"type": "simple", "include_metadata": False, "max_length": 1000}
+        assert builder._formatter_config == {'type': 'simple', 'include_metadata': False, 'max_length': 1000}
         assert result is builder  # Check method chaining
 
     def test_with_markdown_formatter(self):
@@ -102,7 +102,7 @@ class TestPipelineBuilder:
         builder = RAGPipelineBuilder()
         result = builder.with_markdown_formatter(include_metadata=True, max_length=2000)
 
-        assert builder._formatter_config == {"type": "markdown", "include_metadata": True, "max_length": 2000}
+        assert builder._formatter_config == {'type': 'markdown', 'include_metadata': True, 'max_length': 2000}
         assert result is builder  # Check method chaining
 
     def test_with_custom_formatter(self):
@@ -118,16 +118,16 @@ class TestPipelineBuilder:
     def test_with_llm_generator(self):
         """Test configuring an LLM generator."""
         mock_llm = MagicMock(spec=BaseLanguageModel)
-        mock_prompt = PromptTemplate.from_template("Test template {context}")
+        mock_prompt = PromptTemplate.from_template('Test template {context}')
 
         builder = RAGPipelineBuilder()
         result = builder.with_llm_generator(llm=mock_llm, prompt_template=mock_prompt, apply_anti_hallucination=False)
 
         assert builder._llm is mock_llm
         assert builder._generator_config == {
-            "type": "llm",
-            "prompt_template": mock_prompt,
-            "apply_anti_hallucination": False,
+            'type': 'llm',
+            'prompt_template': mock_prompt,
+            'apply_anti_hallucination': False,
         }
         assert result is builder  # Check method chaining
 
@@ -135,21 +135,21 @@ class TestPipelineBuilder:
         """Test configuring a templated generator."""
         mock_llm = MagicMock(spec=BaseLanguageModel)
         templates = {
-            "default": "Default template {context}",
-            "custom": PromptTemplate.from_template("Custom template {context}"),
+            'default': 'Default template {context}',
+            'custom': PromptTemplate.from_template('Custom template {context}'),
         }
 
         builder = RAGPipelineBuilder()
         result = builder.with_templated_generator(
-            llm=mock_llm, templates=templates, default_template="custom", apply_anti_hallucination=True
+            llm=mock_llm, templates=templates, default_template='custom', apply_anti_hallucination=True
         )
 
         assert builder._llm is mock_llm
         assert builder._generator_config == {
-            "type": "templated",
-            "templates": templates,
-            "default_template": "custom",
-            "apply_anti_hallucination": True,
+            'type': 'templated',
+            'templates': templates,
+            'default_template': 'custom',
+            'apply_anti_hallucination': True,
         }
         assert result is builder  # Check method chaining
 
@@ -166,23 +166,23 @@ class TestPipelineBuilder:
     def test_with_config(self):
         """Test setting additional pipeline configuration."""
         builder = RAGPipelineBuilder()
-        result = builder.with_config(max_tokens=1000, temperature=0.7, custom_param="value")
+        result = builder.with_config(max_tokens=1000, temperature=0.7, custom_param='value')
 
-        assert builder._pipeline_config == {"max_tokens": 1000, "temperature": 0.7, "custom_param": "value"}
+        assert builder._pipeline_config == {'max_tokens': 1000, 'temperature': 0.7, 'custom_param': 'value'}
 
         # Test updating existing config
-        result = builder.with_config(temperature=0.5, new_param="new_value")
+        result = builder.with_config(temperature=0.5, new_param='new_value')
         assert builder._pipeline_config == {
-            "max_tokens": 1000,
-            "temperature": 0.5,
-            "custom_param": "value",
-            "new_param": "new_value",
+            'max_tokens': 1000,
+            'temperature': 0.5,
+            'custom_param': 'value',
+            'new_param': 'new_value',
         }
 
         assert result is builder  # Check method chaining
 
-    @patch("src.llm_rag.rag.pipeline.pipeline_builder.rag_factory")
-    @patch("src.llm_rag.rag.pipeline.pipeline_builder.RAGPipeline")
+    @patch('src.llm_rag.rag.pipeline.pipeline_builder.rag_factory')
+    @patch('src.llm_rag.rag.pipeline.pipeline_builder.RAGPipeline')
     def test_build_standard_pipeline(self, mock_pipeline_cls, mock_factory):
         """Test building a standard pipeline."""
         # Setup mocks
@@ -222,8 +222,8 @@ class TestPipelineBuilder:
 
         assert result == mock_pipeline
 
-    @patch("src.llm_rag.rag.pipeline.pipeline_builder.rag_factory")
-    @patch("src.llm_rag.rag.pipeline.pipeline_builder.ConversationalRAGPipeline")
+    @patch('src.llm_rag.rag.pipeline.pipeline_builder.rag_factory')
+    @patch('src.llm_rag.rag.pipeline.pipeline_builder.ConversationalRAGPipeline')
     def test_build_conversational_pipeline(self, mock_pipeline_cls, mock_factory):
         """Test building a conversational pipeline."""
         # Setup mocks
@@ -271,7 +271,7 @@ class TestPipelineBuilder:
         mock_generator = MagicMock(spec=BaseGenerator)
 
         # Use patch as context manager for the pipeline class
-        with patch("src.llm_rag.rag.pipeline.pipeline_builder.RAGPipeline") as mock_pipeline_cls:
+        with patch('src.llm_rag.rag.pipeline.pipeline_builder.RAGPipeline') as mock_pipeline_cls:
             mock_pipeline = MagicMock()
             mock_pipeline_cls.return_value = mock_pipeline
 
@@ -299,7 +299,7 @@ class TestPipelineBuilder:
         with pytest.raises(ValueError) as excinfo:
             builder.build()
 
-        assert "Retriever configuration is required" in str(excinfo.value)
+        assert 'Retriever configuration is required' in str(excinfo.value)
 
     def test_build_with_missing_llm(self):
         """Test building a pipeline with missing language model."""
@@ -310,7 +310,7 @@ class TestPipelineBuilder:
         with pytest.raises(ValueError) as excinfo:
             builder.build()
 
-        assert "Language model (llm) is required" in str(excinfo.value)
+        assert 'Language model (llm) is required' in str(excinfo.value)
 
     def test_build_with_missing_generator_config(self):
         """Test building a pipeline with missing generator configuration."""
@@ -324,13 +324,13 @@ class TestPipelineBuilder:
         with pytest.raises(ValueError) as excinfo:
             builder.build()
 
-        assert "Generator configuration is required" in str(excinfo.value)
+        assert 'Generator configuration is required' in str(excinfo.value)
 
-    @patch("src.llm_rag.rag.pipeline.pipeline_builder.rag_factory")
+    @patch('src.llm_rag.rag.pipeline.pipeline_builder.rag_factory')
     def test_build_with_exception(self, mock_factory):
         """Test exception handling during pipeline building."""
         # Setup to raise an exception
-        mock_factory.create_retriever.side_effect = Exception("Component creation failed")
+        mock_factory.create_retriever.side_effect = Exception('Component creation failed')
 
         builder = (
             RAGPipelineBuilder()
@@ -342,6 +342,6 @@ class TestPipelineBuilder:
         with pytest.raises(PipelineError) as excinfo:
             builder.build()
 
-        assert "Failed to build RAG pipeline" in str(excinfo.value)
+        assert 'Failed to build RAG pipeline' in str(excinfo.value)
         assert isinstance(excinfo.value.original_exception, Exception)
-        assert "Component creation failed" in str(excinfo.value.original_exception)
+        assert 'Component creation failed' in str(excinfo.value.original_exception)

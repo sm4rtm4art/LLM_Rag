@@ -12,12 +12,12 @@ import sys
 from typing import Any, Dict, List
 
 # Add the parent directory to the path so we can import the llm_rag module
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
 
@@ -31,50 +31,50 @@ def setup_arg_parser() -> argparse.ArgumentParser:
     """Set up the argument parser for the script."""
     parser = argparse.ArgumentParser(description="Load documents into the RAG system's vector store.")
     parser.add_argument(
-        "--dir",
+        '--dir',
         type=str,
-        default="data/documents/test_subset",
-        help="Directory containing documents to load",
+        default='data/documents/test_subset',
+        help='Directory containing documents to load',
     )
     parser.add_argument(
-        "--db-path",
+        '--db-path',
         type=str,
-        default="chroma_db",
-        help="Path to the ChromaDB database",
+        default='chroma_db',
+        help='Path to the ChromaDB database',
     )
     parser.add_argument(
-        "--collection-name",
+        '--collection-name',
         type=str,
-        default="documents",
-        help="Name of the ChromaDB collection",
+        default='documents',
+        help='Name of the ChromaDB collection',
     )
     parser.add_argument(
-        "--chunk-size",
+        '--chunk-size',
         type=int,
         default=1000,
-        help="Size of document chunks for splitting",
+        help='Size of document chunks for splitting',
     )
     parser.add_argument(
-        "--chunk-overlap",
+        '--chunk-overlap',
         type=int,
         default=200,
-        help="Overlap between document chunks",
+        help='Overlap between document chunks',
     )
     parser.add_argument(
-        "--glob",
+        '--glob',
         type=str,
-        default="**/*.txt",
-        help="Glob pattern for matching files",
+        default='**/*.txt',
+        help='Glob pattern for matching files',
     )
     parser.add_argument(
-        "--use-enhanced-pdf",
-        action="store_true",
-        help="Use enhanced PDF loader with table and image extraction",
+        '--use-enhanced-pdf',
+        action='store_true',
+        help='Use enhanced PDF loader with table and image extraction',
     )
     parser.add_argument(
-        "--din-standard-mode",
-        action="store_true",
-        help="Use DIN standard loader for DIN standard documents",
+        '--din-standard-mode',
+        action='store_true',
+        help='Use DIN standard loader for DIN standard documents',
     )
     return parser
 
@@ -96,7 +96,7 @@ def load_documents(
         List of loaded documents.
 
     """
-    logger.info(f"Loading documents from {dir_path} with pattern {glob_pattern}")
+    logger.info(f'Loading documents from {dir_path} with pattern {glob_pattern}')
 
     # Create directory loader with our custom implementation
     loader = DirectoryLoader(
@@ -107,10 +107,10 @@ def load_documents(
 
     try:
         documents = loader.load()
-        logger.info(f"Loaded {len(documents)} documents")
+        logger.info(f'Loaded {len(documents)} documents')
         return documents
     except Exception as e:
-        logger.error(f"Error loading documents: {str(e)}")
+        logger.error(f'Error loading documents: {str(e)}')
         return []
 
 
@@ -129,13 +129,13 @@ def split_documents(documents: List, chunk_size: int, chunk_overlap: int) -> Lis
 
     """
     if not documents:
-        logger.warning("No documents to split")
+        logger.warning('No documents to split')
         return []
 
-    logger.info(f"Splitting {len(documents)} documents into chunks")
+    logger.info(f'Splitting {len(documents)} documents into chunks')
 
     # Use RecursiveTextChunker
-    logger.info("Using RecursiveTextChunker")
+    logger.info('Using RecursiveTextChunker')
     chunker = RecursiveTextChunker(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -143,7 +143,7 @@ def split_documents(documents: List, chunk_size: int, chunk_overlap: int) -> Lis
 
     # Split documents
     document_chunks = chunker.split_documents(documents)
-    logger.info(f"Created {len(document_chunks)} chunks")
+    logger.info(f'Created {len(document_chunks)} chunks')
 
     return document_chunks
 
@@ -168,19 +168,19 @@ def prepare_documents_for_vectorstore(
 
     for i, doc in enumerate(document_chunks):
         # Extract content and metadata
-        if isinstance(doc, dict) and "content" in doc and "metadata" in doc:
-            texts.append(doc["content"])
-            metadatas.append(doc["metadata"])
+        if isinstance(doc, dict) and 'content' in doc and 'metadata' in doc:
+            texts.append(doc['content'])
+            metadatas.append(doc['metadata'])
         else:
             # Handle unexpected format
-            logger.warning(f"Unexpected document format: {type(doc)}")
+            logger.warning(f'Unexpected document format: {type(doc)}')
             continue
 
         # Generate ID
-        doc_id = f"doc_{i}"
+        doc_id = f'doc_{i}'
         ids.append(doc_id)
 
-    logger.info(f"Prepared {len(texts)} documents for vector store")
+    logger.info(f'Prepared {len(texts)} documents for vector store')
     return texts, metadatas, ids
 
 
@@ -191,7 +191,7 @@ def main() -> None:
 
     # Check if the document directory exists
     if not os.path.exists(args.dir):
-        logger.error(f"Document directory not found: {args.dir}")
+        logger.error(f'Document directory not found: {args.dir}')
         sys.exit(1)
 
     # Create the output directory if it doesn't exist
@@ -203,35 +203,35 @@ def main() -> None:
     )
 
     if not documents:
-        logger.error("No documents were loaded. Check your input directory and glob pattern.")
+        logger.error('No documents were loaded. Check your input directory and glob pattern.')
         sys.exit(1)
 
     # Split documents into chunks
     document_chunks = split_documents(documents, args.chunk_size, args.chunk_overlap)
 
     if not document_chunks:
-        logger.error("No document chunks were created. Check your input documents.")
+        logger.error('No document chunks were created. Check your input documents.')
         sys.exit(1)
 
     # Prepare documents for vector store
     texts, metadatas, ids = prepare_documents_for_vectorstore(document_chunks)
 
     if not texts:
-        logger.error("Failed to prepare documents for vector store.")
+        logger.error('Failed to prepare documents for vector store.')
         sys.exit(1)
 
     # Create vector store
-    logger.info(f"Creating vector store at {args.db_path} with collection {args.collection_name}")
+    logger.info(f'Creating vector store at {args.db_path} with collection {args.collection_name}')
 
     # Use standard vector store
-    logger.info("Using ChromaVectorStore")
+    logger.info('Using ChromaVectorStore')
     vector_store = ChromaVectorStore(
         collection_name=args.collection_name,
         persist_directory=args.db_path,
     )
 
     # Add documents to vector store
-    logger.info("Adding documents to vector store...")
+    logger.info('Adding documents to vector store...')
 
     # Use the collection.add method directly with prepared data
     vector_store.collection.add(
@@ -240,11 +240,11 @@ def main() -> None:
         ids=ids,
     )
 
-    logger.info(f"Successfully added {len(texts)} document chunks to the vector store")
-    logger.info(f"Vector store path: {args.db_path}")
-    logger.info(f"Collection name: {args.collection_name}")
-    logger.info("You can now use the RAG system with the loaded documents")
+    logger.info(f'Successfully added {len(texts)} document chunks to the vector store')
+    logger.info(f'Vector store path: {args.db_path}')
+    logger.info(f'Collection name: {args.collection_name}')
+    logger.info('You can now use the RAG system with the loaded documents')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

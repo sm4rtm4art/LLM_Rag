@@ -111,7 +111,7 @@ class WebLoader(Protocol):
 
 
 # Generic type for loader factories
-T = TypeVar("T", bound=DocumentLoader)
+T = TypeVar('T', bound=DocumentLoader)
 
 
 class LoaderRegistry:
@@ -145,7 +145,7 @@ class LoaderRegistry:
         if extensions:
             for ext in extensions:
                 # Handle extensions with or without the leading dot
-                ext = ext if ext.startswith(".") else f".{ext}"
+                ext = ext if ext.startswith('.') else f'.{ext}'
                 self._extension_mapping[ext.lower()] = name
 
     def get_loader_class(self, name: str) -> type:
@@ -168,7 +168,7 @@ class LoaderRegistry:
 
         """
         if name not in self._loaders:
-            raise KeyError(f"Loader {name} not registered")
+            raise KeyError(f'Loader {name} not registered')
         return self._loaders[name]
 
     def create_loader(self, name: str, **kwargs) -> DocumentLoader:
@@ -205,7 +205,7 @@ class LoaderRegistry:
 
         """
         # Handle extensions with or without the leading dot
-        ext = extension if extension.startswith(".") else f".{extension}"
+        ext = extension if extension.startswith('.') else f'.{extension}'
         return self._extension_mapping.get(ext.lower())
 
     def create_loader_for_file(self, file_path: Union[str, Path], **kwargs) -> Optional[DocumentLoader]:

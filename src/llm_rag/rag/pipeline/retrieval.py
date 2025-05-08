@@ -16,7 +16,7 @@ from llm_rag.utils.logging import get_logger
 logger = get_logger(__name__)
 
 # Type variable for document types
-T = TypeVar("T")
+T = TypeVar('T')
 
 
 class DocumentRetriever(Protocol):
@@ -76,14 +76,14 @@ class BaseRetriever(ABC):
         """
         if not query or not isinstance(query, str):
             raise PipelineError(
-                "Query must be a non-empty string",
-                details={"query": query},
+                'Query must be a non-empty string',
+                details={'query': query},
             )
 
         if len(query.strip()) == 0:
             raise PipelineError(
-                "Query cannot be empty or only whitespace",
-                details={"query": query},
+                'Query cannot be empty or only whitespace',
+                details={'query': query},
             )
 
 
@@ -104,7 +104,7 @@ class VectorStoreRetriever(BaseRetriever):
         """
         self.vectorstore = vectorstore
         self.top_k = top_k
-        logger.info(f"Initialized VectorStoreRetriever with top_k={top_k}")
+        logger.info(f'Initialized VectorStoreRetriever with top_k={top_k}')
 
     def retrieve(self, query: str, **kwargs) -> List[Any]:
         """Retrieve documents from the vector store.
@@ -127,23 +127,23 @@ class VectorStoreRetriever(BaseRetriever):
             self._validate_query(query)
 
             # Get top_k from kwargs or use default
-            top_k = kwargs.get("top_k", self.top_k)
+            top_k = kwargs.get('top_k', self.top_k)
 
             # Log retrieval attempt
-            logger.debug(f"Retrieving documents for query: {query} (top_k={top_k})")
+            logger.debug(f'Retrieving documents for query: {query} (top_k={top_k})')
 
             # Retrieve documents from the vector store
             documents = self.vectorstore.similarity_search(query, k=top_k)
 
-            logger.debug(f"Retrieved {len(documents)} documents")
+            logger.debug(f'Retrieved {len(documents)} documents')
             return documents
 
         except Exception as e:
             # Handle vector store specific errors
-            if hasattr(e, "__module__") and "langchain" in getattr(e, "__module__", ""):
-                logger.error(f"Vector store retrieval error: {str(e)}")
+            if hasattr(e, '__module__') and 'langchain' in getattr(e, '__module__', ''):
+                logger.error(f'Vector store retrieval error: {str(e)}')
                 raise VectorstoreError(
-                    f"Failed to retrieve documents from vector store: {str(e)}",
+                    f'Failed to retrieve documents from vector store: {str(e)}',
                     original_exception=e,
                 ) from e
 
@@ -152,9 +152,9 @@ class VectorStoreRetriever(BaseRetriever):
                 raise
 
             # Handle other errors
-            logger.error(f"Error retrieving documents: {str(e)}")
+            logger.error(f'Error retrieving documents: {str(e)}')
             raise PipelineError(
-                f"Document retrieval failed: {str(e)}",
+                f'Document retrieval failed: {str(e)}',
                 original_exception=e,
             ) from e
 
@@ -182,13 +182,13 @@ class HybridRetriever(BaseRetriever):
             self.weights = [1.0 / len(retrievers)] * len(retrievers)
         else:
             if len(weights) != len(retrievers):
-                raise ValueError("Number of weights must match number of retrievers")
+                raise ValueError('Number of weights must match number of retrievers')
 
             # Normalize weights to sum to 1.0
             total = sum(weights)
             self.weights = [w / total for w in weights]
 
-        logger.info(f"Initialized HybridRetriever with {len(retrievers)} retrievers")
+        logger.info(f'Initialized HybridRetriever with {len(retrievers)} retrievers')
 
     def retrieve(self, query: str, **kwargs) -> List[Any]:
         """Retrieve documents using multiple strategies.
@@ -213,13 +213,13 @@ class HybridRetriever(BaseRetriever):
             self._validate_query(query)
 
             all_documents = []
-            deduplicate = kwargs.get("deduplicate", True)
+            deduplicate = kwargs.get('deduplicate', True)
 
             # Get documents from each retriever
             for i, retriever in enumerate(self.retrievers):
                 try:
                     # Get retriever-specific top_k parameter based on weights
-                    retriever_top_k = int(kwargs.get("top_k", 5) * self.weights[i] * 2)
+                    retriever_top_k = int(kwargs.get('top_k', 5) * self.weights[i] * 2)
                     if retriever_top_k < 1:
                         retriever_top_k = 1
 
@@ -228,14 +228,14 @@ class HybridRetriever(BaseRetriever):
                     all_documents.extend(docs)
                 except Exception as e:
                     # Log but continue if one retriever fails
-                    logger.warning(f"Retriever {i} failed: {str(e)}. Continuing with other retrievers.")
+                    logger.warning(f'Retriever {i} failed: {str(e)}. Continuing with other retrievers.')
 
             # Deduplicate if requested
             if deduplicate and all_documents:
                 all_documents = self._deduplicate_documents(all_documents)
 
             # Limit to requested top_k
-            top_k = kwargs.get("top_k", 5)
+            top_k = kwargs.get('top_k', 5)
             return all_documents[:top_k]
 
         except Exception as e:
@@ -244,9 +244,9 @@ class HybridRetriever(BaseRetriever):
                 raise
 
             # Handle other errors
-            logger.error(f"Error in hybrid retrieval: {str(e)}")
+            logger.error(f'Error in hybrid retrieval: {str(e)}')
             raise PipelineError(
-                f"Hybrid document retrieval failed: {str(e)}",
+                f'Hybrid document retrieval failed: {str(e)}',
                 original_exception=e,
             ) from e
 
@@ -269,12 +269,12 @@ class HybridRetriever(BaseRetriever):
             # Extract content based on document type
             content = None
 
-            if hasattr(doc, "page_content"):
+            if hasattr(doc, 'page_content'):
                 content = doc.page_content
-            elif isinstance(doc, dict) and "content" in doc:
-                content = doc["content"]
-            elif isinstance(doc, dict) and "page_content" in doc:
-                content = doc["page_content"]
+            elif isinstance(doc, dict) and 'content' in doc:
+                content = doc['content']
+            elif isinstance(doc, dict) and 'page_content' in doc:
+                content = doc['page_content']
             elif isinstance(doc, str):
                 content = doc
 
@@ -311,7 +311,7 @@ def create_retriever(
 
     """
     # Special handling for unittest.mock.MagicMock during testing
-    if hasattr(source, "_extract_mock_name") and callable(getattr(source, "_extract_mock_name", None)):
+    if hasattr(source, '_extract_mock_name') and callable(getattr(source, '_extract_mock_name', None)):
         # This is a MagicMock - create a custom retriever for testing
         class MockRetriever(BaseRetriever):
             def __init__(self, mock_vectorstore, top_k):
@@ -320,10 +320,10 @@ def create_retriever(
 
             def retrieve(self, query: str, **kwargs) -> List[Any]:
                 # For tests, use similarity_search if available
-                if hasattr(self.mock_vectorstore, "similarity_search"):
+                if hasattr(self.mock_vectorstore, 'similarity_search'):
                     return self.mock_vectorstore.similarity_search(query, k=self.top_k)
                 # Fall back to search if similarity_search is not available
-                elif hasattr(self.mock_vectorstore, "search"):
+                elif hasattr(self.mock_vectorstore, 'search'):
                     return self.mock_vectorstore.search(query)
                 # If all else fails, return an empty list
                 return []
@@ -335,10 +335,10 @@ def create_retriever(
     elif isinstance(source, BaseRetriever):
         return source
     elif isinstance(source, list) and all(isinstance(r, BaseRetriever) for r in source):
-        weights = kwargs.get("weights", None)
+        weights = kwargs.get('weights', None)
         return HybridRetriever(retrievers=source, weights=weights)
     # Handle custom vector stores that have similarity_search method
-    elif hasattr(source, "similarity_search") and callable(source.similarity_search):
+    elif hasattr(source, 'similarity_search') and callable(source.similarity_search):
         # Create a custom retriever for sources with similarity_search method
         class CustomVectorStoreRetriever(BaseRetriever):
             def __init__(self, vectorstore, top_k):
@@ -351,6 +351,6 @@ def create_retriever(
         return CustomVectorStoreRetriever(source, top_k)
     else:
         raise ValueError(
-            f"Unsupported retriever source type: {type(source)}. "
-            "Must be a VectorStore, BaseRetriever, or list of BaseRetrievers."
+            f'Unsupported retriever source type: {type(source)}. '
+            'Must be a VectorStore, BaseRetriever, or list of BaseRetrievers.'
         )

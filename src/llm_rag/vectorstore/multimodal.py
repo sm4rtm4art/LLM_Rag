@@ -29,8 +29,8 @@ class MultiModalEmbeddingFunction(EmbeddingFunction):
 
     def __init__(
         self,
-        text_model_name: str = "all-MiniLM-L6-v2",
-        image_model_name: str = "clip-ViT-B-32",
+        text_model_name: str = 'all-MiniLM-L6-v2',
+        image_model_name: str = 'clip-ViT-B-32',
         embedding_dim: int = 512,
     ) -> None:
         """Initialize the multi-modal embedding function.
@@ -43,7 +43,7 @@ class MultiModalEmbeddingFunction(EmbeddingFunction):
 
         """
         # Check if running in CI environment
-        if os.environ.get("GITHUB_ACTIONS") == "true":
+        if os.environ.get('GITHUB_ACTIONS') == 'true':
             self.is_mock = True
             self.embedding_dim = embedding_dim
         else:
@@ -58,7 +58,7 @@ class MultiModalEmbeddingFunction(EmbeddingFunction):
                 self.image_model = SentenceTransformer(image_model_name)
                 self.has_image_model = True
             except Exception as e:
-                print(f"Warning: Could not load image model: {e}")
+                print(f'Warning: Could not load image model: {e}')
                 self.has_image_model = False
 
             # Initialize table embedding model (using text model as fallback)
@@ -141,7 +141,7 @@ class MultiModalEmbeddingFunction(EmbeddingFunction):
 
         if not self.has_image_model:
             # Fallback to random embeddings if image model is not available
-            print("Warning: Image model not available, using random embeddings")
+            print('Warning: Image model not available, using random embeddings')
             return [np.random.rand(self.embedding_dim).astype(np.float32) for _ in image_paths]
 
         try:
@@ -154,7 +154,7 @@ class MultiModalEmbeddingFunction(EmbeddingFunction):
                     img = Image.open(path)
                     images.append(img)
                 except Exception as e:
-                    print(f"Error loading image {path}: {e}")
+                    print(f'Error loading image {path}: {e}')
                     # Use a placeholder for failed images
                     images.append(None)
 
@@ -188,7 +188,7 @@ class MultiModalEmbeddingFunction(EmbeddingFunction):
             return result
 
         except Exception as e:
-            print(f"Error embedding images: {e}")
+            print(f'Error embedding images: {e}')
             # Fallback to random embeddings
             return [np.random.rand(self.embedding_dim).astype(np.float32) for _ in image_paths]
 
@@ -213,11 +213,11 @@ class MultiModalEmbeddingFunction(EmbeddingFunction):
         embeddings = []
 
         for _i, (text, metadata) in enumerate(zip(texts, metadatas, strict=False)):
-            filetype = metadata.get("filetype", "")
+            filetype = metadata.get('filetype', '')
 
-            if filetype in ["image", "technical_drawing"]:
+            if filetype in ['image', 'technical_drawing']:
                 # For images, the text might contain a caption, but we need the image path
-                image_path = metadata.get("image_path", "")
+                image_path = metadata.get('image_path', '')
                 if image_path:
                     # Embed a single image
                     emb = self._embed_image([image_path])[0]
@@ -225,7 +225,7 @@ class MultiModalEmbeddingFunction(EmbeddingFunction):
                     # Fallback to text embedding if no image path
                     emb = self._embed_text([text])[0]
 
-            elif filetype == "table":
+            elif filetype == 'table':
                 # Embed table content
                 emb = self._embed_table([text])[0]
 
@@ -247,11 +247,11 @@ class MultiModalVectorStore(ChromaVectorStore):
 
     def __init__(
         self,
-        collection_name: str = "multimodal_docs",
-        persist_directory: str = "chroma_multimodal",
+        collection_name: str = 'multimodal_docs',
+        persist_directory: str = 'chroma_multimodal',
         embedding_function: Optional[EmbeddingFunction] = None,
-        text_model_name: str = "all-MiniLM-L6-v2",
-        image_model_name: str = "clip-ViT-B-32",
+        text_model_name: str = 'all-MiniLM-L6-v2',
+        image_model_name: str = 'clip-ViT-B-32',
         embedding_dim: int = 512,
     ) -> None:
         """Initialize the multi-modal vector store.
@@ -283,10 +283,10 @@ class MultiModalVectorStore(ChromaVectorStore):
 
         # Store content type information
         self.content_types = {
-            "text": [],
-            "table": [],
-            "image": [],
-            "technical_drawing": [],
+            'text': [],
+            'table': [],
+            'image': [],
+            'technical_drawing': [],
         }
 
     def add_documents(
@@ -310,20 +310,20 @@ class MultiModalVectorStore(ChromaVectorStore):
         # Track content types if metadata is available
         if metadatas:
             for i, metadata in enumerate(metadatas):
-                filetype = metadata.get("filetype", "")
-                doc_id = ids[i] if ids else f"doc_{i}"
+                filetype = metadata.get('filetype', '')
+                doc_id = ids[i] if ids else f'doc_{i}'
 
-                if filetype in ["image", "technical_drawing"]:
-                    self.content_types["image"].append(doc_id)
-                elif filetype == "table":
-                    self.content_types["table"].append(doc_id)
+                if filetype in ['image', 'technical_drawing']:
+                    self.content_types['image'].append(doc_id)
+                elif filetype == 'table':
+                    self.content_types['table'].append(doc_id)
                 else:
-                    self.content_types["text"].append(doc_id)
+                    self.content_types['text'].append(doc_id)
 
     def search_by_content_type(
         self,
         query: str,
-        content_type: str = "all",
+        content_type: str = 'all',
         n_results: int = 5,
     ) -> List[Dict[str, Any]]:
         """Search for documents of a specific content type.
@@ -340,7 +340,7 @@ class MultiModalVectorStore(ChromaVectorStore):
             List of dictionaries containing matched documents and metadata
 
         """
-        if content_type == "all" or not self.content_types.get(content_type):
+        if content_type == 'all' or not self.content_types.get(content_type):
             # Search all documents if no content type specified or no documents of that type
             return self.search(query, n_results=n_results)
 
@@ -348,7 +348,7 @@ class MultiModalVectorStore(ChromaVectorStore):
         return self.search(
             query,
             n_results=n_results,
-            where={"filetype": content_type},
+            where={'filetype': content_type},
         )
 
     def multimodal_search(
@@ -371,7 +371,7 @@ class MultiModalVectorStore(ChromaVectorStore):
         results = {}
 
         # Search each content type
-        for content_type in ["text", "table", "image", "technical_drawing"]:
+        for content_type in ['text', 'table', 'image', 'technical_drawing']:
             if self.content_types.get(content_type):
                 type_results = self.search_by_content_type(
                     query,
@@ -382,7 +382,7 @@ class MultiModalVectorStore(ChromaVectorStore):
 
         return results
 
-    def as_retriever(self, search_kwargs: Optional[Dict[str, Any]] = None) -> "MultiModalRetriever":
+    def as_retriever(self, search_kwargs: Optional[Dict[str, Any]] = None) -> 'MultiModalRetriever':
         """Create a retriever from this vector store.
 
         Args:
@@ -420,8 +420,8 @@ class MultiModalRetriever:
         """
         self.vectorstore = vectorstore
         self.search_kwargs = search_kwargs
-        self.k = search_kwargs.get("k", 4)
-        self.content_type = search_kwargs.get("content_type", "all")
+        self.k = search_kwargs.get('k', 4)
+        self.content_type = search_kwargs.get('content_type', 'all')
 
     def get_relevant_documents(self, query: str) -> List[Document]:
         """Get documents relevant to the query.
@@ -435,7 +435,7 @@ class MultiModalRetriever:
             List of relevant Document objects
 
         """
-        if self.content_type != "all":
+        if self.content_type != 'all':
             # Search for specific content type
             results = self.vectorstore.search_by_content_type(
                 query,
@@ -453,8 +453,8 @@ class MultiModalRetriever:
         documents = []
         for result in results:
             doc = Document(
-                page_content=result["content"],
-                metadata=result["metadata"],
+                page_content=result['content'],
+                metadata=result['metadata'],
             )
             documents.append(doc)
 
@@ -484,8 +484,8 @@ class MultiModalRetriever:
             documents = []
             for result in results:
                 doc = Document(
-                    page_content=result["content"],
-                    metadata=result["metadata"],
+                    page_content=result['content'],
+                    metadata=result['metadata'],
                 )
                 documents.append(doc)
             documents_by_type[content_type] = documents

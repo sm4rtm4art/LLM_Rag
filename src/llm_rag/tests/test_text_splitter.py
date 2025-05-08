@@ -11,7 +11,7 @@ class TestTextSplitter(unittest.TestCase):
 
     def test_init_with_separators(self):
         """Test initialization with separators list."""
-        separators = ["\n\n", "\n", ".", " "]
+        separators = ['\n\n', '\n', '.', ' ']
         splitter = TextSplitter(
             chunk_size=100,
             chunk_overlap=20,
@@ -21,12 +21,12 @@ class TestTextSplitter(unittest.TestCase):
 
     def test_init_with_separator(self):
         """Test initialization with single separator (deprecated)."""
-        separator = ";"
+        separator = ';'
         # Use with statement to ignore the DeprecationWarning
         import warnings
 
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+            warnings.simplefilter('always')
             splitter = TextSplitter(
                 chunk_size=100,
                 chunk_overlap=20,
@@ -34,20 +34,20 @@ class TestTextSplitter(unittest.TestCase):
             )
             # Check that a DeprecationWarning was raised
             self.assertTrue(any(issubclass(warning.category, DeprecationWarning) for warning in w))
-            self.assertTrue(any("deprecated" in str(warning.message) for warning in w))
+            self.assertTrue(any('deprecated' in str(warning.message) for warning in w))
 
         # Verify that the separator was converted to a list
         self.assertEqual(splitter.separators, [separator])
 
     def test_init_with_both_separator_and_separators(self):
         """Test initialization with both separator and separators parameters."""
-        separator = ";"
-        separators = ["\n\n", "\n", ".", " "]
+        separator = ';'
+        separators = ['\n\n', '\n', '.', ' ']
         # Use with statement to ignore the DeprecationWarning
         import warnings
 
         with warnings.catch_warnings(record=True):
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             splitter = TextSplitter(
                 chunk_size=100,
                 chunk_overlap=20,
@@ -62,12 +62,12 @@ class TestTextSplitter(unittest.TestCase):
         """Test initialization with default parameters."""
         splitter = TextSplitter()
         # Default separators
-        default_separators = ["\n\n", "\n", " ", ""]
+        default_separators = ['\n\n', '\n', ' ', '']
         self.assertEqual(splitter.separators, default_separators)
 
     def test_split_text(self):
         """Test splitting text."""
-        text = "This is a test.\nWith multiple lines.\nAnd some more text."
+        text = 'This is a test.\nWith multiple lines.\nAnd some more text.'
         splitter = TextSplitter(chunk_size=20, chunk_overlap=0)
         chunks = splitter.split_text(text)
         self.assertIsInstance(chunks, List)
@@ -80,12 +80,12 @@ class TestTextSplitter(unittest.TestCase):
         """Test splitting documents."""
         documents = [
             {
-                "content": "This is a test document with some content.",
-                "metadata": {"source": "test1.txt"},
+                'content': 'This is a test document with some content.',
+                'metadata': {'source': 'test1.txt'},
             },
             {
-                "content": "This is another test document with different content.",
-                "metadata": {"source": "test2.txt"},
+                'content': 'This is another test document with different content.',
+                'metadata': {'source': 'test2.txt'},
             },
         ]
         splitter = TextSplitter(chunk_size=20, chunk_overlap=0)
@@ -93,10 +93,10 @@ class TestTextSplitter(unittest.TestCase):
         self.assertIsInstance(chunks, List)
         self.assertGreater(len(chunks), 2)  # Should have more chunks than original documents
         for chunk in chunks:
-            self.assertIn("content", chunk)
-            self.assertIn("metadata", chunk)
-            self.assertLessEqual(len(chunk["content"]), 20)
+            self.assertIn('content', chunk)
+            self.assertIn('metadata', chunk)
+            self.assertLessEqual(len(chunk['content']), 20)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

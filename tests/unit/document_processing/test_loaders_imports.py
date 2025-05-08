@@ -24,8 +24,8 @@ def test_successful_imports():
 
 def test_stub_classes_used_when_imports_fail():
     """Test that stub classes are used when imports fail."""
-    with patch("llm_rag.document_processing.loaders._MODULAR_IMPORT_SUCCESS", False):
-        with patch("llm_rag.document_processing.loaders.FileLoader") as mock_file_loader:
+    with patch('llm_rag.document_processing.loaders._MODULAR_IMPORT_SUCCESS', False):
+        with patch('llm_rag.document_processing.loaders.FileLoader') as mock_file_loader:
             # Configure mock to return a regular class instance instead of a Protocol
             mock_instance = mock_file_loader.return_value
             mock_instance.load.return_value = []
@@ -35,7 +35,7 @@ def test_stub_classes_used_when_imports_fail():
 
             # No need to instantiate FileLoader as we've patched it
             # Test load_document functionality instead
-            result = load_document("test.txt")
+            result = load_document('test.txt')
 
             # In mock/stub mode, it should return None or empty list
             assert result is None or (isinstance(result, list) and len(result) == 0)

@@ -26,7 +26,7 @@ from src.llm_rag.rag.pipeline.pipeline_builder import RAGPipelineBuilder
 from src.llm_rag.vectorstore.chroma import ChromaVectorStore
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -40,7 +40,7 @@ def load_documents(docs_dir: str) -> List[Dict]:
         List of loaded documents
 
     """
-    logger.info(f"Loading documents from {docs_dir}")
+    logger.info(f'Loading documents from {docs_dir}')
 
     # Create directory loader
     loader = DirectoryLoader(docs_dir)
@@ -48,17 +48,17 @@ def load_documents(docs_dir: str) -> List[Dict]:
     # Load documents
     documents = loader.load()
 
-    logger.info(f"Loaded {len(documents)} documents")
+    logger.info(f'Loaded {len(documents)} documents')
 
     # Print document summary
     for i, doc in enumerate(documents[:3], start=1):
-        metadata = doc.get("metadata", {})
-        source = metadata.get("source", "Unknown")
-        content_len = len(doc.get("content", ""))
-        logger.info(f"Document {i}: {source} ({content_len} characters)")
+        metadata = doc.get('metadata', {})
+        source = metadata.get('source', 'Unknown')
+        content_len = len(doc.get('content', ''))
+        logger.info(f'Document {i}: {source} ({content_len} characters)')
 
     if len(documents) > 3:
-        logger.info(f"... and {len(documents) - 3} more documents")
+        logger.info(f'... and {len(documents) - 3} more documents')
 
     return documents
 
@@ -73,7 +73,7 @@ def process_documents(documents: List[Dict]) -> List[Dict]:
         List of processed document chunks
 
     """
-    logger.info("Processing documents")
+    logger.info('Processing documents')
 
     # Create text splitter
     text_splitter = TextSplitter(
@@ -87,7 +87,7 @@ def process_documents(documents: List[Dict]) -> List[Dict]:
     # Process documents
     processed_docs = processor.process(documents)
 
-    logger.info(f"Created {len(processed_docs)} document chunks")
+    logger.info(f'Created {len(processed_docs)} document chunks')
 
     return processed_docs
 
@@ -95,7 +95,7 @@ def process_documents(documents: List[Dict]) -> List[Dict]:
 def build_vectorstore(
     documents: List[Dict],
     output_dir: str,
-    collection_name: str = "documents",
+    collection_name: str = 'documents',
 ) -> ChromaVectorStore:
     """Build a vector store from the processed documents.
 
@@ -108,7 +108,7 @@ def build_vectorstore(
         Initialized vector store
 
     """
-    logger.info(f"Building vector store in {output_dir}")
+    logger.info(f'Building vector store in {output_dir}')
 
     # Create directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
@@ -124,9 +124,9 @@ def build_vectorstore(
     doc_metadatas = []
 
     for doc in documents:
-        if isinstance(doc, dict) and "content" in doc:
-            content = doc.get("content", "")
-            metadata = doc.get("metadata", {})
+        if isinstance(doc, dict) and 'content' in doc:
+            content = doc.get('content', '')
+            metadata = doc.get('metadata', {})
 
             # Clean metadata - ensure all values are strings, ints, floats, or bools
             clean_metadata = {}
@@ -146,19 +146,19 @@ def build_vectorstore(
 
     # Add documents to vector store
     if doc_contents:
-        logger.info(f"Adding {len(doc_contents)} documents to vector store")
+        logger.info(f'Adding {len(doc_contents)} documents to vector store')
         vectorstore.add_documents(documents=doc_contents, metadatas=doc_metadatas)
     else:
-        logger.warning("No valid documents to add to vector store")
+        logger.warning('No valid documents to add to vector store')
 
-    logger.info(f"Vector store built with {vectorstore.get_collection_size()} documents")
+    logger.info(f'Vector store built with {vectorstore.get_collection_size()} documents')
 
     return vectorstore
 
 
 def load_vectorstore(
     output_dir: str,
-    collection_name: str = "documents",
+    collection_name: str = 'documents',
 ) -> ChromaVectorStore:
     """Load an existing vector store.
 
@@ -170,7 +170,7 @@ def load_vectorstore(
         Loaded vector store
 
     """
-    logger.info(f"Loading vector store from {output_dir}")
+    logger.info(f'Loading vector store from {output_dir}')
 
     # Initialize vector store from existing data
     vectorstore = ChromaVectorStore(
@@ -180,14 +180,14 @@ def load_vectorstore(
 
     # Get collection stats
     collection_size = vectorstore.get_collection_size()
-    logger.info(f"Vector store loaded with {collection_size} documents")
+    logger.info(f'Vector store loaded with {collection_size} documents')
 
     return vectorstore
 
 
 def setup_rag_pipeline(
     vectorstore: ChromaVectorStore,
-    model_name: str = "llama3",
+    model_name: str = 'llama3',
     top_k: int = 5,
     apply_anti_hallucination: bool = True,
 ) -> RAGPipeline:
@@ -203,7 +203,7 @@ def setup_rag_pipeline(
         Configured RAG pipeline
 
     """
-    logger.info(f"Setting up RAG pipeline with Ollama model: {model_name}")
+    logger.info(f'Setting up RAG pipeline with Ollama model: {model_name}')
 
     # Create model factory
     factory = ModelFactory()
@@ -214,10 +214,10 @@ def setup_rag_pipeline(
             model_path_or_name=model_name,
             backend=ModelBackend.OLLAMA,
         )
-        logger.info(f"Successfully initialized Ollama model: {model_name}")
+        logger.info(f'Successfully initialized Ollama model: {model_name}')
     except Exception as e:
-        logger.error(f"Error initializing Ollama model: {e}")
-        raise RuntimeError(f"Failed to initialize Ollama model: {e}") from e
+        logger.error(f'Error initializing Ollama model: {e}')
+        raise RuntimeError(f'Failed to initialize Ollama model: {e}') from e
 
     # Create RAG pipeline using the builder pattern
     builder = RAGPipelineBuilder()
@@ -228,7 +228,7 @@ def setup_rag_pipeline(
         .build()
     )
 
-    logger.info("RAG pipeline created successfully")
+    logger.info('RAG pipeline created successfully')
 
     return pipeline
 
@@ -241,7 +241,7 @@ def analyze_response(response: str, context: str) -> None:
         context: Retrieved context used for generation
 
     """
-    print("\n===== RESPONSE ANALYSIS =====")
+    print('\n===== RESPONSE ANALYSIS =====')
 
     # Extract entities from response and context
     response_entities = extract_key_entities(response)
@@ -257,19 +257,19 @@ def analyze_response(response: str, context: str) -> None:
         coverage_ratio = 1.0
 
     # Print analysis results
-    print(f"Entity coverage: {coverage_ratio:.2f}")
-    print(f"Entities in response: {len(response_entities)}")
-    print(f"Entities in context: {len(context_entities)}")
-    print(f"Potentially hallucinated entities: {len(missing_entities)}")
+    print(f'Entity coverage: {coverage_ratio:.2f}')
+    print(f'Entities in response: {len(response_entities)}')
+    print(f'Entities in context: {len(context_entities)}')
+    print(f'Potentially hallucinated entities: {len(missing_entities)}')
 
     if missing_entities:
-        print("\nEntities not found in context:")
+        print('\nEntities not found in context:')
         for entity in missing_entities[:10]:
-            print(f"  - {entity}")
+            print(f'  - {entity}')
         if len(missing_entities) > 10:
-            print(f"  ... and {len(missing_entities) - 10} more")
+            print(f'  ... and {len(missing_entities) - 10} more')
 
-    print("===============================\n")
+    print('===============================\n')
 
 
 def interactive_rag_session(
@@ -283,10 +283,10 @@ def interactive_rag_session(
         anti_hallucination_config: Configuration for anti-hallucination
 
     """
-    print("\n==== RAG Interactive Session ====")
+    print('\n==== RAG Interactive Session ====')
     print("Type 'exit' or 'quit' to end the session")
     print("Type 'toggle' to toggle anti-hallucination")
-    print("===============================")
+    print('===============================')
 
     # Default anti-hallucination config
     if anti_hallucination_config is None:
@@ -303,16 +303,16 @@ def interactive_rag_session(
         # Get user query
         query = input("\nEnter your query (or 'exit' to quit): ")
 
-        if query.lower() in ("exit", "quit"):
+        if query.lower() in ('exit', 'quit'):
             break
 
-        if query.lower() == "toggle":
+        if query.lower() == 'toggle':
             use_anti_hallucination = not use_anti_hallucination
-            print(f"\nAnti-hallucination features: {'ON' if use_anti_hallucination else 'OFF'}")
+            print(f'\nAnti-hallucination features: {"ON" if use_anti_hallucination else "OFF"}')
             continue
 
         # Process the query
-        print("\nProcessing query...")
+        print('\nProcessing query...')
         start_time = time.time()
 
         try:
@@ -321,11 +321,11 @@ def interactive_rag_session(
 
             # Extract response and context
             if isinstance(result, dict):
-                response = result.get("response", "No response generated")
-                context = result.get("context", "")
+                response = result.get('response', 'No response generated')
+                context = result.get('context', '')
             else:
                 response = result
-                context = ""
+                context = ''
 
             # Apply post-processing if enabled
             if use_anti_hallucination and context:
@@ -336,62 +336,62 @@ def interactive_rag_session(
                     return_metadata=True,
                 )
                 # Print the processed response
-                print("\n===== PROCESSED RESPONSE =====")
+                print('\n===== PROCESSED RESPONSE =====')
                 print(processed_response)
 
                 # Analyze the response
                 analyze_response(response, context)
             else:
                 # Print the raw response
-                print("\n===== RAW RESPONSE =====")
+                print('\n===== RAW RESPONSE =====')
                 print(response)
 
             # Print time taken
             elapsed_time = time.time() - start_time
-            print(f"\nQuery processed in {elapsed_time:.2f} seconds")
+            print(f'\nQuery processed in {elapsed_time:.2f} seconds')
 
         except Exception as e:
-            logger.error(f"Error processing query: {e}")
-            print(f"\nError: {str(e)}")
+            logger.error(f'Error processing query: {e}')
+            print(f'\nError: {str(e)}')
 
 
 def main():
     """Run the main function."""
-    parser = argparse.ArgumentParser(description="End-to-End RAG Pipeline Test")
+    parser = argparse.ArgumentParser(description='End-to-End RAG Pipeline Test')
 
     parser.add_argument(
-        "--docs-dir",
+        '--docs-dir',
         type=str,
-        default="data/documents/test_subset",
-        help="Directory containing documents",
+        default='data/documents/test_subset',
+        help='Directory containing documents',
     )
     parser.add_argument(
-        "--output-dir",
+        '--output-dir',
         type=str,
-        default="chroma_db_test",
-        help="Directory to store the vector database",
+        default='chroma_db_test',
+        help='Directory to store the vector database',
     )
     parser.add_argument(
-        "--model",
+        '--model',
         type=str,
-        default="llama3",
-        help="Ollama model name (default: llama3)",
+        default='llama3',
+        help='Ollama model name (default: llama3)',
     )
     parser.add_argument(
-        "--top-k",
+        '--top-k',
         type=int,
         default=5,
-        help="Number of documents to retrieve",
+        help='Number of documents to retrieve',
     )
     parser.add_argument(
-        "--skip-build",
-        action="store_true",
-        help="Skip building the vector store if it exists",
+        '--skip-build',
+        action='store_true',
+        help='Skip building the vector store if it exists',
     )
     parser.add_argument(
-        "--no-anti-hallucination",
-        action="store_true",
-        help="Disable anti-hallucination features",
+        '--no-anti-hallucination',
+        action='store_true',
+        help='Disable anti-hallucination features',
     )
 
     args = parser.parse_args()
@@ -412,7 +412,7 @@ def main():
             )
         else:
             # Load existing vector store
-            logger.info(f"Using existing vector store at {args.output_dir}")
+            logger.info(f'Using existing vector store at {args.output_dir}')
             vectorstore = load_vectorstore(args.output_dir)
 
         # Set up RAG pipeline
@@ -427,12 +427,12 @@ def main():
         interactive_rag_session(pipeline)
 
     except Exception as e:
-        logger.error(f"Error during RAG testing: {e}", exc_info=True)
-        print(f"Error: {e}")
+        logger.error(f'Error during RAG testing: {e}', exc_info=True)
+        print(f'Error: {e}')
         return 1
 
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

@@ -27,7 +27,7 @@ class TestHallucinationConfig:
         config = HallucinationConfig()
         assert config.entity_threshold == 0.7
         assert config.embedding_threshold == 0.75
-        assert config.model_name == "paraphrase-MiniLM-L6-v2"
+        assert config.model_name == 'paraphrase-MiniLM-L6-v2'
         assert config.entity_weight == 0.6
         assert config.human_review_threshold == 0.5
         assert config.entity_critical_threshold == 0.3
@@ -40,7 +40,7 @@ class TestHallucinationConfig:
         config = HallucinationConfig(
             entity_threshold=0.8,
             embedding_threshold=0.85,
-            model_name="custom-model",
+            model_name='custom-model',
             entity_weight=0.7,
             human_review_threshold=0.6,
             entity_critical_threshold=0.2,
@@ -51,7 +51,7 @@ class TestHallucinationConfig:
 
         assert config.entity_threshold == 0.8
         assert config.embedding_threshold == 0.85
-        assert config.model_name == "custom-model"
+        assert config.model_name == 'custom-model'
         assert config.entity_weight == 0.7
         assert config.human_review_threshold == 0.6
         assert config.entity_critical_threshold == 0.2
@@ -65,7 +65,7 @@ class TestEntityFunctions:
 
     def test_extract_key_entities(self):
         """Test entity extraction functionality."""
-        text = "Apple Inc. and Microsoft are major technology companies based in the United States."
+        text = 'Apple Inc. and Microsoft are major technology companies based in the United States.'
         entities = extract_key_entities(text)
 
         # In stub implementation, expect empty set
@@ -74,14 +74,14 @@ class TestEntityFunctions:
 
     def test_extract_key_entities_with_languages(self):
         """Test entity extraction with language specification."""
-        text = "Berlin ist die Hauptstadt von Deutschland."
-        entities = extract_key_entities(text, languages=["de"])
+        text = 'Berlin ist die Hauptstadt von Deutschland.'
+        entities = extract_key_entities(text, languages=['de'])
         assert isinstance(entities, set)
 
     def test_verify_entities_in_context(self):
         """Test entity verification in context."""
-        response = "Apple is a technology company."
-        context = "Apple Inc. is an American multinational technology company headquartered in Cupertino, California."
+        response = 'Apple is a technology company.'
+        context = 'Apple Inc. is an American multinational technology company headquartered in Cupertino, California.'
 
         verified, coverage, missing = verify_entities_in_context(response, context)
 
@@ -96,8 +96,8 @@ class TestEntityFunctions:
 
     def test_verify_entities_with_custom_threshold(self):
         """Test entity verification with custom threshold."""
-        response = "Microsoft is a software company."
-        context = "Microsoft Corporation is an American multinational technology company."
+        response = 'Microsoft is a software company.'
+        context = 'Microsoft Corporation is an American multinational technology company.'
 
         verified, coverage, missing = verify_entities_in_context(response, context, threshold=0.8)
 
@@ -112,7 +112,7 @@ class TestEmbeddingFunctions:
 
     def test_get_sentence_transformer_model(self):
         """Test sentence transformer model loading."""
-        model = get_sentence_transformer_model("paraphrase-MiniLM-L6-v2")
+        model = get_sentence_transformer_model('paraphrase-MiniLM-L6-v2')
 
         # In stub implementation, expect None
         # In actual implementation, would expect a model object
@@ -120,8 +120,8 @@ class TestEmbeddingFunctions:
 
     def test_embedding_based_verification(self):
         """Test embedding-based verification."""
-        response = "The cat sat on the mat."
-        context = "A feline was resting on a small carpet."
+        response = 'The cat sat on the mat.'
+        context = 'A feline was resting on a small carpet.'
 
         verified, similarity = embedding_based_verification(response, context)
 
@@ -134,10 +134,10 @@ class TestEmbeddingFunctions:
 
     def test_embedding_based_verification_with_custom_threshold(self):
         """Test embedding-based verification with custom threshold."""
-        response = "The dog played in the yard."
-        context = "A canine was enjoying time in the garden."
+        response = 'The dog played in the yard.'
+        context = 'A canine was enjoying time in the garden.'
 
-        verified, similarity = embedding_based_verification(response, context, threshold=0.8, model_name="custom-model")
+        verified, similarity = embedding_based_verification(response, context, threshold=0.8, model_name='custom-model')
 
         # In stub implementation, expect verified=True, similarity=1.0
         assert verified is True
@@ -149,8 +149,8 @@ class TestAdvancedVerification:
 
     def test_advanced_verify_response(self):
         """Test advanced response verification."""
-        response = "The company released a new smartphone."
-        context = "Apple Inc. announced a new iPhone model during their annual event."
+        response = 'The company released a new smartphone.'
+        context = 'Apple Inc. announced a new iPhone model during their annual event.'
 
         result = advanced_verify_response(response, context)
 
@@ -170,10 +170,10 @@ class TestAdvancedVerification:
 
     def test_advanced_verify_with_config(self):
         """Test advanced verification with custom config."""
-        response = "The car has good fuel efficiency."
-        context = "The vehicle has excellent gas mileage and eco-friendly features."
+        response = 'The car has good fuel efficiency.'
+        context = 'The vehicle has excellent gas mileage and eco-friendly features.'
 
-        config = HallucinationConfig(entity_threshold=0.6, embedding_threshold=0.7, model_name="custom-model")
+        config = HallucinationConfig(entity_threshold=0.6, embedding_threshold=0.7, model_name='custom-model')
 
         result = advanced_verify_response(response, context, config=config)
         verified, entity_coverage, embedding_sim, missing_entities = result
@@ -229,18 +229,18 @@ class TestHumanReviewFunctions:
     def test_generate_verification_warning(self):
         """Test warning message generation."""
         # Basic test
-        warning1 = generate_verification_warning(missing_entities=["Apple", "iPhone"], coverage_ratio=0.6)
+        warning1 = generate_verification_warning(missing_entities=['Apple', 'iPhone'], coverage_ratio=0.6)
         assert isinstance(warning1, str)
 
         # Test with embedding similarity and human review flag
         warning2 = generate_verification_warning(
-            missing_entities=["Microsoft", "Windows"], coverage_ratio=0.5, embeddings_sim=0.7, human_review=True
+            missing_entities=['Microsoft', 'Windows'], coverage_ratio=0.5, embeddings_sim=0.7, human_review=True
         )
         assert isinstance(warning2, str)
 
         # In stub implementation, expect empty strings
-        assert warning1 == ""
-        assert warning2 == ""
+        assert warning1 == ''
+        assert warning2 == ''
 
 
 class TestPostProcessingFunctions:
@@ -248,8 +248,8 @@ class TestPostProcessingFunctions:
 
     def test_post_process_response(self):
         """Test response post-processing."""
-        response = "The algorithm has O(n log n) complexity."
-        context = "Quick sort has a time complexity of O(n log n) in the average case."
+        response = 'The algorithm has O(n log n) complexity.'
+        context = 'Quick sort has a time complexity of O(n log n) in the average case.'
 
         # Basic test
         processed = post_process_response(response, context)
@@ -266,8 +266,8 @@ class TestPostProcessingFunctions:
 
     def test_post_process_with_config(self):
         """Test post-processing with custom config."""
-        response = "The GPU utilizes CUDA cores."
-        context = "NVIDIA GPUs contain CUDA cores for parallel processing."
+        response = 'The GPU utilizes CUDA cores.'
+        context = 'NVIDIA GPUs contain CUDA cores for parallel processing.'
 
         config = HallucinationConfig(entity_threshold=0.6, embedding_threshold=0.65, flag_for_human_review=True)
 
@@ -279,8 +279,8 @@ class TestPostProcessingFunctions:
 
     def test_post_process_with_custom_params(self):
         """Test post-processing with individual custom parameters."""
-        response = "The framework supports deep learning."
-        context = "PyTorch is a machine learning framework that supports neural networks."
+        response = 'The framework supports deep learning.'
+        context = 'PyTorch is a machine learning framework that supports neural networks.'
 
         processed = post_process_response(
             response,
@@ -288,10 +288,10 @@ class TestPostProcessingFunctions:
             threshold=0.6,
             entity_threshold=0.7,
             embedding_threshold=0.8,
-            model_name="custom-model",
+            model_name='custom-model',
             human_review_threshold=0.5,
             flag_for_human_review=True,
-            languages=["en"],
+            languages=['en'],
         )
         assert isinstance(processed, str)
 
@@ -309,34 +309,34 @@ class TestUtilityFunctions:
         assert isinstance(stopwords_en, set)
 
         # Specific language
-        stopwords_de = load_stopwords(language="de")
+        stopwords_de = load_stopwords(language='de')
         assert isinstance(stopwords_de, set)
 
         # In stub implementation, expect empty sets
         assert stopwords_en == set()
         assert stopwords_de == set()
 
-    @patch("llm_rag.rag.anti_hallucination.load_stopwords")
+    @patch('llm_rag.rag.anti_hallucination.load_stopwords')
     def test_load_specific_stopwords(self, mock_load_stopwords):
         """Test that stopwords are loaded for a specific language."""
         # Mock the response for German stopwords
-        mock_german_stopwords = {"der", "die", "das", "und", "oder"}
+        mock_german_stopwords = {'der', 'die', 'das', 'und', 'oder'}
         mock_load_stopwords.return_value = mock_german_stopwords
 
         # Import the module to get access to the function that will use the mock
         from llm_rag.rag.anti_hallucination import load_stopwords as load_fn
 
         # Call the function through the imported reference
-        result = load_fn(language="de")
+        result = load_fn(language='de')
 
         # Verify the mock was called with the correct language
-        mock_load_stopwords.assert_called_once_with(language="de")
+        mock_load_stopwords.assert_called_once_with(language='de')
 
         # Verify the result
         assert result == mock_german_stopwords
-        assert "der" in result
-        assert "die" in result
-        assert "das" in result
+        assert 'der' in result
+        assert 'die' in result
+        assert 'das' in result
 
 
 class TestModuleImports:
@@ -358,18 +358,18 @@ class TestModuleImports:
 
             # Verify a warning would be emitted by calling the warning code directly
             with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
+                warnings.simplefilter('always')
 
                 # Execute the warning code directly
                 if not llm_rag.rag.anti_hallucination._MODULAR_IMPORT_SUCCESS:
                     warnings.warn(
-                        "Using stub implementation for anti-hallucination module. Functionality will be limited.",
+                        'Using stub implementation for anti-hallucination module. Functionality will be limited.',
                         stacklevel=2,
                     )
 
                 # Check that the warning was issued
                 assert len(w) == 1
-                assert "stub implementation" in str(w[0].message)
+                assert 'stub implementation' in str(w[0].message)
 
         finally:
             # Restore the original module state

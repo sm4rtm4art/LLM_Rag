@@ -23,7 +23,7 @@ def extract_key_entities(text: str, languages: List[str] = None) -> Set[str]:
 
     """
     if languages is None:
-        languages = ["en"]
+        languages = ['en']
 
     # Combine stopwords from all specified languages
     stop_words = set()
@@ -31,16 +31,16 @@ def extract_key_entities(text: str, languages: List[str] = None) -> Set[str]:
         stop_words.update(load_stopwords(lang))
 
     # Extract words (min 4 chars; includes German umlauts and ß)
-    words = re.findall(r"\b[a-zA-ZäöüßÄÖÜ0-9_-]{4,}\b", text.lower())
+    words = re.findall(r'\b[a-zA-ZäöüßÄÖÜ0-9_-]{4,}\b', text.lower())
     entities = {word for word in words if word not in stop_words}
 
     # Add special handling for DIN standard references
     din_pattern = (
-        r"\b(?:DIN|EN|ISO|IEC|CEN|TR)\s*[-_]?\s*\d+"
-        r"(?:[-_]\d+)*\b"
+        r'\b(?:DIN|EN|ISO|IEC|CEN|TR)\s*[-_]?\s*\d+'
+        r'(?:[-_]\d+)*\b'
     )
     din_refs = re.findall(din_pattern, text)
-    entities.update([ref.replace(" ", "").lower() for ref in din_refs])
+    entities.update([ref.replace(' ', '').lower() for ref in din_refs])
 
     return entities
 

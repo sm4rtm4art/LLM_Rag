@@ -11,52 +11,52 @@ from llm_rag.utils.logging import setup_logging
 
 def main():
     """Run the OCR pipeline with LLM cleaning example."""
-    parser = argparse.ArgumentParser(description="OCR with LLM text cleaning")
-    parser.add_argument("pdf_path", type=str, help="Path to the PDF file to process")
+    parser = argparse.ArgumentParser(description='OCR with LLM text cleaning')
+    parser.add_argument('pdf_path', type=str, help='Path to the PDF file to process')
     parser.add_argument(
-        "--output-dir", type=str, default=None, help="Directory to save output files (default: output/ocr/)"
+        '--output-dir', type=str, default=None, help='Directory to save output files (default: output/ocr/)'
     )
     parser.add_argument(
-        "--format",
+        '--format',
         type=str,
-        choices=["markdown", "json", "txt"],
-        default="markdown",
-        help="Output format (default: markdown)",
+        choices=['markdown', 'json', 'txt'],
+        default='markdown',
+        help='Output format (default: markdown)',
     )
     parser.add_argument(
-        "--model", type=str, default="gemma-2b", help="LLM model to use for cleaning (default: gemma-2b)"
+        '--model', type=str, default='gemma-2b', help='LLM model to use for cleaning (default: gemma-2b)'
     )
     parser.add_argument(
-        "--model-backend",
+        '--model-backend',
         type=str,
-        choices=["ollama", "huggingface", "llama_cpp"],
-        default="ollama",
-        help="Backend to use for the model (default: ollama)",
+        choices=['ollama', 'huggingface', 'llama_cpp'],
+        default='ollama',
+        help='Backend to use for the model (default: ollama)',
     )
-    parser.add_argument("--languages", type=str, default="eng", help="OCR language(s), comma-separated (default: eng)")
+    parser.add_argument('--languages', type=str, default='eng', help='OCR language(s), comma-separated (default: eng)')
     parser.add_argument(
-        "--min-error-rate",
+        '--min-error-rate',
         type=float,
         default=0.05,
-        help="Only apply LLM cleaning when estimated error rate is above this threshold",
+        help='Only apply LLM cleaning when estimated error rate is above this threshold',
     )
     parser.add_argument(
-        "--confidence-threshold",
+        '--confidence-threshold',
         type=float,
         default=0.8,
-        help="Only apply LLM cleaning when OCR confidence is below this threshold",
+        help='Only apply LLM cleaning when OCR confidence is below this threshold',
     )
-    parser.add_argument("--no-llm-cleaning", action="store_true", help="Disable LLM cleaning (for comparison)")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
+    parser.add_argument('--no-llm-cleaning', action='store_true', help='Disable LLM cleaning (for comparison)')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
 
     args = parser.parse_args()
 
     # Configure logging
-    log_level = "debug" if args.verbose else "info"
+    log_level = 'debug' if args.verbose else 'info'
     setup_logging(level=log_level)
 
     # Parse languages
-    languages = args.languages.split(",")
+    languages = args.languages.split(',')
     if len(languages) == 1:
         languages = languages[0]
 
@@ -89,7 +89,7 @@ def main():
     try:
         pdf_path = Path(args.pdf_path)
         if not pdf_path.exists():
-            print(f"Error: PDF file not found: {pdf_path}")
+            print(f'Error: PDF file not found: {pdf_path}')
             return 1
 
         # Determine output directory
@@ -97,9 +97,9 @@ def main():
             output_dir = Path(args.output_dir)
         else:
             # Create a structured output directory based on processing type
-            base_output_dir = Path("output/ocr")
+            base_output_dir = Path('output/ocr')
             # Use subdirectory based on whether LLM cleaning is enabled
-            subdir = "with_llm" if not args.no_llm_cleaning else "without_llm"
+            subdir = 'with_llm' if not args.no_llm_cleaning else 'without_llm'
             # Use format as another subdirectory level
             format_dir = args.format
             # Combine to create final output path
@@ -108,24 +108,24 @@ def main():
         # Create the output directory if it doesn't exist
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        print(f"Processing PDF: {pdf_path}")
-        print(f"LLM cleaning {'enabled' if not args.no_llm_cleaning else 'disabled'}")
-        print(f"Output directory: {output_dir}")
+        print(f'Processing PDF: {pdf_path}')
+        print(f'LLM cleaning {"enabled" if not args.no_llm_cleaning else "disabled"}')
+        print(f'Output directory: {output_dir}')
 
         if args.no_llm_cleaning:
-            print("Running without LLM cleaning...")
+            print('Running without LLM cleaning...')
         else:
-            print(f"Using LLM model: {args.model} with backend: {args.model_backend}")
-            print(f"Error rate threshold: {args.min_error_rate}")
-            print(f"Confidence threshold: {args.confidence_threshold}")
+            print(f'Using LLM model: {args.model} with backend: {args.model_backend}')
+            print(f'Error rate threshold: {args.min_error_rate}')
+            print(f'Confidence threshold: {args.confidence_threshold}')
 
         output_path = pipeline.process_and_save(pdf_path, output_dir, args.format)
 
-        print(f"Processing complete! Output saved to: {output_path}")
+        print(f'Processing complete! Output saved to: {output_path}')
         return 0
 
     except Exception as e:
-        print(f"Error processing PDF: {str(e)}")
+        print(f'Error processing PDF: {str(e)}')
         if args.verbose:
             import traceback
 
@@ -147,16 +147,16 @@ def process_directory(input_dir, output_dir=None, **kwargs):
     """
     input_path = Path(input_dir)
     if not input_path.exists() or not input_path.is_dir():
-        print(f"Error: Input directory not found: {input_path}")
+        print(f'Error: Input directory not found: {input_path}')
         return 0
 
     # Find all PDF files
-    pdf_files = list(input_path.glob("**/*.pdf"))
+    pdf_files = list(input_path.glob('**/*.pdf'))
     if not pdf_files:
-        print(f"No PDF files found in {input_path}")
+        print(f'No PDF files found in {input_path}')
         return 0
 
-    print(f"Found {len(pdf_files)} PDF files to process")
+    print(f'Found {len(pdf_files)} PDF files to process')
     successful = 0
 
     for pdf_file in pdf_files:
@@ -165,14 +165,14 @@ def process_directory(input_dir, output_dir=None, **kwargs):
             sys_args = [str(pdf_file)]
 
             if output_dir:
-                sys_args.extend(["--output-dir", str(output_dir)])
+                sys_args.extend(['--output-dir', str(output_dir)])
 
             # Add any other kwargs as command-line arguments
             for key, value in kwargs.items():
                 if value is True:  # For boolean flags
-                    sys_args.append(f"--{key.replace('_', '-')}")
+                    sys_args.append(f'--{key.replace("_", "-")}')
                 elif value is not False:  # Skip if False
-                    sys_args.append(f"--{key.replace('_', '-')}")
+                    sys_args.append(f'--{key.replace("_", "-")}')
                     sys_args.append(str(value))
 
             # Save original sys.argv
@@ -193,13 +193,13 @@ def process_directory(input_dir, output_dir=None, **kwargs):
                 sys.argv = original_argv
 
         except Exception as e:
-            print(f"Error processing {pdf_file}: {str(e)}")
+            print(f'Error processing {pdf_file}: {str(e)}')
 
-    print(f"Successfully processed {successful} out of {len(pdf_files)} PDF files")
+    print(f'Successfully processed {successful} out of {len(pdf_files)} PDF files')
     return successful
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Check if we're processing a directory
     if len(sys.argv) > 1 and os.path.isdir(sys.argv[1]):
         # First argument is a directory

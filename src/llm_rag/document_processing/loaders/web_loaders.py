@@ -26,8 +26,8 @@ class WebLoader(DocumentLoader):
         """
         self.web_path = web_path
         self.kwargs = kwargs
-        self.timeout = kwargs.get("timeout", 10)
-        self.headers = kwargs.get("headers", {})
+        self.timeout = kwargs.get('timeout', 10)
+        self.headers = kwargs.get('headers', {})
 
     def load(self) -> List[Dict[str, Any]]:
         """Load content from web URL.
@@ -39,7 +39,7 @@ class WebLoader(DocumentLoader):
         try:
             import requests
 
-            logger.info(f"Loading web content from: {self.web_path}")
+            logger.info(f'Loading web content from: {self.web_path}')
             response = requests.get(self.web_path, timeout=self.timeout, headers=self.headers)
             response.raise_for_status()
 
@@ -47,65 +47,65 @@ class WebLoader(DocumentLoader):
             try:
                 from bs4 import BeautifulSoup
 
-                soup = BeautifulSoup(response.text, "html.parser")
+                soup = BeautifulSoup(response.text, 'html.parser')
 
                 # Try to extract title if available
                 title = None
-                title_tag = soup.find("title")
+                title_tag = soup.find('title')
                 if title_tag:
                     title = title_tag.get_text().strip()
 
                 # Remove script and style elements that contain JavaScript/CSS
-                for script in soup(["script", "style"]):
+                for script in soup(['script', 'style']):
                     script.extract()
 
                 # Get the text content
-                text = soup.get_text(separator=" ", strip=True)
+                text = soup.get_text(separator=' ', strip=True)
 
                 metadata = {
-                    "source": self.web_path,
-                    "type": "web",
-                    "status_code": response.status_code,
+                    'source': self.web_path,
+                    'type': 'web',
+                    'status_code': response.status_code,
                 }
 
                 if title:
-                    metadata["title"] = title
+                    metadata['title'] = title
 
-                return [{"content": text, "metadata": metadata}]
+                return [{'content': text, 'metadata': metadata}]
             except ImportError:
                 # If BeautifulSoup isn't available, just use the raw HTML
-                logger.warning("BeautifulSoup not available. Using raw HTML.")
+                logger.warning('BeautifulSoup not available. Using raw HTML.')
                 return [
                     {
-                        "content": response.text,
-                        "metadata": {
-                            "source": self.web_path,
-                            "type": "web_raw",
-                            "status_code": response.status_code,
+                        'content': response.text,
+                        'metadata': {
+                            'source': self.web_path,
+                            'type': 'web_raw',
+                            'status_code': response.status_code,
                         },
                     }
                 ]
         except ImportError:
-            logger.warning("Requests library not available. Web content cannot be retrieved.")
+            logger.warning('Requests library not available. Web content cannot be retrieved.')
             return [
                 {
-                    "content": f"Web content unavailable. URL: {self.web_path}",
-                    "metadata": {
-                        "source": self.web_path,
-                        "type": "web",
-                        "error": "Web libraries not available",
+                    'content': f'Web content unavailable. URL: {self.web_path}',
+                    'metadata': {
+                        'source': self.web_path,
+                        'type': 'web',
+                        'error': 'Web libraries not available',
                     },
                 }
             ]
         except Exception as e:
-            logger.error(f"Error loading web content from {self.web_path}: {e}")
+            logger.error(f'Error loading web content from {self.web_path}: {e}')
             return [
                 {
-                    "content": f"Error retrieving web content: {str(e)}",
-                    "metadata": {
-                        "source": self.web_path,
-                        "type": "web",
-                        "error": str(e),
+                    'content': f'Error retrieving web content: {str(e)}',
+                    'metadata': {
+                        'source': self.web_path,
+                        'type': 'web',
+                        'error': str(e),
                     },
                 }
             ]
@@ -114,7 +114,7 @@ class WebLoader(DocumentLoader):
 class WebPageLoader(WebLoader):
     """Enhanced loader for web pages with additional capabilities."""
 
-    def __init__(self, web_path=None, url=None, headers=None, encoding="utf-8", **kwargs):
+    def __init__(self, web_path=None, url=None, headers=None, encoding='utf-8', **kwargs):
         """Initialize the WebPageLoader.
 
         Args:
@@ -135,18 +135,18 @@ class WebPageLoader(WebLoader):
         if web_path is None and url is not None:
             web_path = url
         elif web_path is None and url is None:
-            raise ValueError("Either web_path or url must be provided")
+            raise ValueError('Either web_path or url must be provided')
 
         # Set up default headers if not provided
         if headers is None:
-            headers = {"User-Agent": "LLM-RAG WebPageLoader/1.0"}
+            headers = {'User-Agent': 'LLM-RAG WebPageLoader/1.0'}
 
         # Pass headers to parent
         super().__init__(web_path, headers=headers, **kwargs)
 
-        self.include_images = kwargs.get("include_images", False)
-        self.extract_metadata = kwargs.get("extract_metadata", True)
-        self.output_format = kwargs.get("output_format", "text")
+        self.include_images = kwargs.get('include_images', False)
+        self.extract_metadata = kwargs.get('extract_metadata', True)
+        self.output_format = kwargs.get('output_format', 'text')
 
         # For compatibility with tests
         self.url = web_path
@@ -166,7 +166,7 @@ class WebPageLoader(WebLoader):
         try:
             import requests
 
-            logger.info(f"Loading web page from: {self.web_path}")
+            logger.info(f'Loading web page from: {self.web_path}')
             response = requests.get(self.web_path, timeout=self.timeout, headers=self.headers, verify=True)
 
             # This will raise ValueError for non-200 status
@@ -176,7 +176,7 @@ class WebPageLoader(WebLoader):
             try:
                 from bs4 import BeautifulSoup
 
-                soup = BeautifulSoup(response.text, "html.parser")
+                soup = BeautifulSoup(response.text, 'html.parser')
 
                 # Extract page title
                 title = None
@@ -184,10 +184,10 @@ class WebPageLoader(WebLoader):
                     title = soup.title.string.strip()
 
                 # Extract page content based on output format
-                if self.output_format == "html":
+                if self.output_format == 'html':
                     # Return HTML content
                     content = str(soup)
-                elif self.output_format == "markdown":
+                elif self.output_format == 'markdown':
                     # Convert to markdown if possible
                     try:
                         import html2text
@@ -195,46 +195,46 @@ class WebPageLoader(WebLoader):
                         h2t = html2text.HTML2Text()
                         content = h2t.handle(str(soup))
                     except ImportError:
-                        logger.warning("html2text not available. Using plain text.")
-                        content = soup.get_text(separator="\n", strip=True)
+                        logger.warning('html2text not available. Using plain text.')
+                        content = soup.get_text(separator='\n', strip=True)
                 else:
                     # Default to plain text
-                    content = soup.get_text(separator="\n", strip=True)
+                    content = soup.get_text(separator='\n', strip=True)
 
                 # Extract metadata
                 metadata = {
-                    "source": self.web_path,
-                    "title": title,
-                    "content_type": response.headers.get("Content-Type", "text/html"),
-                    "status_code": response.status_code,
+                    'source': self.web_path,
+                    'title': title,
+                    'content_type': response.headers.get('Content-Type', 'text/html'),
+                    'status_code': response.status_code,
                 }
 
-                return [{"content": content, "metadata": metadata}]
+                return [{'content': content, 'metadata': metadata}]
 
             except ImportError:
-                logger.warning("BeautifulSoup not available. Using raw HTML.")
+                logger.warning('BeautifulSoup not available. Using raw HTML.')
 
                 # Process without BeautifulSoup
                 content = response.text
 
                 metadata = {
-                    "source": self.web_path,
-                    "content_type": response.headers.get("Content-Type", "text/html"),
-                    "status_code": response.status_code,
+                    'source': self.web_path,
+                    'content_type': response.headers.get('Content-Type', 'text/html'),
+                    'status_code': response.status_code,
                 }
 
-                return [{"content": content, "metadata": metadata}]
+                return [{'content': content, 'metadata': metadata}]
 
         except (ConnectionError, ValueError) as e:
             # Re-raise these specific errors for the tests to catch
-            logger.error(f"Error in WebPageLoader for {self.web_path}: {str(e)}")
+            logger.error(f'Error in WebPageLoader for {self.web_path}: {str(e)}')
             raise
 
         except Exception as e:
-            logger.error(f"Error in WebPageLoader for {self.web_path}: {str(e)}")
+            logger.error(f'Error in WebPageLoader for {self.web_path}: {str(e)}')
             return [
                 {
-                    "content": f"Error loading content from {self.web_path}: {str(e)}",
-                    "metadata": {"source": self.web_path, "error": str(e)},
+                    'content': f'Error loading content from {self.web_path}: {str(e)}',
+                    'metadata': {'source': self.web_path, 'error': str(e)},
                 }
             ]

@@ -11,12 +11,12 @@ import os
 import sys
 
 # Add the project root to the path so we can import the llm_rag module
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
 
@@ -31,33 +31,33 @@ def setup_arg_parser() -> argparse.ArgumentParser:
         An argument parser for the download script.
 
     """
-    parser = argparse.ArgumentParser(description="Download LLM models for RAG demo")
+    parser = argparse.ArgumentParser(description='Download LLM models for RAG demo')
 
     parser.add_argument(
-        "--model",
+        '--model',
         type=str,
-        default="llama-2-7b-chat.Q4_K_M.gguf",
-        help="Model filename to download",
+        default='llama-2-7b-chat.Q4_K_M.gguf',
+        help='Model filename to download',
     )
 
     parser.add_argument(
-        "--repo",
+        '--repo',
         type=str,
-        default="TheBloke/Llama-2-7B-Chat-GGUF",
-        help="HuggingFace repository containing the model",
+        default='TheBloke/Llama-2-7B-Chat-GGUF',
+        help='HuggingFace repository containing the model',
     )
 
     parser.add_argument(
-        "--output-dir",
+        '--output-dir',
         type=str,
-        default="models",
-        help="Directory to save the model",
+        default='models',
+        help='Directory to save the model',
     )
 
     parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Force download even if the model already exists",
+        '--force',
+        action='store_true',
+        help='Force download even if the model already exists',
     )
 
     return parser
@@ -85,12 +85,12 @@ def download_model(repo_id: str, filename: str, output_dir: str, force: bool = F
 
     # Check if file already exists
     if os.path.exists(output_path) and not force:
-        print(f"Model {filename} already exists at {output_path}")
-        print("Use --force to download anyway")
+        print(f'Model {filename} already exists at {output_path}')
+        print('Use --force to download anyway')
         return True
 
-    print(f"Downloading {filename} from {repo_id}")
-    print("This may take a while depending on the model size...")
+    print(f'Downloading {filename} from {repo_id}')
+    print('This may take a while depending on the model size...')
 
     try:
         # Download the model using huggingface_hub
@@ -101,10 +101,10 @@ def download_model(repo_id: str, filename: str, output_dir: str, force: bool = F
             local_dir_use_symlinks=False,
         )
 
-        print(f"Successfully downloaded {filename} to {output_path}")
+        print(f'Successfully downloaded {filename} to {output_path}')
         return True
     except Exception as e:
-        print(f"Error downloading model: {e}")
+        print(f'Error downloading model: {e}')
         return False
 
 
@@ -126,12 +126,12 @@ def main() -> None:
     )
 
     if success:
-        print("\nYou can now use the model with the RAG demo:")
-        print(f"python demo_llm_rag.py --model-path {os.path.join(args.output_dir, args.model)}")
+        print('\nYou can now use the model with the RAG demo:')
+        print(f'python demo_llm_rag.py --model-path {os.path.join(args.output_dir, args.model)}')
     else:
-        print("\nModel download failed. Please check your internet connection or repository/filename.")
+        print('\nModel download failed. Please check your internet connection or repository/filename.')
         sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

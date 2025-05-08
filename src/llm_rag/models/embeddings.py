@@ -17,7 +17,7 @@ class EmbeddingModel:
     using pretrained sentence-transformer models.
     """
 
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2", device: Optional[str] = None) -> None:
+    def __init__(self, model_name: str = 'all-MiniLM-L6-v2', device: Optional[str] = None) -> None:
         """Initialize the embedding model.
 
         Args:

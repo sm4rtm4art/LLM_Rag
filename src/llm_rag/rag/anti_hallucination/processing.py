@@ -103,27 +103,27 @@ def generate_verification_warning(
 
     """
     if not missing_entities:
-        return ""
+        return ''
 
-    confidence_level = "low" if coverage_ratio < 0.5 else "moderate"
+    confidence_level = 'low' if coverage_ratio < 0.5 else 'moderate'
 
     warning = (
-        "\n\n[SYSTEM WARNING: This response may contain hallucinated "
-        f"information. Confidence level: {confidence_level}. "
-        f"The following terms were not found in the retrieved documents: "
-        f"{', '.join(missing_entities[:5])}"
+        '\n\n[SYSTEM WARNING: This response may contain hallucinated '
+        f'information. Confidence level: {confidence_level}. '
+        f'The following terms were not found in the retrieved documents: '
+        f'{", ".join(missing_entities[:5])}'
     )
 
     if len(missing_entities) > 5:
-        warning += f" and {len(missing_entities) - 5} more"
+        warning += f' and {len(missing_entities) - 5} more'
 
     if embeddings_sim is not None:
-        warning += f". Semantic similarity score: {embeddings_sim:.2f}"
+        warning += f'. Semantic similarity score: {embeddings_sim:.2f}'
 
     if human_review:
-        warning += ". This response has been flagged for expert review"
+        warning += '. This response has been flagged for expert review'
 
-    warning += ". Please verify this information from other sources.]"
+    warning += '. Please verify this information from other sources.]'
 
     return warning
 
@@ -228,12 +228,12 @@ def post_process_response(
 
     # Create metadata for caller
     metadata = {
-        "verified": verified,
-        "entity_coverage": entity_cov,
-        "embeddings_similarity": embeddings_sim,
-        "missing_entities": missing_entities,
-        "hallucination_score": hallucination_score,
-        "human_review_recommended": requires_review,
+        'verified': verified,
+        'entity_coverage': entity_cov,
+        'embeddings_similarity': embeddings_sim,
+        'missing_entities': missing_entities,
+        'hallucination_score': hallucination_score,
+        'human_review_recommended': requires_review,
     }
 
     if return_metadata:

@@ -17,17 +17,17 @@ class TestPDFImageConverterIntegration(unittest.TestCase):
     def setUpClass(cls):
         """Set up test fixtures before running tests."""
         # Create a test PDF file
-        cls.test_dir = Path("tests/data/pdfs")
+        cls.test_dir = Path('tests/data/pdfs')
         cls.test_dir.mkdir(parents=True, exist_ok=True)
 
-        cls.valid_pdf_path = cls.test_dir / "valid_test.pdf"
+        cls.valid_pdf_path = cls.test_dir / 'valid_test.pdf'
         cls.create_test_pdf(cls.valid_pdf_path)
 
-        cls.invalid_pdf_path = cls.test_dir / "invalid_test.pdf"
-        with open(cls.invalid_pdf_path, "w") as f:
-            f.write("This is not a valid PDF file")
+        cls.invalid_pdf_path = cls.test_dir / 'invalid_test.pdf'
+        with open(cls.invalid_pdf_path, 'w') as f:
+            f.write('This is not a valid PDF file')
 
-        cls.nonexistent_pdf_path = cls.test_dir / "nonexistent.pdf"
+        cls.nonexistent_pdf_path = cls.test_dir / 'nonexistent.pdf'
 
         # Create a converter instance
         cls.converter = PDFImageConverter()
@@ -49,7 +49,7 @@ class TestPDFImageConverterIntegration(unittest.TestCase):
 
         # Add some text to the page
         text_rect = fitz.Rect(100, 100, 500, 150)
-        page.insert_text(text_rect.tl, "This is a test PDF document for OCR testing", fontsize=12)
+        page.insert_text(text_rect.tl, 'This is a test PDF document for OCR testing', fontsize=12)
 
         # Add some shapes
         page.draw_rect(fitz.Rect(100, 200, 500, 250), color=(0, 0, 1), fill=(1, 1, 0))
@@ -71,7 +71,7 @@ class TestPDFImageConverterIntegration(unittest.TestCase):
         for page_num, image in images:
             self.assertEqual(page_num, 0)  # First and only page
             self.assertIsInstance(image, Image.Image)
-            self.assertEqual(image.mode, "RGB")
+            self.assertEqual(image.mode, 'RGB')
             self.assertTrue(image.width > 0)
             self.assertTrue(image.height > 0)
 
@@ -84,7 +84,7 @@ class TestPDFImageConverterIntegration(unittest.TestCase):
         """Test converting a specific page from PDF."""
         image = self.converter.convert_pdf_page_to_image(self.valid_pdf_path, 1)  # 1-indexed
         self.assertIsInstance(image, Image.Image)
-        self.assertEqual(image.mode, "RGB")
+        self.assertEqual(image.mode, 'RGB')
 
     def test_nonexistent_pdf(self):
         """Test handling a nonexistent PDF file."""
@@ -115,5 +115,5 @@ class TestPDFImageConverterIntegration(unittest.TestCase):
         self.assertGreater(image_high_dpi.height, image_standard.height)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

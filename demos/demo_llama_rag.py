@@ -23,7 +23,7 @@ import os
 import sys
 
 # Add the current directory to the path so we can import the src module
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import RAG components
 from llm_rag.models.factory import ModelBackend, ModelFactory  # noqa: E402
@@ -31,58 +31,58 @@ from llm_rag.rag.pipeline import ConversationalRAGPipeline, RAGPipeline  # noqa:
 from llm_rag.vectorstore.chroma import ChromaVectorStore  # noqa: E402
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
 def setup_arg_parser() -> argparse.ArgumentParser:
     """Set up the argument parser for the demo script."""
-    parser = argparse.ArgumentParser(description="Demo script for the LLM RAG system using a local LLM.")
+    parser = argparse.ArgumentParser(description='Demo script for the LLM RAG system using a local LLM.')
     parser.add_argument(
-        "--model-path",
+        '--model-path',
         type=str,
-        default="models/llama-2-7b-chat.Q4_K_M.gguf",
-        help="Path to the model file or Hugging Face model name",
+        default='models/llama-2-7b-chat.Q4_K_M.gguf',
+        help='Path to the model file or Hugging Face model name',
     )
     parser.add_argument(
-        "--db-dir",
+        '--db-dir',
         type=str,
-        default="chroma_db",
-        help="Directory containing the ChromaDB vector store",
+        default='chroma_db',
+        help='Directory containing the ChromaDB vector store',
     )
     parser.add_argument(
-        "--collection-name",
+        '--collection-name',
         type=str,
-        default="documents",
-        help="Name of the collection in ChromaDB",
+        default='documents',
+        help='Name of the collection in ChromaDB',
     )
     parser.add_argument(
-        "--backend",
+        '--backend',
         type=str,
-        choices=["llamacpp", "huggingface"],
-        default="llamacpp",
-        help="Backend to use for the model (llamacpp or huggingface)",
+        choices=['llamacpp', 'huggingface'],
+        default='llamacpp',
+        help='Backend to use for the model (llamacpp or huggingface)',
     )
     parser.add_argument(
-        "--device",
+        '--device',
         type=str,
-        default="mps",
-        help="Device to use for the model (mps for Mac, cuda for NVIDIA)",
+        default='mps',
+        help='Device to use for the model (mps for Mac, cuda for NVIDIA)',
     )
     parser.add_argument(
-        "--interactive",
-        action="store_true",
-        help="Run in interactive mode",
+        '--interactive',
+        action='store_true',
+        help='Run in interactive mode',
     )
     parser.add_argument(
-        "--query",
+        '--query',
         type=str,
-        help="Query to run (if not in interactive mode)",
+        help='Query to run (if not in interactive mode)',
     )
     parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable verbose output",
+        '--verbose',
+        action='store_true',
+        help='Enable verbose output',
     )
     return parser
 
@@ -91,7 +91,7 @@ def setup_llm(args: argparse.Namespace):
     """Set up the language model."""
     try:
         # Create the model using the factory
-        backend = ModelBackend.LLAMACPP if args.backend == "llamacpp" else ModelBackend.HUGGINGFACE
+        backend = ModelBackend.LLAMACPP if args.backend == 'llamacpp' else ModelBackend.HUGGINGFACE
         llm = ModelFactory.create_model(
             model_path_or_name=args.model_path,
             backend=backend,
@@ -103,18 +103,18 @@ def setup_llm(args: argparse.Namespace):
         )
         return llm
     except Exception as e:
-        logger.error(f"Error setting up LLM: {e}")
+        logger.error(f'Error setting up LLM: {e}')
         sys.exit(1)
 
 
 def setup_vector_store(args: argparse.Namespace) -> ChromaVectorStore:
     """Set up the vector store."""
     if not os.path.exists(args.db_dir):
-        print(f"Error: Vector store directory not found at {args.db_dir}")
-        print("Please ingest some documents first.")
+        print(f'Error: Vector store directory not found at {args.db_dir}')
+        print('Please ingest some documents first.')
         sys.exit(1)
 
-    print(f"Loading vector store from {args.db_dir}...")
+    print(f'Loading vector store from {args.db_dir}...')
     vector_store = ChromaVectorStore(
         persist_directory=args.db_dir,
         collection_name=args.collection_name,
@@ -125,34 +125,34 @@ def setup_vector_store(args: argparse.Namespace) -> ChromaVectorStore:
 def run_interactive_mode(rag_pipeline: ConversationalRAGPipeline) -> None:
     """Run the RAG pipeline in interactive mode."""
     print("\nEntering interactive mode. Type 'exit' to quit.")
-    print("Type your query and press Enter.")
+    print('Type your query and press Enter.')
 
     while True:
         try:
-            query = input("\nQuery: ")
-            if query.lower() in ["exit", "quit", "q"]:
+            query = input('\nQuery: ')
+            if query.lower() in ['exit', 'quit', 'q']:
                 break
 
             if not query.strip():
                 continue
 
-            print("Thinking...")
+            print('Thinking...')
             response = rag_pipeline.query(query)
-            print(f"\nResponse: {response}")
+            print(f'\nResponse: {response}')
 
         except KeyboardInterrupt:
-            print("\nExiting...")
+            print('\nExiting...')
             break
         except Exception as e:
-            print(f"Error: {e}")
+            print(f'Error: {e}')
 
 
 def run_single_query(rag_pipeline: RAGPipeline, query: str) -> None:
     """Run a single query through the RAG pipeline."""
-    print(f"Query: {query}")
-    print("Thinking...")
+    print(f'Query: {query}')
+    print('Thinking...')
     response = rag_pipeline.query(query)
-    print(f"\nResponse: {response}")
+    print(f'\nResponse: {response}')
 
 
 def main() -> None:
@@ -162,7 +162,7 @@ def main() -> None:
 
     # Validate arguments
     if not args.interactive and not args.query:
-        parser.error("Either --interactive or --query must be specified")
+        parser.error('Either --interactive or --query must be specified')
 
     # Set up the language model
     llm = setup_llm(args)
@@ -172,14 +172,14 @@ def main() -> None:
 
     # Create the RAG pipeline
     if args.interactive:
-        print("Creating conversational RAG pipeline...")
+        print('Creating conversational RAG pipeline...')
         rag_pipeline = ConversationalRAGPipeline(
             vector_store=vector_store,
             llm_chain=llm,
         )
         run_interactive_mode(rag_pipeline)
     else:
-        print("Creating RAG pipeline...")
+        print('Creating RAG pipeline...')
         rag_pipeline = RAGPipeline(
             vector_store=vector_store,
             llm_chain=llm,
@@ -187,5 +187,5 @@ def main() -> None:
         run_single_query(rag_pipeline, args.query)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

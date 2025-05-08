@@ -33,7 +33,7 @@ class RAGPipelineBuilder:
     def __init__(self):
         """Initialize an empty pipeline builder."""
         # Pipeline type and components
-        self._pipeline_type = "standard"  # or "conversational"
+        self._pipeline_type = 'standard'  # or "conversational"
         self._retriever = None
         self._formatter = None
         self._generator = None
@@ -48,31 +48,31 @@ class RAGPipelineBuilder:
         self._template = None
         self._llm = None
 
-        logger.debug("Initialized RAGPipelineBuilder")
+        logger.debug('Initialized RAGPipelineBuilder')
 
     # Pipeline type setters
-    def with_standard_pipeline(self) -> "RAGPipelineBuilder":
+    def with_standard_pipeline(self) -> 'RAGPipelineBuilder':
         """Configure as a standard RAG pipeline.
 
         Returns:
             Self for method chaining
 
         """
-        self._pipeline_type = "standard"
+        self._pipeline_type = 'standard'
         return self
 
-    def with_conversational_pipeline(self) -> "RAGPipelineBuilder":
+    def with_conversational_pipeline(self) -> 'RAGPipelineBuilder':
         """Configure as a conversational RAG pipeline.
 
         Returns:
             Self for method chaining
 
         """
-        self._pipeline_type = "conversational"
+        self._pipeline_type = 'conversational'
         return self
 
     # Component configuration methods
-    def with_vector_retriever(self, vectorstore: VectorStore, top_k: int = 5) -> "RAGPipelineBuilder":
+    def with_vector_retriever(self, vectorstore: VectorStore, top_k: int = 5) -> 'RAGPipelineBuilder':
         """Configure a vector store retriever.
 
         Args:
@@ -84,15 +84,15 @@ class RAGPipelineBuilder:
 
         """
         self._retriever_config = {
-            "type": "vector",
-            "source": vectorstore,
-            "top_k": top_k,
+            'type': 'vector',
+            'source': vectorstore,
+            'top_k': top_k,
         }
         return self
 
     def with_hybrid_retriever(
         self, retrievers: List[BaseRetriever], weights: Optional[List[float]] = None
-    ) -> "RAGPipelineBuilder":
+    ) -> 'RAGPipelineBuilder':
         """Configure a hybrid retriever.
 
         Args:
@@ -104,13 +104,13 @@ class RAGPipelineBuilder:
 
         """
         self._retriever_config = {
-            "type": "hybrid",
-            "source": retrievers,
-            "weights": weights,
+            'type': 'hybrid',
+            'source': retrievers,
+            'weights': weights,
         }
         return self
 
-    def with_custom_retriever(self, retriever: BaseRetriever) -> "RAGPipelineBuilder":
+    def with_custom_retriever(self, retriever: BaseRetriever) -> 'RAGPipelineBuilder':
         """Configure a custom retriever.
 
         Args:
@@ -125,7 +125,7 @@ class RAGPipelineBuilder:
 
     def with_simple_formatter(
         self, include_metadata: bool = True, max_length: Optional[int] = None
-    ) -> "RAGPipelineBuilder":
+    ) -> 'RAGPipelineBuilder':
         """Configure a simple context formatter.
 
         Args:
@@ -137,15 +137,15 @@ class RAGPipelineBuilder:
 
         """
         self._formatter_config = {
-            "type": "simple",
-            "include_metadata": include_metadata,
-            "max_length": max_length,
+            'type': 'simple',
+            'include_metadata': include_metadata,
+            'max_length': max_length,
         }
         return self
 
     def with_markdown_formatter(
         self, include_metadata: bool = True, max_length: Optional[int] = None
-    ) -> "RAGPipelineBuilder":
+    ) -> 'RAGPipelineBuilder':
         """Configure a markdown context formatter.
 
         Args:
@@ -157,13 +157,13 @@ class RAGPipelineBuilder:
 
         """
         self._formatter_config = {
-            "type": "markdown",
-            "include_metadata": include_metadata,
-            "max_length": max_length,
+            'type': 'markdown',
+            'include_metadata': include_metadata,
+            'max_length': max_length,
         }
         return self
 
-    def with_custom_formatter(self, formatter: BaseContextFormatter) -> "RAGPipelineBuilder":
+    def with_custom_formatter(self, formatter: BaseContextFormatter) -> 'RAGPipelineBuilder':
         """Configure a custom formatter.
 
         Args:
@@ -181,7 +181,7 @@ class RAGPipelineBuilder:
         llm: BaseLanguageModel,
         prompt_template: Optional[Union[str, PromptTemplate]] = None,
         apply_anti_hallucination: bool = True,
-    ) -> "RAGPipelineBuilder":
+    ) -> 'RAGPipelineBuilder':
         """Configure an LLM generator.
 
         Args:
@@ -195,9 +195,9 @@ class RAGPipelineBuilder:
         """
         self._llm = llm
         self._generator_config = {
-            "type": "llm",
-            "prompt_template": prompt_template,
-            "apply_anti_hallucination": apply_anti_hallucination,
+            'type': 'llm',
+            'prompt_template': prompt_template,
+            'apply_anti_hallucination': apply_anti_hallucination,
         }
         return self
 
@@ -205,9 +205,9 @@ class RAGPipelineBuilder:
         self,
         llm: BaseLanguageModel,
         templates: Dict[str, Union[str, PromptTemplate]],
-        default_template: str = "default",
+        default_template: str = 'default',
         apply_anti_hallucination: bool = True,
-    ) -> "RAGPipelineBuilder":
+    ) -> 'RAGPipelineBuilder':
         """Configure a templated generator with multiple templates.
 
         Args:
@@ -222,14 +222,14 @@ class RAGPipelineBuilder:
         """
         self._llm = llm
         self._generator_config = {
-            "type": "templated",
-            "templates": templates,
-            "default_template": default_template,
-            "apply_anti_hallucination": apply_anti_hallucination,
+            'type': 'templated',
+            'templates': templates,
+            'default_template': default_template,
+            'apply_anti_hallucination': apply_anti_hallucination,
         }
         return self
 
-    def with_custom_generator(self, generator: BaseGenerator) -> "RAGPipelineBuilder":
+    def with_custom_generator(self, generator: BaseGenerator) -> 'RAGPipelineBuilder':
         """Configure a custom generator.
 
         Args:
@@ -243,7 +243,7 @@ class RAGPipelineBuilder:
         return self
 
     # Pipeline configuration methods
-    def with_config(self, **kwargs) -> "RAGPipelineBuilder":
+    def with_config(self, **kwargs) -> 'RAGPipelineBuilder':
         """Set additional pipeline configuration.
 
         Args:
@@ -271,38 +271,38 @@ class RAGPipelineBuilder:
             # Create components if not already provided
             if not self._retriever:
                 if not self._retriever_config:
-                    raise ValueError("Retriever configuration is required")
+                    raise ValueError('Retriever configuration is required')
 
-                retriever_type = self._retriever_config.pop("type")
-                source = self._retriever_config.pop("source", None)
+                retriever_type = self._retriever_config.pop('type')
+                source = self._retriever_config.pop('source', None)
                 self._retriever = rag_factory.create_retriever(
                     retriever_type=retriever_type, source=source, **self._retriever_config
                 )
 
             if not self._formatter:
-                formatter_type = self._formatter_config.pop("type", "simple")
+                formatter_type = self._formatter_config.pop('type', 'simple')
                 self._formatter = rag_factory.create_formatter(formatter_type=formatter_type, **self._formatter_config)
 
             if not self._generator:
                 if not self._llm:
-                    raise ValueError("Language model (llm) is required")
+                    raise ValueError('Language model (llm) is required')
                 elif not self._generator_config:
-                    raise ValueError("Generator configuration is required")
+                    raise ValueError('Generator configuration is required')
 
-                generator_type = self._generator_config.pop("type", "llm")
+                generator_type = self._generator_config.pop('type', 'llm')
                 self._generator = rag_factory.create_generator(
                     generator_type=generator_type, llm=self._llm, **self._generator_config
                 )
 
             # Create appropriate pipeline type
-            if self._pipeline_type == "conversational":
+            if self._pipeline_type == 'conversational':
                 pipeline = ConversationalRAGPipeline(
                     retriever=self._retriever,
                     formatter=self._formatter,
                     generator=self._generator,
                     **self._pipeline_config,
                 )
-                logger.info("Built ConversationalRAGPipeline")
+                logger.info('Built ConversationalRAGPipeline')
             else:
                 pipeline = RAGPipeline(
                     retriever=self._retriever,
@@ -310,18 +310,18 @@ class RAGPipelineBuilder:
                     generator=self._generator,
                     **self._pipeline_config,
                 )
-                logger.info("Built RAGPipeline")
+                logger.info('Built RAGPipeline')
 
             return pipeline
 
         except ValueError as e:
             # Re-raise ValueError for missing components or configuration
-            logger.error(f"Error building RAG pipeline: {str(e)}")
+            logger.error(f'Error building RAG pipeline: {str(e)}')
             raise
         except Exception as e:
             # Wrap other errors in PipelineError
-            logger.error(f"Error building RAG pipeline: {str(e)}")
-            raise PipelineError(f"Failed to build RAG pipeline: {str(e)}", original_exception=e) from e
+            logger.error(f'Error building RAG pipeline: {str(e)}')
+            raise PipelineError(f'Failed to build RAG pipeline: {str(e)}', original_exception=e) from e
 
 
 # Create a builder function for easy access

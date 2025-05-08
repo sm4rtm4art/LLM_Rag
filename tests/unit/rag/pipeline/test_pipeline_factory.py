@@ -16,25 +16,25 @@ class TestPipelineFactory:
     def test_module_exports(self):
         """Test that the module exports all expected classes and functions."""
         # Essential exports from directly imported module
-        assert hasattr(PipelineType, "STANDARD")
-        assert hasattr(PipelineType, "CONVERSATIONAL")
+        assert hasattr(PipelineType, 'STANDARD')
+        assert hasattr(PipelineType, 'CONVERSATIONAL')
         assert callable(create_pipeline)
 
-    @patch("llm_rag.rag.pipeline.pipeline_factory.RagPipelineFactory")
+    @patch('llm_rag.rag.pipeline.pipeline_factory.RagPipelineFactory')
     def test_create_pipeline_calls_factory(self, mock_factory_cls):
         """Test that create_pipeline delegates to the RagPipelineFactory."""
         # Setup
         mock_factory = MagicMock()
         mock_factory_cls.return_value = mock_factory
-        mock_factory.create.return_value = "mock_pipeline"
+        mock_factory.create.return_value = 'mock_pipeline'
 
         # Call the function
-        result = create_pipeline(pipeline_type="standard", config={"key": "value"})
+        result = create_pipeline(pipeline_type='standard', config={'key': 'value'})
 
         # Verify factory was created and called correctly
-        mock_factory_cls.assert_called_once_with({"key": "value"})
-        mock_factory.create.assert_called_once_with("standard")
-        assert result == "mock_pipeline"
+        mock_factory_cls.assert_called_once_with({'key': 'value'})
+        mock_factory.create.assert_called_once_with('standard')
+        assert result == 'mock_pipeline'
 
     def test_pipeline_type_enum(self):
         """Test the PipelineType enum."""
@@ -43,8 +43,8 @@ class TestPipelineFactory:
         assert isinstance(PipelineType.CONVERSATIONAL.value, str)
 
         # Check enum string values
-        assert PipelineType.STANDARD.value == "standard"
-        assert PipelineType.CONVERSATIONAL.value == "conversational"
+        assert PipelineType.STANDARD.value == 'standard'
+        assert PipelineType.CONVERSATIONAL.value == 'conversational'
 
     def test_factory_init_with_empty_config(self):
         """Test factory initialization with empty config."""
@@ -53,11 +53,11 @@ class TestPipelineFactory:
 
     def test_factory_init_with_config(self):
         """Test factory initialization with a config dictionary."""
-        config = {"param1": "value1", "param2": "value2"}
+        config = {'param1': 'value1', 'param2': 'value2'}
         factory = RagPipelineFactory(config)
         assert factory.config == config
 
-    @patch("llm_rag.rag.pipeline.pipeline_factory.RAGPipeline")
+    @patch('llm_rag.rag.pipeline.pipeline_factory.RAGPipeline')
     def test_create_standard_pipeline(self, mock_pipeline_cls):
         """Test creating a standard pipeline."""
         # Setup mocks
@@ -67,14 +67,14 @@ class TestPipelineFactory:
         mock_llm = MagicMock(spec=BaseLanguageModel)
 
         # Mock the entire RagPipelineFactory class to avoid the issue
-        with patch("llm_rag.rag.pipeline.pipeline_factory.RagPipelineFactory") as mock_factory_cls:
+        with patch('llm_rag.rag.pipeline.pipeline_factory.RagPipelineFactory') as mock_factory_cls:
             # Set up a fake factory that returns our mock pipeline
             mock_factory = MagicMock()
             mock_factory_cls.return_value = mock_factory
             mock_factory.create.return_value = mock_pipeline
 
             # Use the create_pipeline function which will use our mocked factory
-            config = {"vectorstore": mock_vectorstore, "llm": mock_llm, "top_k": 5}
+            config = {'vectorstore': mock_vectorstore, 'llm': mock_llm, 'top_k': 5}
             result = create_pipeline(PipelineType.STANDARD, config)
 
             # Verify the factory was created and called correctly
@@ -82,7 +82,7 @@ class TestPipelineFactory:
             mock_factory.create.assert_called_once_with(PipelineType.STANDARD)
             assert result == mock_pipeline
 
-    @patch("llm_rag.rag.pipeline.pipeline_factory.ConversationalRAGPipeline")
+    @patch('llm_rag.rag.pipeline.pipeline_factory.ConversationalRAGPipeline')
     def test_create_conversational_pipeline(self, mock_pipeline_cls):
         """Test creating a conversational pipeline."""
         # Setup mocks
@@ -92,14 +92,14 @@ class TestPipelineFactory:
         mock_llm = MagicMock(spec=BaseLanguageModel)
 
         # Mock the entire RagPipelineFactory class to avoid the issue
-        with patch("llm_rag.rag.pipeline.pipeline_factory.RagPipelineFactory") as mock_factory_cls:
+        with patch('llm_rag.rag.pipeline.pipeline_factory.RagPipelineFactory') as mock_factory_cls:
             # Set up a fake factory that returns our mock pipeline
             mock_factory = MagicMock()
             mock_factory_cls.return_value = mock_factory
             mock_factory.create.return_value = mock_pipeline
 
             # Use the create_pipeline function which will use our mocked factory
-            config = {"vectorstore": mock_vectorstore, "llm": mock_llm, "max_history_length": 3}
+            config = {'vectorstore': mock_vectorstore, 'llm': mock_llm, 'max_history_length': 3}
             result = create_pipeline(PipelineType.CONVERSATIONAL, config)
 
             # Verify the factory was created and called correctly
@@ -112,45 +112,45 @@ class TestPipelineFactory:
         # Setup
         mock_vectorstore = MagicMock(spec=VectorStore)
         mock_llm = MagicMock(spec=BaseLanguageModel)
-        config = {"vectorstore": mock_vectorstore, "llm": mock_llm}
+        config = {'vectorstore': mock_vectorstore, 'llm': mock_llm}
         mock_pipeline = MagicMock()
 
         # Mock the factory directly
-        with patch("llm_rag.rag.pipeline.pipeline_factory.RagPipelineFactory") as mock_factory_cls:
+        with patch('llm_rag.rag.pipeline.pipeline_factory.RagPipelineFactory') as mock_factory_cls:
             # Set up our factory mock
             mock_factory = MagicMock()
             mock_factory_cls.return_value = mock_factory
             mock_factory.create.return_value = mock_pipeline
 
             # Call the function with a string pipeline type
-            result = create_pipeline("standard", config)
+            result = create_pipeline('standard', config)
 
             # Verify the factory was created and called correctly
             mock_factory_cls.assert_called_once_with(config)
-            mock_factory.create.assert_called_once_with("standard")
+            mock_factory.create.assert_called_once_with('standard')
             assert result == mock_pipeline
 
     def test_create_with_invalid_pipeline_type(self):
         """Test creating a pipeline with invalid pipeline type."""
-        factory = RagPipelineFactory({"vectorstore": MagicMock(), "llm": MagicMock()})
+        factory = RagPipelineFactory({'vectorstore': MagicMock(), 'llm': MagicMock()})
 
         # Verify that an invalid type raises ValueError
         with pytest.raises(ValueError) as excinfo:
-            factory.create("invalid_type")
+            factory.create('invalid_type')
 
         # Check error message
-        assert "Unknown pipeline type" in str(excinfo.value)
+        assert 'Unknown pipeline type' in str(excinfo.value)
 
     def test_create_without_vectorstore(self):
         """Test creating a pipeline without vectorstore."""
         # This test verifies that missing vectorstore raises ValueError
-        config = {"llm": MagicMock(spec=BaseLanguageModel)}
+        config = {'llm': MagicMock(spec=BaseLanguageModel)}
 
         # Create a real factory to test validation
         factory = RagPipelineFactory(config)
 
         # Mock the actual RAGPipeline so we don't need to worry about the constructor
-        with patch("llm_rag.rag.pipeline.pipeline_factory.RAGPipeline"):
+        with patch('llm_rag.rag.pipeline.pipeline_factory.RAGPipeline'):
             # Verify the check for missing vectorstore
             with pytest.raises(ValueError) as excinfo:
                 try:
@@ -160,18 +160,18 @@ class TestPipelineFactory:
                     raise e.original_exception from e
 
             # Check error message
-            assert "vectorstore is required" in str(excinfo.value)
+            assert 'vectorstore is required' in str(excinfo.value)
 
     def test_create_without_llm(self):
         """Test creating a pipeline without llm."""
         # This test verifies that missing LLM raises ValueError
-        config = {"vectorstore": MagicMock(spec=VectorStore)}
+        config = {'vectorstore': MagicMock(spec=VectorStore)}
 
         # Create a real factory to test validation
         factory = RagPipelineFactory(config)
 
         # Mock the actual RAGPipeline so we don't need to worry about the constructor
-        with patch("llm_rag.rag.pipeline.pipeline_factory.RAGPipeline"):
+        with patch('llm_rag.rag.pipeline.pipeline_factory.RAGPipeline'):
             # Verify the check for missing llm
             with pytest.raises(ValueError) as excinfo:
                 try:
@@ -181,7 +181,7 @@ class TestPipelineFactory:
                     raise e.original_exception from e
 
             # Check error message
-            assert "language model (llm) is required" in str(excinfo.value)
+            assert 'language model (llm) is required' in str(excinfo.value)
 
     def test_create_pipeline_exception_handling(self):
         """Test exception handling during pipeline creation."""
@@ -189,19 +189,19 @@ class TestPipelineFactory:
         factory = RagPipelineFactory({})
 
         # Create a dummy exception we'll expect the factory to wrap
-        expected_exception = Exception("This is a test exception")
+        expected_exception = Exception('This is a test exception')
 
         # Mock the validation functions to pass
-        with patch.object(factory, "config") as mock_config:
+        with patch.object(factory, 'config') as mock_config:
             # Mock the config.get calls to return valid objects for validation
             mock_config.get.side_effect = (
                 lambda key, default=None: MagicMock(spec=VectorStore)
-                if key == "vectorstore"
+                if key == 'vectorstore'
                 else MagicMock(spec=BaseLanguageModel)
             )
 
             # Patch the RAGPipeline constructor to raise our expected exception
-            with patch("llm_rag.rag.pipeline.pipeline_factory.RAGPipeline") as mock_pipeline:
+            with patch('llm_rag.rag.pipeline.pipeline_factory.RAGPipeline') as mock_pipeline:
                 mock_pipeline.side_effect = expected_exception
 
                 # The call should raise a PipelineError wrapping our expected exception
@@ -210,33 +210,33 @@ class TestPipelineFactory:
 
                 # Check that the exception details are correct
                 error = excinfo.value
-                assert "Failed to create standard pipeline" in str(error)
+                assert 'Failed to create standard pipeline' in str(error)
                 # The original exception should be preserved and accessible
                 assert error.original_exception is expected_exception
 
-    @patch("llm_rag.rag.pipeline.pipeline_factory.RagPipelineFactory")
+    @patch('llm_rag.rag.pipeline.pipeline_factory.RagPipelineFactory')
     def test_create_pipeline_with_enum_type(self, mock_factory_cls):
         """Test create_pipeline with PipelineType enum."""
         # Setup
         mock_factory = MagicMock()
         mock_factory_cls.return_value = mock_factory
-        mock_factory.create.return_value = "mock_pipeline"
+        mock_factory.create.return_value = 'mock_pipeline'
 
         # Call the function with enum value
-        result = create_pipeline(pipeline_type=PipelineType.CONVERSATIONAL, config={"key": "value"})
+        result = create_pipeline(pipeline_type=PipelineType.CONVERSATIONAL, config={'key': 'value'})
 
         # Verify factory was created and called correctly
-        mock_factory_cls.assert_called_once_with({"key": "value"})
+        mock_factory_cls.assert_called_once_with({'key': 'value'})
         mock_factory.create.assert_called_once_with(PipelineType.CONVERSATIONAL)
-        assert result == "mock_pipeline"
+        assert result == 'mock_pipeline'
 
-    @patch("llm_rag.rag.pipeline.pipeline_factory.RagPipelineFactory")
+    @patch('llm_rag.rag.pipeline.pipeline_factory.RagPipelineFactory')
     def test_create_pipeline_defaults(self, mock_factory_cls):
         """Test create_pipeline default arguments."""
         # Setup
         mock_factory = MagicMock()
         mock_factory_cls.return_value = mock_factory
-        mock_factory.create.return_value = "mock_pipeline"
+        mock_factory.create.return_value = 'mock_pipeline'
 
         # Call the function with no arguments
         result = create_pipeline()
@@ -244,4 +244,4 @@ class TestPipelineFactory:
         # Verify default values are used
         mock_factory_cls.assert_called_once_with(None)
         mock_factory.create.assert_called_once_with(PipelineType.STANDARD)
-        assert result == "mock_pipeline"
+        assert result == 'mock_pipeline'

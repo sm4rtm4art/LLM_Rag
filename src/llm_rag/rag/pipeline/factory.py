@@ -19,9 +19,9 @@ from .retrieval import BaseRetriever, HybridRetriever, VectorStoreRetriever
 logger = get_logger(__name__)
 
 # Type variables for component types
-R = TypeVar("R", bound=BaseRetriever)
-F = TypeVar("F", bound=BaseContextFormatter)
-G = TypeVar("G", bound=BaseGenerator)
+R = TypeVar('R', bound=BaseRetriever)
+F = TypeVar('F', bound=BaseContextFormatter)
+G = TypeVar('G', bound=BaseGenerator)
 
 
 class ComponentFactory:
@@ -35,26 +35,26 @@ class ComponentFactory:
         """Initialize the component factory with default implementations."""
         # Initialize registries for each component type
         self._retriever_registry: Dict[str, Type[BaseRetriever]] = {
-            "vector": VectorStoreRetriever,
-            "hybrid": HybridRetriever,
+            'vector': VectorStoreRetriever,
+            'hybrid': HybridRetriever,
         }
 
         self._formatter_registry: Dict[str, Type[BaseContextFormatter]] = {
-            "simple": SimpleContextFormatter,
-            "markdown": MarkdownContextFormatter,
-            "html": MarkdownContextFormatter,  # Alias for markdown
+            'simple': SimpleContextFormatter,
+            'markdown': MarkdownContextFormatter,
+            'html': MarkdownContextFormatter,  # Alias for markdown
         }
 
         self._generator_registry: Dict[str, Type[BaseGenerator]] = {
-            "llm": LLMGenerator,
-            "templated": TemplatedGenerator,
+            'llm': LLMGenerator,
+            'templated': TemplatedGenerator,
         }
 
         logger.info(
-            f"ComponentFactory initialized with "
-            f"{len(self._retriever_registry)} retrievers, "
-            f"{len(self._formatter_registry)} formatters, "
-            f"{len(self._generator_registry)} generators"
+            f'ComponentFactory initialized with '
+            f'{len(self._retriever_registry)} retrievers, '
+            f'{len(self._formatter_registry)} formatters, '
+            f'{len(self._generator_registry)} generators'
         )
 
     # Registration methods
@@ -73,7 +73,7 @@ class ComponentFactory:
             raise ValueError(f"Retriever type '{name}' is already registered")
 
         if not issubclass(retriever_class, BaseRetriever):
-            raise ValueError(f"Class {retriever_class.__name__} must inherit from BaseRetriever")
+            raise ValueError(f'Class {retriever_class.__name__} must inherit from BaseRetriever')
 
         self._retriever_registry[name] = retriever_class
         logger.info(f"Registered retriever type '{name}': {retriever_class.__name__}")
@@ -93,7 +93,7 @@ class ComponentFactory:
             raise ValueError(f"Formatter type '{name}' is already registered")
 
         if not issubclass(formatter_class, BaseContextFormatter):
-            raise ValueError(f"Class {formatter_class.__name__} must inherit from BaseContextFormatter")
+            raise ValueError(f'Class {formatter_class.__name__} must inherit from BaseContextFormatter')
 
         self._formatter_registry[name] = formatter_class
         logger.info(f"Registered formatter type '{name}': {formatter_class.__name__}")
@@ -113,7 +113,7 @@ class ComponentFactory:
             raise ValueError(f"Generator type '{name}' is already registered")
 
         if not issubclass(generator_class, BaseGenerator):
-            raise ValueError(f"Class {generator_class.__name__} must inherit from BaseGenerator")
+            raise ValueError(f'Class {generator_class.__name__} must inherit from BaseGenerator')
 
         self._generator_registry[name] = generator_class
         logger.info(f"Registered generator type '{name}': {generator_class.__name__}")
@@ -121,7 +121,7 @@ class ComponentFactory:
     # Factory methods
     def create_retriever(
         self,
-        retriever_type: str = "vector",
+        retriever_type: str = 'vector',
         source: Union[VectorStore, BaseRetriever, List[BaseRetriever]] = None,
         **kwargs,
     ) -> BaseRetriever:
@@ -142,24 +142,24 @@ class ComponentFactory:
         if retriever_type not in self._retriever_registry:
             raise ValueError(
                 f"Unknown retriever type: '{retriever_type}'. "
-                f"Available types: {', '.join(self._retriever_registry.keys())}"
+                f'Available types: {", ".join(self._retriever_registry.keys())}'
             )
 
         retriever_class = self._retriever_registry[retriever_type]
 
         try:
-            if retriever_type == "vector":
+            if retriever_type == 'vector':
                 if not source or not isinstance(source, VectorStore):
-                    raise ValueError("Vector retriever requires a VectorStore source")
+                    raise ValueError('Vector retriever requires a VectorStore source')
 
-                top_k = kwargs.get("top_k", 5)
+                top_k = kwargs.get('top_k', 5)
                 return retriever_class(vectorstore=source, top_k=top_k)
 
-            elif retriever_type == "hybrid":
+            elif retriever_type == 'hybrid':
                 if not source or not isinstance(source, list):
-                    raise ValueError("Hybrid retriever requires a list of retrievers")
+                    raise ValueError('Hybrid retriever requires a list of retrievers')
 
-                weights = kwargs.get("weights", None)
+                weights = kwargs.get('weights', None)
                 return retriever_class(retrievers=source, weights=weights)
 
             else:
@@ -167,10 +167,10 @@ class ComponentFactory:
                 return retriever_class(**kwargs)
 
         except Exception as e:
-            logger.error(f"Error creating {retriever_type} retriever: {str(e)}")
-            raise PipelineError(f"Failed to create retriever: {str(e)}", original_exception=e) from e
+            logger.error(f'Error creating {retriever_type} retriever: {str(e)}')
+            raise PipelineError(f'Failed to create retriever: {str(e)}', original_exception=e) from e
 
-    def create_formatter(self, formatter_type: str = "simple", **kwargs) -> BaseContextFormatter:
+    def create_formatter(self, formatter_type: str = 'simple', **kwargs) -> BaseContextFormatter:
         """Create a context formatter instance.
 
         Args:
@@ -187,17 +187,17 @@ class ComponentFactory:
         if formatter_type not in self._formatter_registry:
             raise ValueError(
                 f"Unknown formatter type: '{formatter_type}'. "
-                f"Available types: {', '.join(self._formatter_registry.keys())}"
+                f'Available types: {", ".join(self._formatter_registry.keys())}'
             )
 
         formatter_class = self._formatter_registry[formatter_type]
 
         try:
-            include_metadata = kwargs.get("include_metadata", True)
-            max_length = kwargs.get("max_length", None)
+            include_metadata = kwargs.get('include_metadata', True)
+            max_length = kwargs.get('max_length', None)
 
-            if formatter_type == "simple":
-                separator = kwargs.get("separator", "\n\n")
+            if formatter_type == 'simple':
+                separator = kwargs.get('separator', '\n\n')
                 return formatter_class(
                     include_metadata=include_metadata,
                     max_length=max_length,
@@ -210,10 +210,10 @@ class ComponentFactory:
                 )
 
         except Exception as e:
-            logger.error(f"Error creating {formatter_type} formatter: {str(e)}")
-            raise PipelineError(f"Failed to create formatter: {str(e)}", original_exception=e) from e
+            logger.error(f'Error creating {formatter_type} formatter: {str(e)}')
+            raise PipelineError(f'Failed to create formatter: {str(e)}', original_exception=e) from e
 
-    def create_generator(self, generator_type: str = "llm", llm: BaseLanguageModel = None, **kwargs) -> BaseGenerator:
+    def create_generator(self, generator_type: str = 'llm', llm: BaseLanguageModel = None, **kwargs) -> BaseGenerator:
         """Create a response generator instance.
 
         Args:
@@ -231,31 +231,31 @@ class ComponentFactory:
         if generator_type not in self._generator_registry:
             raise ValueError(
                 f"Unknown generator type: '{generator_type}'. "
-                f"Available types: {', '.join(self._generator_registry.keys())}"
+                f'Available types: {", ".join(self._generator_registry.keys())}'
             )
 
         if not llm:
-            raise ValueError("Language model (llm) is required for generator creation")
+            raise ValueError('Language model (llm) is required for generator creation')
 
         generator_class = self._generator_registry[generator_type]
 
         try:
-            prompt_template = kwargs.get("prompt_template", None)
-            apply_anti_hallucination = kwargs.get("apply_anti_hallucination", True)
+            prompt_template = kwargs.get('prompt_template', None)
+            apply_anti_hallucination = kwargs.get('apply_anti_hallucination', True)
 
-            if generator_type == "llm":
+            if generator_type == 'llm':
                 return generator_class(
                     llm=llm,
                     prompt_template=prompt_template,
                     apply_anti_hallucination=apply_anti_hallucination,
                 )
 
-            elif generator_type == "templated":
-                templates = kwargs.get("templates")
+            elif generator_type == 'templated':
+                templates = kwargs.get('templates')
                 if not templates:
-                    raise ValueError("Templates dictionary is required for templated generator")
+                    raise ValueError('Templates dictionary is required for templated generator')
 
-                default_template = kwargs.get("default_template", "default")
+                default_template = kwargs.get('default_template', 'default')
                 return generator_class(
                     llm=llm,
                     templates=templates,
@@ -268,8 +268,8 @@ class ComponentFactory:
                 return generator_class(llm=llm, **kwargs)
 
         except Exception as e:
-            logger.error(f"Error creating {generator_type} generator: {str(e)}")
-            raise PipelineError(f"Failed to create generator: {str(e)}", original_exception=e) from e
+            logger.error(f'Error creating {generator_type} generator: {str(e)}')
+            raise PipelineError(f'Failed to create generator: {str(e)}', original_exception=e) from e
 
 
 # Create a global factory instance for easy access

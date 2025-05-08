@@ -31,13 +31,13 @@ def calculate_character_error_rate(ground_truth: str, ocr_text: str, normalize: 
 
     """
     if not ground_truth:
-        logger.warning("Ground truth is empty, returning error rate of 1.0")
+        logger.warning('Ground truth is empty, returning error rate of 1.0')
         return 1.0
 
     if normalize:
         # Remove all whitespace and convert to lowercase to focus on character accuracy
-        truth_chars = "".join(re.sub(r"\s+", "", ground_truth).lower())
-        ocr_chars = "".join(re.sub(r"\s+", "", ocr_text).lower())
+        truth_chars = ''.join(re.sub(r'\s+', '', ground_truth).lower())
+        ocr_chars = ''.join(re.sub(r'\s+', '', ocr_text).lower())
     else:
         truth_chars = ground_truth
         ocr_chars = ocr_text
@@ -69,20 +69,20 @@ def calculate_word_error_rate(ground_truth: str, ocr_text: str, normalize: bool 
 
     """
     if not ground_truth:
-        logger.warning("Ground truth is empty, returning error rate of 1.0")
+        logger.warning('Ground truth is empty, returning error rate of 1.0')
         return 1.0
 
     if normalize:
         # Convert to lowercase and remove punctuation
-        ground_truth = re.sub(r"[^\w\s]", "", ground_truth.lower())
-        ocr_text = re.sub(r"[^\w\s]", "", ocr_text.lower())
+        ground_truth = re.sub(r'[^\w\s]', '', ground_truth.lower())
+        ocr_text = re.sub(r'[^\w\s]', '', ocr_text.lower())
 
     # Split into words
     truth_words = ground_truth.split()
     ocr_words = ocr_text.split()
 
     if not truth_words:
-        logger.warning("No words in ground truth after normalization, returning error rate of 1.0")
+        logger.warning('No words in ground truth after normalization, returning error rate of 1.0')
         return 1.0
 
     # Use difflib's SequenceMatcher to compute the similarity
@@ -147,10 +147,10 @@ def calculate_metrics(ground_truth: str, ocr_text: str, normalize: bool = True) 
     wer = calculate_word_error_rate(ground_truth, ocr_text, normalize)
 
     return {
-        "character_error_rate": cer,
-        "word_error_rate": wer,
-        "character_accuracy": 1.0 - cer,
-        "word_accuracy": 1.0 - wer,
+        'character_error_rate': cer,
+        'word_error_rate': wer,
+        'character_accuracy': 1.0 - cer,
+        'word_accuracy': 1.0 - wer,
     }
 
 
@@ -182,9 +182,9 @@ def evaluate_document(
     # Ensure both inputs have the same number of pages
     if len(ground_truth) != len(ocr_result):
         logger.warning(
-            f"Number of pages in ground truth ({len(ground_truth)}) and OCR result "
+            f'Number of pages in ground truth ({len(ground_truth)}) and OCR result '
             f"({len(ocr_result)}) don't match. Evaluating only the first "
-            f"min({len(ground_truth)}, {len(ocr_result)}) pages."
+            f'min({len(ground_truth)}, {len(ocr_result)}) pages.'
         )
         num_pages = min(len(ground_truth), len(ocr_result))
         ground_truth = ground_truth[:num_pages]
@@ -196,8 +196,8 @@ def evaluate_document(
         page_metrics = calculate_metrics(truth_page, ocr_page, normalize)
         all_metrics.append(page_metrics)
         logger.debug(
-            f"Page {i + 1} metrics: CER={page_metrics['character_error_rate']:.4f}, "
-            f"WER={page_metrics['word_error_rate']:.4f}"
+            f'Page {i + 1} metrics: CER={page_metrics["character_error_rate"]:.4f}, '
+            f'WER={page_metrics["word_error_rate"]:.4f}'
         )
 
     # Calculate average metrics across all pages
@@ -229,7 +229,7 @@ def compare_preprocessing_methods(
     # Calculate improvement percentages
     improvement = {}
     for metric in base_metrics:
-        if "error" in metric:
+        if 'error' in metric:
             # For error rates, lower is better
             if base_metrics[metric] > 0:  # Avoid division by zero
                 improvement[metric] = (base_metrics[metric] - enhanced_metrics[metric]) / base_metrics[metric] * 100
@@ -242,4 +242,4 @@ def compare_preprocessing_methods(
             else:
                 improvement[metric] = 0.0
 
-    return {"base": base_metrics, "enhanced": enhanced_metrics, "improvement_percent": improvement}
+    return {'base': base_metrics, 'enhanced': enhanced_metrics, 'improvement_percent': improvement}

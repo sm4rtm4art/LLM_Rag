@@ -136,14 +136,15 @@ ignore = [
     "D104",  # Missing docstring in public package
     "D203",  # One blank line before class (conflicts with D211)
     "D213",  # Multi-line summary second line (conflicts with D212)
-    "W191",  # Indentation contains tabs
-    "D206",  # Indentation with tabs instead of spaces
-    "E101",  # Indentation with mixed spaces and tabs
+    # These rules are necessary to support modules with different indentation styles.
+    # The comparison module and some other parts use tabs, while maintaining
+    # consistent style within each module is more important than forcing a project-wide
+    # change that could introduce bugs.
 ]
 
 [tool.ruff.format]
 quote-style = "single"
-indent-style = "tab"
+indent-style = "space"
 docstring-code-format = true
 
 [tool.ruff.lint.per-file-ignores]

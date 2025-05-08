@@ -38,8 +38,8 @@ def process_document_with_language_handling(
     """
     # Create a configuration that handles language appropriately
     cleaner_config = LLMCleanerConfig(
-        model_name="gemma-2b",  # Fast, lightweight model
-        model_backend="ollama",  # Using local Ollama (requires installation)
+        model_name='gemma-2b',  # Fast, lightweight model
+        model_backend='ollama',  # Using local Ollama (requires installation)
         preserve_language=preserve_language,
         translate_to_language=target_language,
         language_models=language_models or {},
@@ -50,57 +50,57 @@ def process_document_with_language_handling(
     pipeline_config = OCRPipelineConfig(
         llm_cleaner_config=cleaner_config,
         use_llm_cleaner=True,  # Enable LLM cleaning
-        output_format="markdown",  # Output as markdown for readability
+        output_format='markdown',  # Output as markdown for readability
     )
 
     # Create and run the pipeline
     pipeline = OCRPipeline(config=pipeline_config)
 
-    logger.info(f"Processing document: {pdf_path}")
-    logger.info(f"Language preservation: {preserve_language}")
+    logger.info(f'Processing document: {pdf_path}')
+    logger.info(f'Language preservation: {preserve_language}')
     if target_language:
-        logger.info(f"Target language for translation: {target_language}")
+        logger.info(f'Target language for translation: {target_language}')
 
     # Process the document
     result = pipeline.process_pdf(pdf_path)
 
     # Save results if output_dir is specified
     if output_dir:
-        save_path = Path(output_dir) / f"{Path(pdf_path).stem}_processed.md"
+        save_path = Path(output_dir) / f'{Path(pdf_path).stem}_processed.md'
         os.makedirs(output_dir, exist_ok=True)
-        with open(save_path, "w", encoding="utf-8") as f:
+        with open(save_path, 'w', encoding='utf-8') as f:
             f.write(result)
-        logger.info(f"Saved processed text to: {save_path}")
+        logger.info(f'Saved processed text to: {save_path}')
 
     return result
 
 
 def main():
     """Run the language-aware OCR example from the command line."""
-    parser = argparse.ArgumentParser(description="Language-aware OCR processing example")
-    parser.add_argument("pdf_path", help="Path to the PDF file to process")
+    parser = argparse.ArgumentParser(description='Language-aware OCR processing example')
+    parser.add_argument('pdf_path', help='Path to the PDF file to process')
     parser.add_argument(
-        "--preserve-language",
-        action="store_true",
+        '--preserve-language',
+        action='store_true',
         default=True,
-        help="Preserve the original language (default: True)",
+        help='Preserve the original language (default: True)',
     )
     parser.add_argument(
-        "--translate-to",
+        '--translate-to',
         help="Target language for translation (e.g., 'en', 'de', 'fr')",
     )
     parser.add_argument(
-        "--output-dir",
-        help="Directory to save the processed text",
-        default="./processed_docs",
+        '--output-dir',
+        help='Directory to save the processed text',
+        default='./processed_docs',
     )
     args = parser.parse_args()
 
     # Example language-specific model mapping
     # These are just examples - replace with actual models you have access to
     language_models = {
-        "de": "german-llm-model",  # Example for German
-        "fr": "french-llm-model",  # Example for French
+        'de': 'german-llm-model',  # Example for German
+        'fr': 'french-llm-model',  # Example for French
         # Add more language-specific models as needed
     }
 
@@ -114,5 +114,5 @@ def main():
     )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

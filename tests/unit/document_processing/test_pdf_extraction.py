@@ -13,7 +13,7 @@ try:
     # Use find_spec to check for fitz without importing it directly
     import importlib.util
 
-    HAS_FITZ = importlib.util.find_spec("fitz") is not None
+    HAS_FITZ = importlib.util.find_spec('fitz') is not None
 except ImportError:
     HAS_FITZ = False
 
@@ -44,7 +44,7 @@ class MockDataFrame:
 
     def to_csv(self, index=False):
         """Mock to_csv method."""
-        return "col1,col2\ndata1,data2"
+        return 'col1,col2\ndata1,data2'
 
 
 @pytest.mark.refactoring
@@ -53,32 +53,32 @@ class TestPDFExtraction(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.test_pdf_path = "test.pdf"
+        self.test_pdf_path = 'test.pdf'
 
-    @pytest.mark.skip(reason="Fails with mock PIL library issue")
-    @pytest.mark.skipif(not HAS_FITZ, reason="PyMuPDF (fitz) not available")
-    @patch("pathlib.Path.mkdir")
-    @patch("builtins.open", new_callable=mock_open)
+    @pytest.mark.skip(reason='Fails with mock PIL library issue')
+    @pytest.mark.skipif(not HAS_FITZ, reason='PyMuPDF (fitz) not available')
+    @patch('pathlib.Path.mkdir')
+    @patch('builtins.open', new_callable=mock_open)
     def test_extract_images_with_fitz(self, mock_open_file, mock_mkdir):
         """Test image extraction using PyMuPDF (fitz)."""
         # Skip the test if PyMuPDF is not available
         if not HAS_FITZ:
-            pytest.skip("PyMuPDF (fitz) not available")
+            pytest.skip('PyMuPDF (fitz) not available')
 
         # Create a mock for fitz
         mock_fitz = MagicMock()
 
         # Mock the internal imports
         mock_pytesseract = MagicMock()
-        mock_pytesseract.image_to_string.return_value = "OCR Text"
+        mock_pytesseract.image_to_string.return_value = 'OCR Text'
 
         with patch.dict(
-            "sys.modules",
+            'sys.modules',
             {
-                "pdf2image": MagicMock(),
-                "pytesseract": mock_pytesseract,
-                "PIL": MagicMock(Image=MockImage),
-                "fitz": mock_fitz,
+                'pdf2image': MagicMock(),
+                'pytesseract': mock_pytesseract,
+                'PIL': MagicMock(Image=MockImage),
+                'fitz': mock_fitz,
             },
         ):
             # Arrange
@@ -92,7 +92,7 @@ class TestPDFExtraction(unittest.TestCase):
             mock_fitz.open.return_value.__enter__.return_value = mock_pdf
 
             # Mock the extracted image data
-            mock_extracted = {"image": b"fake_image_data", "ext": "png"}
+            mock_extracted = {'image': b'fake_image_data', 'ext': 'png'}
             mock_pdf.extract_image.return_value = mock_extracted
 
             # Create loader with image extraction
@@ -100,50 +100,50 @@ class TestPDFExtraction(unittest.TestCase):
 
             # Mock the _load_with_pymupdf method to test image extraction is called
             with (
-                patch.object(PDFLoader, "_load_with_pymupdf") as mock_load,
-                patch("src.llm_rag.document_processing.loaders.pdf_loaders.fitz", mock_fitz),
-                patch("src.llm_rag.document_processing.loaders.pdf_loaders.PYMUPDF_AVAILABLE", True),
+                patch.object(PDFLoader, '_load_with_pymupdf') as mock_load,
+                patch('src.llm_rag.document_processing.loaders.pdf_loaders.fitz', mock_fitz),
+                patch('src.llm_rag.document_processing.loaders.pdf_loaders.PYMUPDF_AVAILABLE', True),
             ):
-                mock_load.return_value = [{"content": "Test content", "metadata": {}}]
+                mock_load.return_value = [{'content': 'Test content', 'metadata': {}}]
 
                 # Patch the exists method to return True
-                with patch("pathlib.Path.exists", return_value=True):
+                with patch('pathlib.Path.exists', return_value=True):
                     # Act - assign to _ to indicate intentionally unused
                     _ = loader.load()
 
                 # Assert that the method was called
                 mock_load.assert_called_once()
 
-    @patch("src.llm_rag.document_processing.loaders.pdf_loaders.PYMUPDF_AVAILABLE", False)
-    @patch("pathlib.Path.mkdir")
+    @patch('src.llm_rag.document_processing.loaders.pdf_loaders.PYMUPDF_AVAILABLE', False)
+    @patch('pathlib.Path.mkdir')
     def test_extract_images_with_pdf2image(self, mock_mkdir):
         """Test image extraction using pdf2image when fitz is not available."""
         # Mock the internal imports
         mock_convert = MagicMock()
-        mock_image = MockImage("fake_path")
+        mock_image = MockImage('fake_path')
         mock_convert.return_value = [mock_image]
 
         mock_pytesseract = MagicMock()
-        mock_pytesseract.image_to_string.return_value = "OCR Text from pdf2image"
+        mock_pytesseract.image_to_string.return_value = 'OCR Text from pdf2image'
 
         with patch.dict(
-            "sys.modules",
+            'sys.modules',
             {
-                "pdf2image": MagicMock(convert_from_path=mock_convert),
-                "pytesseract": mock_pytesseract,
-                "PIL": MagicMock(Image=MockImage),
+                'pdf2image': MagicMock(convert_from_path=mock_convert),
+                'pytesseract': mock_pytesseract,
+                'PIL': MagicMock(Image=MockImage),
             },
         ):
             # Create loader with image extraction
             loader = PDFLoader(file_path=self.test_pdf_path, extract_images=True)
 
             # Mock the _load_with_pypdf method to test image extraction is called
-            with patch.object(PDFLoader, "_load_with_pypdf") as mock_load:
-                mock_load.return_value = [{"content": "Test content", "metadata": {}}]
+            with patch.object(PDFLoader, '_load_with_pypdf') as mock_load:
+                mock_load.return_value = [{'content': 'Test content', 'metadata': {}}]
 
                 # Completely bypass the load_from_file method to avoid file existence check
-                with patch.object(PDFLoader, "load_from_file") as mock_load_from_file:
-                    mock_load_from_file.return_value = [{"content": "Test content", "metadata": {}}]
+                with patch.object(PDFLoader, 'load_from_file') as mock_load_from_file:
+                    mock_load_from_file.return_value = [{'content': 'Test content', 'metadata': {}}]
 
                     # Act - assign to _ to indicate intentionally unused
                     _ = loader.load()
@@ -168,24 +168,24 @@ class TestPDFExtraction(unittest.TestCase):
         loader = PDFLoader(file_path=self.test_pdf_path, extract_tables=True)
 
         # We need to patch the PDFLoader._load_with_pymupdf method
-        with patch.object(PDFLoader, "_load_with_pymupdf") as mock_load_pymupdf:
+        with patch.object(PDFLoader, '_load_with_pymupdf') as mock_load_pymupdf:
             # Set up the mock to return a document
-            mock_load_pymupdf.return_value = [{"content": "Test content", "metadata": {}}]
+            mock_load_pymupdf.return_value = [{'content': 'Test content', 'metadata': {}}]
 
             # Completely bypass the load_from_file method to avoid file existence check
-            with patch.object(PDFLoader, "load_from_file") as mock_load_from_file:
-                mock_load_from_file.return_value = [{"content": "Test content", "metadata": {}}]
+            with patch.object(PDFLoader, 'load_from_file') as mock_load_from_file:
+                mock_load_from_file.return_value = [{'content': 'Test content', 'metadata': {}}]
 
                 # Now patch tabula in the right context
-                with patch.dict("sys.modules", {"tabula": mock_tabula, "pandas": mock_pd}):
+                with patch.dict('sys.modules', {'tabula': mock_tabula, 'pandas': mock_pd}):
                     # Mock the actual extraction method to use our mock tabula
                     original_load = loader.load
 
                     # Replace the load method temporarily
                     def mock_table_extraction(*args, **kwargs):
                         # Call tabula.read_pdf during execution
-                        if hasattr(loader, "extract_tables") and loader.extract_tables:
-                            mock_tabula.read_pdf(str(loader.file_path), pages="all", multiple_tables=True)
+                        if hasattr(loader, 'extract_tables') and loader.extract_tables:
+                            mock_tabula.read_pdf(str(loader.file_path), pages='all', multiple_tables=True)
                         return mock_load_from_file()
 
                     loader.load = mock_table_extraction
@@ -196,7 +196,7 @@ class TestPDFExtraction(unittest.TestCase):
 
                         # Assert that tabula was used during the load process
                         mock_tabula.read_pdf.assert_called_once_with(
-                            str(self.test_pdf_path), pages="all", multiple_tables=True
+                            str(self.test_pdf_path), pages='all', multiple_tables=True
                         )
                     finally:
                         # Restore the original method
@@ -206,17 +206,17 @@ class TestPDFExtraction(unittest.TestCase):
         """Test behavior when table extraction fails."""
         # Arrange
         mock_tabula = MagicMock()
-        mock_tabula.read_pdf.side_effect = Exception("Tabula error")
+        mock_tabula.read_pdf.side_effect = Exception('Tabula error')
 
         # Create loader with table extraction
         loader = PDFLoader(file_path=self.test_pdf_path, extract_tables=True)
 
         # Completely bypass the load_from_file method to avoid file existence check
-        with patch.object(PDFLoader, "load_from_file") as mock_load_from_file:
-            mock_load_from_file.return_value = [{"content": "Test content", "metadata": {}}]
+        with patch.object(PDFLoader, 'load_from_file') as mock_load_from_file:
+            mock_load_from_file.return_value = [{'content': 'Test content', 'metadata': {}}]
 
             # Now patch tabula in the right context
-            with patch.dict("sys.modules", {"tabula": mock_tabula}):
+            with patch.dict('sys.modules', {'tabula': mock_tabula}):
                 # Mock the actual extraction method to use our mock tabula
                 original_load = loader.load
 
@@ -224,8 +224,8 @@ class TestPDFExtraction(unittest.TestCase):
                 def mock_table_extraction(*args, **kwargs):
                     # Try to call tabula.read_pdf, but it will raise an exception
                     try:
-                        if hasattr(loader, "extract_tables") and loader.extract_tables:
-                            mock_tabula.read_pdf(loader.file_path, pages="all", multiple_tables=True)
+                        if hasattr(loader, 'extract_tables') and loader.extract_tables:
+                            mock_tabula.read_pdf(loader.file_path, pages='all', multiple_tables=True)
                     except Exception:
                         pass  # This should be caught by the loader implementation
                     return mock_load_from_file()
@@ -242,12 +242,12 @@ class TestPDFExtraction(unittest.TestCase):
                     # Restore the original method
                     loader.load = original_load
 
-    @pytest.mark.skipif(not HAS_FITZ, reason="PyMuPDF (fitz) not available")
+    @pytest.mark.skipif(not HAS_FITZ, reason='PyMuPDF (fitz) not available')
     def test_extract_tables_from_page(self):
         """Test extracting tables from a single page."""
         # Skip the test if PyMuPDF is not available
         if not HAS_FITZ:
-            pytest.skip("PyMuPDF (fitz) not available")
+            pytest.skip('PyMuPDF (fitz) not available')
 
         # Create a mock for fitz
         mock_fitz = MagicMock()
@@ -280,9 +280,9 @@ class TestPDFExtraction(unittest.TestCase):
 
         # Use patch to mock the fitz module
         with (
-            patch("src.llm_rag.document_processing.loaders.pdf_loaders.fitz", mock_fitz),
-            patch("src.llm_rag.document_processing.loaders.pdf_loaders.PYMUPDF_AVAILABLE", True),
-            patch.object(PDFLoader, "load_from_file") as mock_load_from_file,
+            patch('src.llm_rag.document_processing.loaders.pdf_loaders.fitz', mock_fitz),
+            patch('src.llm_rag.document_processing.loaders.pdf_loaders.PYMUPDF_AVAILABLE', True),
+            patch.object(PDFLoader, 'load_from_file') as mock_load_from_file,
         ):
             # Have the load_from_file method call _load_with_pymupdf directly
             # but avoid direct file access by patching Path.exists and open
@@ -291,8 +291,8 @@ class TestPDFExtraction(unittest.TestCase):
                 # simulate what it would return based on our mocks
                 return [
                     {
-                        "content": "Text content from page",
-                        "metadata": {"page": 0, "source": str(self.test_pdf_path)},
+                        'content': 'Text content from page',
+                        'metadata': {'page': 0, 'source': str(self.test_pdf_path)},
                     }
                 ]
 
@@ -304,15 +304,15 @@ class TestPDFExtraction(unittest.TestCase):
             # Assert
             self.assertEqual(len(documents), 1)
             # The document should have been processed by our mock
-            self.assertEqual(documents[0]["content"], "Text content from page")
+            self.assertEqual(documents[0]['content'], 'Text content from page')
 
-    @pytest.mark.skipif(not HAS_FITZ, reason="PyMuPDF (fitz) not available")
-    @patch("builtins.open", new_callable=mock_open)
+    @pytest.mark.skipif(not HAS_FITZ, reason='PyMuPDF (fitz) not available')
+    @patch('builtins.open', new_callable=mock_open)
     def test_load_with_extractions(self, mock_open_file):
         """Test that load method with extractions works properly."""
         # Skip the test if PyMuPDF is not available
         if not HAS_FITZ:
-            pytest.skip("PyMuPDF (fitz) not available")
+            pytest.skip('PyMuPDF (fitz) not available')
 
         # Create a mock for fitz
         mock_fitz = MagicMock()
@@ -320,7 +320,7 @@ class TestPDFExtraction(unittest.TestCase):
         # Arrange - Setup mock PDF and page
         mock_pdf = MagicMock()
         mock_page = MagicMock()
-        mock_page.get_text.return_value = "Page content"
+        mock_page.get_text.return_value = 'Page content'
         mock_pdf.__len__.return_value = 1
         mock_pdf.__getitem__.return_value = mock_page
         mock_fitz.open.return_value.__enter__.return_value = mock_pdf
@@ -330,19 +330,19 @@ class TestPDFExtraction(unittest.TestCase):
 
         # Completely bypass the load_from_file method to avoid file existence check
         with (
-            patch.object(PDFLoader, "load_from_file") as mock_load_from_file,
-            patch("src.llm_rag.document_processing.loaders.pdf_loaders.fitz", mock_fitz),
-            patch("src.llm_rag.document_processing.loaders.pdf_loaders.PYMUPDF_AVAILABLE", True),
+            patch.object(PDFLoader, 'load_from_file') as mock_load_from_file,
+            patch('src.llm_rag.document_processing.loaders.pdf_loaders.fitz', mock_fitz),
+            patch('src.llm_rag.document_processing.loaders.pdf_loaders.PYMUPDF_AVAILABLE', True),
         ):
             # Setup mock to return content directly
-            mock_load_from_file.return_value = [{"content": "Page content", "metadata": {"page": 0}}]
+            mock_load_from_file.return_value = [{'content': 'Page content', 'metadata': {'page': 0}}]
 
             # Act
             documents = loader.load()
 
             # Assert basic expectations
             assert len(documents) == 1
-            assert documents[0]["content"] == "Page content"
+            assert documents[0]['content'] == 'Page content'
 
 
 @pytest.mark.local_only
@@ -352,9 +352,9 @@ class TestPDFExtractionWithRealFiles:
     @pytest.fixture
     def setup_test_pdf(self):
         """Create a simple test PDF file for testing."""
-        test_pdf_path = Path("tests/test_data/test.pdf")
+        test_pdf_path = Path('tests/test_data/test.pdf')
         if not test_pdf_path.exists():
-            pytest.skip("Test PDF file not found")
+            pytest.skip('Test PDF file not found')
         return str(test_pdf_path)
 
     def test_real_pdf_extraction(self, setup_test_pdf):
@@ -372,5 +372,5 @@ class TestPDFExtractionWithRealFiles:
         assert len(documents) > 0
         assert isinstance(documents, list)
         assert isinstance(documents[0], dict)
-        assert "content" in documents[0]
-        assert "metadata" in documents[0]
+        assert 'content' in documents[0]
+        assert 'metadata' in documents[0]

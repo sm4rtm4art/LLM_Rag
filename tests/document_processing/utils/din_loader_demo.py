@@ -10,60 +10,60 @@ import os
 from llm_rag.document_processing.loaders import XMLLoader
 
 # Update path to the DIN document
-DIN_DOCUMENT_PATH = "tests/test_data/xml/din_document.xml"
+DIN_DOCUMENT_PATH = 'tests/test_data/xml/din_document.xml'
 
 
 def print_document(doc, full_content=False):
     """Pretty print a document."""
-    print("-" * 80)
-    print("Document Metadata:")
-    for key, value in doc["metadata"].items():
-        print(f"  {key}: {value}")
-    print("-" * 80)
+    print('-' * 80)
+    print('Document Metadata:')
+    for key, value in doc['metadata'].items():
+        print(f'  {key}: {value}')
+    print('-' * 80)
 
     if full_content:
-        print("Content:")
-        print(doc["content"])
+        print('Content:')
+        print(doc['content'])
     else:
         # Print just the first few lines
-        lines = doc["content"].split("\n")
-        preview = "\n".join(lines[:5])
-        print("Content Preview (first 5 lines):")
+        lines = doc['content'].split('\n')
+        preview = '\n'.join(lines[:5])
+        print('Content Preview (first 5 lines):')
         print(preview)
-        print(f"...and {len(lines) - 5} more lines")
-    print("-" * 80)
+        print(f'...and {len(lines) - 5} more lines')
+    print('-' * 80)
     print()
 
 
 def basic_loading():
     """Load the entire DIN document."""
-    print("\n=== BASIC LOADING ===\n")
+    print('\n=== BASIC LOADING ===\n')
 
     loader = XMLLoader(DIN_DOCUMENT_PATH)
     documents = loader.load()
 
-    print(f"Loaded {len(documents)} document(s)")
+    print(f'Loaded {len(documents)} document(s)')
     print_document(documents[0])
 
 
 def load_with_metadata():
     """Extract metadata from specific tags during loading."""
-    print("\n=== LOADING WITH METADATA EXTRACTION ===\n")
+    print('\n=== LOADING WITH METADATA EXTRACTION ===\n')
 
     loader = XMLLoader(
         DIN_DOCUMENT_PATH,
         metadata_tags=[
-            "din:identifier",
-            "din:title",
-            "din:version",
-            "din:language",
-            "din:publicationDate",
-            "din:lastModified",
+            'din:identifier',
+            'din:title',
+            'din:version',
+            'din:language',
+            'din:publicationDate',
+            'din:lastModified',
         ],
     )
     documents = loader.load()
 
-    print(f"Loaded {len(documents)} document(s) with specific metadata")
+    print(f'Loaded {len(documents)} document(s) with specific metadata')
     print_document(documents[0])
 
 
@@ -72,72 +72,72 @@ def load_section_by_section():
 
     This creates individual documents for better semantic chunking.
     """
-    print("\n=== LOADING SECTION BY SECTION ===\n")
+    print('\n=== LOADING SECTION BY SECTION ===\n')
 
-    loader = XMLLoader(DIN_DOCUMENT_PATH, split_by_tag="din:section", metadata_tags=["din:title"])
+    loader = XMLLoader(DIN_DOCUMENT_PATH, split_by_tag='din:section', metadata_tags=['din:title'])
     documents = loader.load()
 
-    print(f"Loaded {len(documents)} section documents")
+    print(f'Loaded {len(documents)} section documents')
 
     # Display first few sections
     for i, doc in enumerate(documents[:3]):
-        print(f"Section {i + 1}:")
+        print(f'Section {i + 1}:')
         print_document(doc)
 
     if len(documents) > 3:
-        print(f"...and {len(documents) - 3} more sections")
+        print(f'...and {len(documents) - 3} more sections')
 
 
 def extract_definitions():
     """Extract term definitions from the document."""
-    print("\n=== EXTRACTING DEFINITIONS ===\n")
+    print('\n=== EXTRACTING DEFINITIONS ===\n')
 
-    loader = XMLLoader(DIN_DOCUMENT_PATH, split_by_tag="din:definition", content_tags=["din:term", "din:description"])
+    loader = XMLLoader(DIN_DOCUMENT_PATH, split_by_tag='din:definition', content_tags=['din:term', 'din:description'])
     documents = loader.load()
 
-    print(f"Extracted {len(documents)} definitions")
+    print(f'Extracted {len(documents)} definitions')
 
     # Display all definitions
     for i, doc in enumerate(documents):
-        print(f"Definition {i + 1}:")
+        print(f'Definition {i + 1}:')
         print_document(doc, full_content=True)
 
 
 def extract_code_examples():
     """Extract code examples from the document."""
-    print("\n=== EXTRACTING CODE EXAMPLES ===\n")
+    print('\n=== EXTRACTING CODE EXAMPLES ===\n')
 
-    loader = XMLLoader(DIN_DOCUMENT_PATH, content_tags=["din:code"], include_tags_in_text=False)
+    loader = XMLLoader(DIN_DOCUMENT_PATH, content_tags=['din:code'], include_tags_in_text=False)
     documents = loader.load()
 
-    print("Extracted code examples from the document")
+    print('Extracted code examples from the document')
     print_document(documents[0], full_content=True)
 
 
 def extract_tables():
     """Extract tables from the document."""
-    print("\n=== EXTRACTING TABLES ===\n")
+    print('\n=== EXTRACTING TABLES ===\n')
 
     loader = XMLLoader(
         DIN_DOCUMENT_PATH,
-        split_by_tag="din:table",
-        metadata_tags=["din:caption"],
-        content_tags=["din:row", "din:cell", "din:header"],
+        split_by_tag='din:table',
+        metadata_tags=['din:caption'],
+        content_tags=['din:row', 'din:cell', 'din:header'],
     )
     documents = loader.load()
 
-    print(f"Extracted {len(documents)} tables")
+    print(f'Extracted {len(documents)} tables')
 
     for i, doc in enumerate(documents):
-        print(f"Table {i + 1}:")
+        print(f'Table {i + 1}:')
         print_document(doc, full_content=True)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Make sure we can find the example file
     if not os.path.exists(DIN_DOCUMENT_PATH):
-        print(f"Error: {DIN_DOCUMENT_PATH} not found")
-        print("Run this script from the project root directory")
+        print(f'Error: {DIN_DOCUMENT_PATH} not found')
+        print('Run this script from the project root directory')
         exit(1)
 
     # Run all the demo functions

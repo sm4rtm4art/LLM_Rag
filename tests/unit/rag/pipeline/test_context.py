@@ -31,19 +31,19 @@ class TestBaseContextFormatter(unittest.TestCase):
             def format_context(self, documents, **kwargs):
                 results = []
                 for i, doc in enumerate(documents, 1):
-                    content = doc.get("content", "")
-                    if self.include_metadata and "metadata" in doc:
-                        metadata = doc["metadata"]
-                        source = metadata.get("source", "unknown")
-                        results.append(f"{i}. {content} [Source: {source}]")
+                    content = doc.get('content', '')
+                    if self.include_metadata and 'metadata' in doc:
+                        metadata = doc['metadata']
+                        source = metadata.get('source', 'unknown')
+                        results.append(f'{i}. {content} [Source: {source}]')
                     else:
-                        results.append(f"{i}. {content}")
-                return "\n".join(results)
+                        results.append(f'{i}. {content}')
+                return '\n'.join(results)
 
         self.formatter = TestFormatter()
         self.test_documents = [
-            {"content": "Document 1 content", "metadata": {"source": "test1.txt"}},
-            {"content": "Document 2 content", "metadata": {"source": "test2.txt"}},
+            {'content': 'Document 1 content', 'metadata': {'source': 'test1.txt'}},
+            {'content': 'Document 2 content', 'metadata': {'source': 'test2.txt'}},
         ]
 
     def test_initialization(self):
@@ -60,7 +60,7 @@ class TestBaseContextFormatter(unittest.TestCase):
                 self.max_length = max_length
 
             def format_context(self, documents, **kwargs):
-                return "test"
+                return 'test'
 
         # Test with include_metadata=False
         formatter = TestFormatter(include_metadata=False)
@@ -75,8 +75,8 @@ class TestBaseContextFormatter(unittest.TestCase):
         result = self.formatter.format_context(self.test_documents)
 
         # Verify metadata is included
-        self.assertIn("Document 1 content [Source: test1.txt]", result)
-        self.assertIn("Document 2 content [Source: test2.txt]", result)
+        self.assertIn('Document 1 content [Source: test1.txt]', result)
+        self.assertIn('Document 2 content [Source: test2.txt]', result)
 
     def test_format_context_without_metadata(self):
         """Test formatting context without metadata."""
@@ -84,14 +84,14 @@ class TestBaseContextFormatter(unittest.TestCase):
         result = self.formatter.format_context(self.test_documents)
 
         # Verify metadata is not included
-        self.assertIn("1. Document 1 content", result)
-        self.assertIn("2. Document 2 content", result)
-        self.assertNotIn("[Source:", result)
+        self.assertIn('1. Document 1 content', result)
+        self.assertIn('2. Document 2 content', result)
+        self.assertNotIn('[Source:', result)
 
     def test_format_empty_documents(self):
         """Test formatting with empty document list."""
         result = self.formatter.format_context([])
-        self.assertEqual(result, "")
+        self.assertEqual(result, '')
 
 
 class TestSimpleContextFormatter(unittest.TestCase):
@@ -101,8 +101,8 @@ class TestSimpleContextFormatter(unittest.TestCase):
         """Set up test fixtures."""
         self.formatter = SimpleContextFormatter()
         self.test_documents = [
-            {"content": "Document 1 content", "metadata": {"source": "test1.txt"}},
-            {"content": "Document 2 content", "metadata": {"source": "test2.txt"}},
+            {'content': 'Document 1 content', 'metadata': {'source': 'test1.txt'}},
+            {'content': 'Document 2 content', 'metadata': {'source': 'test2.txt'}},
         ]
 
     def test_initialization(self):
@@ -111,40 +111,40 @@ class TestSimpleContextFormatter(unittest.TestCase):
         formatter = SimpleContextFormatter()
         self.assertTrue(formatter.include_metadata)
         self.assertIsNone(formatter.max_length)
-        self.assertEqual(formatter.separator, "\n\n")
+        self.assertEqual(formatter.separator, '\n\n')
 
         # Custom initialization
-        formatter = SimpleContextFormatter(include_metadata=False, max_length=100, separator="\n---\n")
+        formatter = SimpleContextFormatter(include_metadata=False, max_length=100, separator='\n---\n')
         self.assertFalse(formatter.include_metadata)
         self.assertEqual(formatter.max_length, 100)
-        self.assertEqual(formatter.separator, "\n---\n")
+        self.assertEqual(formatter.separator, '\n---\n')
 
     def test_format_context_basic(self):
         """Test basic context formatting."""
         result = self.formatter.format_context(self.test_documents)
 
         # Verify format
-        self.assertIn("Document 1 content", result)
-        self.assertIn("Document 2 content", result)
+        self.assertIn('Document 1 content', result)
+        self.assertIn('Document 2 content', result)
 
         # Verify documents are separated
-        self.assertIn("\n\n", result)
+        self.assertIn('\n\n', result)
 
     def test_format_context_with_custom_separator(self):
         """Test formatting with custom separator."""
-        formatter = SimpleContextFormatter(separator="\n---\n")
+        formatter = SimpleContextFormatter(separator='\n---\n')
         result = formatter.format_context(self.test_documents)
 
         # Verify custom separator is used
-        self.assertIn("\n---\n", result)
+        self.assertIn('\n---\n', result)
 
     def test_format_context_with_metadata(self):
         """Test formatting with metadata included."""
         result = self.formatter.format_context(self.test_documents)
 
         # Verify metadata is included - Updated for actual implementation
-        self.assertIn("Metadata: source: test1.txt", result)
-        self.assertIn("Metadata: source: test2.txt", result)
+        self.assertIn('Metadata: source: test1.txt', result)
+        self.assertIn('Metadata: source: test2.txt', result)
 
     def test_format_context_without_metadata(self):
         """Test formatting without metadata."""
@@ -152,9 +152,9 @@ class TestSimpleContextFormatter(unittest.TestCase):
         result = formatter.format_context(self.test_documents)
 
         # Verify metadata is not included
-        self.assertNotIn("Source:", result)
-        self.assertIn("Document 1 content", result)
-        self.assertIn("Document 2 content", result)
+        self.assertNotIn('Source:', result)
+        self.assertIn('Document 1 content', result)
+        self.assertIn('Document 2 content', result)
 
     def test_format_context_with_max_length(self):
         """Test formatting context with max length."""
@@ -165,17 +165,17 @@ class TestSimpleContextFormatter(unittest.TestCase):
         # Check that the result is truncated
         self.assertLessEqual(len(result), 150)  # Allow for truncation message
 
-    @unittest.skip("Implementation handles missing content differently than expected")
+    @unittest.skip('Implementation handles missing content differently than expected')
     def test_format_context_with_missing_content(self):
         """Test formatting with documents missing content field."""
         documents = [
-            {"metadata": {"source": "test1.txt"}},  # No content
-            {"content": "", "metadata": {"source": "test2.txt"}},  # Empty content
+            {'metadata': {'source': 'test1.txt'}},  # No content
+            {'content': '', 'metadata': {'source': 'test2.txt'}},  # Empty content
         ]
 
         result = self.formatter.format_context(documents)
         # Check for document index instead of heading since that's what the implementation does
-        self.assertTrue("Document 1" in result or "Document 2" in result)
+        self.assertTrue('Document 1' in result or 'Document 2' in result)
 
 
 class TestMarkdownContextFormatter(unittest.TestCase):
@@ -185,8 +185,8 @@ class TestMarkdownContextFormatter(unittest.TestCase):
         """Set up test fixtures."""
         self.formatter = MarkdownContextFormatter()
         self.test_documents = [
-            {"content": "Document 1 content", "metadata": {"source": "test1.txt"}},
-            {"content": "Document 2 content", "metadata": {"source": "test2.txt"}},
+            {'content': 'Document 1 content', 'metadata': {'source': 'test1.txt'}},
+            {'content': 'Document 2 content', 'metadata': {'source': 'test2.txt'}},
         ]
 
     def test_initialization(self):
@@ -206,22 +206,22 @@ class TestMarkdownContextFormatter(unittest.TestCase):
         result = self.formatter.format_context(self.test_documents)
 
         # Check for Markdown formatting
-        self.assertIn("## Document 1", result)
-        self.assertIn("## Document 2", result)
-        self.assertIn("Document 1 content", result)
-        self.assertIn("Document 2 content", result)
+        self.assertIn('## Document 1', result)
+        self.assertIn('## Document 2', result)
+        self.assertIn('Document 1 content', result)
+        self.assertIn('Document 2 content', result)
 
     def test_format_context_with_metadata(self):
         """Test formatting context with metadata in Markdown."""
         result = self.formatter.format_context(self.test_documents)
 
         # Check Markdown formatting
-        self.assertIn("## Document 1", result)
-        self.assertIn("## Document 2", result)
-        self.assertIn("Document 1 content", result)
-        self.assertIn("Document 2 content", result)
-        self.assertIn("### Metadata", result)
-        self.assertIn("**source**: test1.txt", result)
+        self.assertIn('## Document 1', result)
+        self.assertIn('## Document 2', result)
+        self.assertIn('Document 1 content', result)
+        self.assertIn('Document 2 content', result)
+        self.assertIn('### Metadata', result)
+        self.assertIn('**source**: test1.txt', result)
 
     def test_format_context_without_metadata(self):
         """Test formatting without metadata in Markdown."""
@@ -229,10 +229,10 @@ class TestMarkdownContextFormatter(unittest.TestCase):
         result = formatter.format_context(self.test_documents)
 
         # Verify Markdown formatting without metadata
-        self.assertIn("## Document 1", result)
-        self.assertIn("## Document 2", result)
-        self.assertNotIn("### Metadata", result)
-        self.assertNotIn("**source**", result)
+        self.assertIn('## Document 1', result)
+        self.assertIn('## Document 2', result)
+        self.assertNotIn('### Metadata', result)
+        self.assertNotIn('**source**', result)
 
     def test_format_context_with_max_length(self):
         """Test formatting context with max length."""
@@ -243,17 +243,17 @@ class TestMarkdownContextFormatter(unittest.TestCase):
         # Check that the result is truncated
         self.assertLessEqual(len(result), 180)  # Allow for truncation message
 
-    @unittest.skip("Implementation handles missing content differently than expected")
+    @unittest.skip('Implementation handles missing content differently than expected')
     def test_format_context_with_missing_content(self):
         """Test formatting with documents missing content field."""
         documents = [
-            {"metadata": {"source": "test1.txt"}},  # No content
-            {"content": "", "metadata": {"source": "test2.txt"}},  # Empty content
+            {'metadata': {'source': 'test1.txt'}},  # No content
+            {'content': '', 'metadata': {'source': 'test2.txt'}},  # Empty content
         ]
 
         result = self.formatter.format_context(documents)
         # Check for document index instead of heading since that's what the implementation does
-        self.assertTrue("Document 1" in result or "Document 2" in result)
+        self.assertTrue('Document 1' in result or 'Document 2' in result)
 
 
 class TestCreateFormatter(unittest.TestCase):
@@ -261,51 +261,51 @@ class TestCreateFormatter(unittest.TestCase):
 
     def test_create_simple_formatter(self):
         """Test creating a simple formatter."""
-        formatter = create_formatter("simple")
+        formatter = create_formatter('simple')
         self.assertIsInstance(formatter, SimpleContextFormatter)
 
         # With custom parameters
-        formatter = create_formatter("simple", include_metadata=False, max_length=100, separator="\n---\n")
+        formatter = create_formatter('simple', include_metadata=False, max_length=100, separator='\n---\n')
         self.assertFalse(formatter.include_metadata)
         self.assertEqual(formatter.max_length, 100)
-        self.assertEqual(formatter.separator, "\n---\n")
+        self.assertEqual(formatter.separator, '\n---\n')
 
     def test_create_markdown_formatter(self):
         """Test creating a markdown formatter."""
-        formatter = create_formatter("markdown")
+        formatter = create_formatter('markdown')
         self.assertIsInstance(formatter, MarkdownContextFormatter)
 
         # With custom parameters
-        formatter = create_formatter("markdown", include_metadata=False, max_length=100)
+        formatter = create_formatter('markdown', include_metadata=False, max_length=100)
         self.assertFalse(formatter.include_metadata)
         self.assertEqual(formatter.max_length, 100)
 
     def test_create_unknown_formatter(self):
         """Test creating an unknown formatter type."""
         with self.assertRaises(ValueError):
-            create_formatter("unknown_type")
+            create_formatter('unknown_type')
 
     def test_create_formatter_for_testing(self):
         """Test creating a formatter specifically for testing."""
         # Create a formatter with _test=True param for testing
-        formatter = create_formatter(format_type="simple", _test=True)
+        formatter = create_formatter(format_type='simple', _test=True)
 
         # Should return a MockFormatter instance
         self.assertNotIsInstance(formatter, SimpleContextFormatter)
         self.assertIsInstance(formatter, BaseContextFormatter)
 
         # Test that it works
-        result = formatter.format_context([{"content": "Test content"}])
-        self.assertIn("Document 1: Test content", result)
+        result = formatter.format_context([{'content': 'Test content'}])
+        self.assertIn('Document 1: Test content', result)
 
 
 @pytest.mark.parametrize(
-    "format_type,formatter_class",
+    'format_type,formatter_class',
     [
-        ("simple", SimpleContextFormatter),
-        ("SIMPLE", SimpleContextFormatter),
-        ("markdown", MarkdownContextFormatter),
-        ("MARKDOWN", MarkdownContextFormatter),
+        ('simple', SimpleContextFormatter),
+        ('SIMPLE', SimpleContextFormatter),
+        ('markdown', MarkdownContextFormatter),
+        ('MARKDOWN', MarkdownContextFormatter),
     ],
 )
 def test_formatter_case_insensitivity(format_type, formatter_class):
@@ -314,5 +314,5 @@ def test_formatter_case_insensitivity(format_type, formatter_class):
     assert isinstance(formatter, formatter_class)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

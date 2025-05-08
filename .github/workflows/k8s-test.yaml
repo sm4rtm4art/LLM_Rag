@@ -10,6 +10,7 @@ on:
     paths:
       - "k8s/**"
       - "Dockerfile"
+      - "Dockerfile.k8s-test"
       - ".github/workflows/k8s-test.yaml"
   workflow_dispatch:
     inputs:
@@ -25,6 +26,7 @@ env:
   IMAGE_NAME: llm-rag
   KIND_VERSION: v0.20.0
   KUBECTL_VERSION: v1.28.2
+  USE_TEST_IMAGE: true # Flag to use the lightweight test image
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -62,11 +64,15 @@ jobs:
           fi
 
       # Optimize disk space
-      - name: Free disk space
+      - name: Aggressive cleanup before Docker build
         run: |
-          echo "Freeing up disk space..."
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          docker system prune -af
+          echo "Disk before:"
+          df -h
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache /usr/local/lib/android || true
+          docker system prune -af || true
+          docker builder prune -af || true
+          docker volume prune -f || true
+          echo "Disk after:"
           df -h
 
       # Cache KIND binary to avoid redownloads
@@ -151,6 +157,17 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Aggressive cleanup before Docker build
+        run: |
+          echo "Disk before:"
+          df -h
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache /usr/local/lib/android || true
+          docker system prune -af || true
+          docker builder prune -af || true
+          docker volume prune -f || true
+          echo "Disk after:"
+          df -h
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -166,6 +183,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ${{ env.USE_TEST_IMAGE == 'true' && 'Dockerfile.k8s-test' || 'Dockerfile' }}
           push: false
           load: true
           tags: ${{ env.IMAGE_NAME }}:latest

@@ -19,7 +19,7 @@ try:
     PYMUPDF_AVAILABLE = True
 except ImportError:
     PYMUPDF_AVAILABLE = False
-    logger.warning("PyMuPDF not available. PDF loading capabilities will be limited.")
+    logger.warning('PyMuPDF not available. PDF loading capabilities will be limited.')
 
 try:
     # Use pypdf instead of PyPDF2 to fix CVE-2023-36464
@@ -28,7 +28,7 @@ try:
     PYPDF_AVAILABLE = True
 except ImportError:
     PYPDF_AVAILABLE = False
-    logger.warning("pypdf not available. Some PDF loading capabilities may be affected.")
+    logger.warning('pypdf not available. Some PDF loading capabilities may be affected.')
 
 
 class PDFLoader(DocumentLoader, FileLoader):
@@ -43,7 +43,7 @@ class PDFLoader(DocumentLoader, FileLoader):
         file_path: Optional[Union[str, Path]] = None,
         extract_images: bool = False,
         extract_tables: bool = False,
-        page_separator: str = "\n\n",
+        page_separator: str = '\n\n',
         start_page: int = 0,
         end_page: Optional[int] = None,
     ):
@@ -87,7 +87,7 @@ class PDFLoader(DocumentLoader, FileLoader):
 
         """
         if not self.file_path:
-            raise ValueError("No file path provided. Either initialize with a file path or use load_from_file.")
+            raise ValueError('No file path provided. Either initialize with a file path or use load_from_file.')
 
         return self.load_from_file(self.file_path)
 
@@ -113,7 +113,7 @@ class PDFLoader(DocumentLoader, FileLoader):
         file_path = Path(file_path)
 
         if not file_path.exists():
-            raise FileNotFoundError(f"PDF file not found: {file_path}")
+            raise FileNotFoundError(f'PDF file not found: {file_path}')
 
         try:
             # Try to use PyMuPDF first
@@ -123,10 +123,10 @@ class PDFLoader(DocumentLoader, FileLoader):
             elif PYPDF_AVAILABLE:
                 return self._load_with_pypdf(file_path)
             else:
-                raise ImportError("No PDF processing library available. Install PyMuPDF or pypdf.")
+                raise ImportError('No PDF processing library available. Install PyMuPDF or pypdf.')
         except Exception as e:
-            logger.error(f"Error loading PDF file {file_path}: {e}")
-            raise Exception(f"Error loading PDF file {file_path}: {str(e)}") from e
+            logger.error(f'Error loading PDF file {file_path}: {e}')
+            raise Exception(f'Error loading PDF file {file_path}: {str(e)}') from e
 
     def _load_with_pymupdf(self, file_path: Path) -> Documents:
         """Load PDF using PyMuPDF.
@@ -161,15 +161,15 @@ class PDFLoader(DocumentLoader, FileLoader):
 
                 # Create metadata
                 metadata = {
-                    "source": str(file_path),
-                    "filename": file_path.name,
-                    "filetype": "pdf",
-                    "page": page_num,
-                    "total_pages": len(pdf),
+                    'source': str(file_path),
+                    'filename': file_path.name,
+                    'filetype': 'pdf',
+                    'page': page_num,
+                    'total_pages': len(pdf),
                 }
 
                 # Add document for this page
-                documents.append({"content": text, "metadata": metadata})
+                documents.append({'content': text, 'metadata': metadata})
 
             # TODO: Implement image extraction if self.extract_images is True
             # TODO: Implement table extraction if self.extract_tables is True
@@ -192,7 +192,7 @@ class PDFLoader(DocumentLoader, FileLoader):
         """
         documents = []
 
-        with open(file_path, "rb") as file:
+        with open(file_path, 'rb') as file:
             pdf = PdfReader(file)
 
             # Determine end page if not specified
@@ -211,16 +211,16 @@ class PDFLoader(DocumentLoader, FileLoader):
 
                 # Create metadata
                 metadata = {
-                    "source": str(file_path),
-                    "filename": file_path.name,
-                    "filetype": "pdf",
-                    "page": page_num,
-                    "total_pages": len(pdf.pages),
+                    'source': str(file_path),
+                    'filename': file_path.name,
+                    'filetype': 'pdf',
+                    'page': page_num,
+                    'total_pages': len(pdf.pages),
                 }
 
                 # Add document for this page
                 if text:
-                    documents.append({"content": text, "metadata": metadata})
+                    documents.append({'content': text, 'metadata': metadata})
 
         return documents
 
@@ -238,8 +238,8 @@ class EnhancedPDFLoader(PDFLoader):
         extract_images: bool = True,
         extract_tables: bool = True,
         use_ocr: bool = False,
-        ocr_languages: str = "eng",
-        page_separator: str = "\n\n",
+        ocr_languages: str = 'eng',
+        page_separator: str = '\n\n',
         start_page: int = 0,
         end_page: Optional[int] = None,
     ):
@@ -281,20 +281,20 @@ class EnhancedPDFLoader(PDFLoader):
             try:
                 import importlib.util
 
-                has_pil = importlib.util.find_spec("PIL") is not None
-                has_pytesseract = importlib.util.find_spec("pytesseract") is not None
+                has_pil = importlib.util.find_spec('PIL') is not None
+                has_pytesseract = importlib.util.find_spec('pytesseract') is not None
 
                 if has_pil and has_pytesseract:
                     self._has_ocr = True
                 else:
                     missing = []
                     if not has_pil:
-                        missing.append("PIL")
+                        missing.append('PIL')
                     if not has_pytesseract:
-                        missing.append("pytesseract")
-                    raise ImportError(f"Missing required modules: {', '.join(missing)}")
+                        missing.append('pytesseract')
+                    raise ImportError(f'Missing required modules: {", ".join(missing)}')
             except ImportError as e:
-                logger.warning(f"OCR requested but dependencies not available: {e}")
+                logger.warning(f'OCR requested but dependencies not available: {e}')
                 self._has_ocr = False
         else:
             self._has_ocr = False
@@ -303,12 +303,12 @@ class EnhancedPDFLoader(PDFLoader):
             try:
                 import importlib.util
 
-                if importlib.util.find_spec("tabula") is not None:
+                if importlib.util.find_spec('tabula') is not None:
                     self._has_tabula = True
                 else:
-                    raise ImportError("tabula module not found")
+                    raise ImportError('tabula module not found')
             except ImportError:
-                logger.warning("Table extraction requested but tabula-py not available.")
+                logger.warning('Table extraction requested but tabula-py not available.')
                 self._has_tabula = False
         else:
             self._has_tabula = False
@@ -342,5 +342,5 @@ class EnhancedPDFLoader(PDFLoader):
 
 
 # Register the loaders
-registry.register(PDFLoader, extensions=["pdf"])
-registry.register(EnhancedPDFLoader, name="EnhancedPDFLoader", extensions=[])
+registry.register(PDFLoader, extensions=['pdf'])
+registry.register(EnhancedPDFLoader, name='EnhancedPDFLoader', extensions=[])

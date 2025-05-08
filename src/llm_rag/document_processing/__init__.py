@@ -33,9 +33,9 @@ class DocumentLoader(ABC):
         deprecated.
         """
         warnings.warn(
-            "This DocumentLoader class is deprecated. "
-            "Use the DocumentLoader from "
-            "llm_rag.document_processing.loaders instead.",
+            'This DocumentLoader class is deprecated. '
+            'Use the DocumentLoader from '
+            'llm_rag.document_processing.loaders instead.',
             DeprecationWarning,
             stacklevel=2,
         )
@@ -77,7 +77,7 @@ try:
     _has_loaders = True
 except ImportError as e:
     warnings.warn(
-        f"Error importing document loaders: {str(e)}. Some functionality may be limited.",
+        f'Error importing document loaders: {str(e)}. Some functionality may be limited.',
         ImportWarning,
         stacklevel=2,
     )
@@ -85,38 +85,38 @@ except ImportError as e:
 
 # Show deprecation warning for directly importing from this module
 warnings.warn(
-    "Importing loaders directly from llm_rag.document_processing "
-    "is deprecated. Please import them from "
-    "llm_rag.document_processing.loader_api instead.",
+    'Importing loaders directly from llm_rag.document_processing '
+    'is deprecated. Please import them from '
+    'llm_rag.document_processing.loader_api instead.',
     DeprecationWarning,
     stacklevel=2,
 )
 
 # Define the exports based on what's available
 _common_exports = [
-    "DocumentMetadata",
-    "DocumentContent",
-    "Document",
-    "Documents",
-    "DocumentLoader",
-    "DocumentProcessor",
-    "TextSplitter",
-    "CharacterTextChunker",
-    "RecursiveTextChunker",
+    'DocumentMetadata',
+    'DocumentContent',
+    'Document',
+    'Documents',
+    'DocumentLoader',
+    'DocumentProcessor',
+    'TextSplitter',
+    'CharacterTextChunker',
+    'RecursiveTextChunker',
 ]
 
 if _has_loaders:
     __all__ = _common_exports + [
-        "CSVLoader",
-        "DirectoryLoader",
-        "EnhancedPDFLoader",
-        "JSONLoader",
-        "PDFLoader",
-        "TextFileLoader",
-        "WebLoader",
-        "WebPageLoader",
-        "XMLLoader",
-        "load_documents_from_directory",
+        'CSVLoader',
+        'DirectoryLoader',
+        'EnhancedPDFLoader',
+        'JSONLoader',
+        'PDFLoader',
+        'TextFileLoader',
+        'WebLoader',
+        'WebPageLoader',
+        'XMLLoader',
+        'load_documents_from_directory',
     ]
 else:
     __all__ = _common_exports

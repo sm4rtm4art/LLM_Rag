@@ -14,11 +14,11 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 
 - **Goal**: Process text-based PDFs, extract raw text using OCR.
 - **Tasks**:
-  - [x] Create `src/llm_rag/document_processing/ocr/` directory structure.
-  - [x] Implement `pdf_converter.py` using PyMuPDF to render PDF pages as images.
-  - [x] Implement `ocr_engine.py` as a basic wrapper for Tesseract.
-  - [x] Create initial `pipeline.py` to orchestrate PDF -> Image -> OCR Text flow.
-  - [x] Add basic configuration for Tesseract path and language models.
+  - ✅ Create `src/llm_rag/document_processing/ocr/` directory structure.
+  - ✅ Implement `pdf_converter.py` using PyMuPDF to render PDF pages as images.
+  - ✅ Implement `ocr_engine.py` as a basic wrapper for Tesseract.
+  - ✅ Create initial `pipeline.py` to orchestrate PDF -> Image -> OCR Text flow.
+  - ✅ Add basic configuration for Tesseract path and language models.
   - [ ] Write unit tests for `pdf_converter` and `ocr_engine`.
   - [ ] Write basic integration test for the text PDF pipeline.
 - **Outcome**: Ability to extract raw text from simple, text-based PDFs via the new OCR pipeline.
@@ -27,9 +27,9 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 
 - **Goal**: Handle scanned PDFs and produce basic structured output (Markdown).
 - **Tasks**:
-  - [x] Enhance `pdf_converter.py` with image preprocessing options (deskewing, thresholding).
-  - [x] Implement `output_formatter.py` to convert raw OCR text into simple Markdown (page breaks, basic paragraphs).
-  - [x] Update `pipeline.py` to include preprocessing and formatting steps.
+  - ✅ Enhance `pdf_converter.py` with image preprocessing options (deskewing, thresholding).
+  - ✅ Implement `output_formatter.py` to convert raw OCR text into simple Markdown (page breaks, basic paragraphs).
+  - ✅ Update `pipeline.py` to include preprocessing and formatting steps.
   - [ ] Create evaluation dataset with scanned PDFs.
   - [ ] Implement initial evaluation harness (CER/WER calculation).
   - [ ] Test pipeline thoroughly with various scanned document qualities.
@@ -40,17 +40,17 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 
 - **Goal**: Improve the quality and structure of the OCR output using a local LLM.
 - **Tasks**:
-  - [x] Implement `llm_processor.py` with an `LLMCleaner` class/function.
-  - [x] Integrate `LLMCleaner` with `ModelFactory` (e.g., Gemma).
-  - [x] Develop and iterate on prompts for cleaning OCR errors and basic formatting (headings, lists).
-  - [x] Update `pipeline.py` to optionally call `LLMCleaner` after the `output_formatter`.
+  - ✅ Implement `llm_processor.py` with an `LLMCleaner` class/function.
+  - ✅ Integrate `LLMCleaner` with `ModelFactory` (e.g., Gemma).
+  - ✅ Develop and iterate on prompts for cleaning OCR errors and basic formatting (headings, lists).
+  - ✅ Update `pipeline.py` to optionally call `LLMCleaner` after the `output_formatter`.
   - [ ] Implement hallucination safeguards (see details in "LLM Hallucination Mitigation" section):
-    - [x] **Initial:** Store original OCR text alongside cleaned version.
-    - [x] **Initial:** Implement basic change detection metrics (e.g., character/word change percentage).
-    - [x] **Initial:** Develop and apply constrained prompt techniques.
+    - ✅ **Initial:** Store original OCR text alongside cleaned version.
+    - ✅ **Initial:** Implement basic change detection metrics (e.g., character/word change percentage).
+    - ✅ **Initial:** Develop and apply constrained prompt techniques.
     - [ ] _Future:_ Implement more advanced safeguards (semantic drift detection, verification steps) as needed.
-  - [x] Evaluate quality improvement vs. processing time trade-off.
-  - [x] Add configuration for LLM model selection and cleaning parameters.
+  - ✅ Evaluate quality improvement vs. processing time trade-off.
+  - ✅ Add configuration for LLM model selection and cleaning parameters.
   - [ ] Write unit tests for `LLMCleaner` (mocking the LLM).
   - [ ] Enhance evaluation harness to include semantic similarity metrics.
 - **Outcome**: Higher-fidelity Markdown output, potentially correcting OCR errors and improving structure.
@@ -60,12 +60,12 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 - **Goal**: Implement safeguards against LLM hallucinations in both OCR cleaning (Phase 3) and document comparison (Phase 7) to maintain text fidelity and trustworthiness. _Implementation will be incremental._
 - **Tasks**:
 
-  - [x] **Initial Safeguards**:
-    - [x] **Storage:** Store original OCR text alongside LLM-processed text (e.g., in metadata or separate fields).
-    - [x] **Basic Change Detection:** Implement simple metrics (e.g., character/word change percentage) between original and processed text. Log these metrics.
-    - [x] **Thresholds:** Create configurable thresholds for acceptable change levels to flag potentially problematic edits.
-    - [x] **Constrained Prompting:** Develop explicit instruction templates focusing on correction, not generation. Control parameters like temperature.
-    - [x] **Configuration:** Ensure LLM steps can be easily enabled/disabled.
+  - ✅ **Initial Safeguards**:
+    - ✅ **Storage:** Store original OCR text alongside LLM-processed text (e.g., in metadata or separate fields).
+    - ✅ **Basic Change Detection:** Implement simple metrics (e.g., character/word change percentage) between original and processed text. Log these metrics.
+    - ✅ **Thresholds:** Create configurable thresholds for acceptable change levels to flag potentially problematic edits.
+    - ✅ **Constrained Prompting:** Develop explicit instruction templates focusing on correction, not generation. Control parameters like temperature.
+    - ✅ **Configuration:** Ensure LLM steps can be easily enabled/disabled.
   - [ ] **_Future_ Enhancements**:
     - [ ] **Semantic Drift Detection:** Implement embedding-based similarity checks between original and cleaned text to catch meaning changes.
     - [ ] **Advanced Verification:** Implement secondary checks (e.g., different prompts, model cross-check, string similarity sanity checks). Consider checks against original PDF images for critical sections.
@@ -138,7 +138,7 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 - **Dataset**:
   - [ ] Curate a diverse PDF dataset (text, scanned, complex layouts, tables, images).
   - [ ] Create corresponding "golden standard" Markdown/JSON outputs manually.
-  - [x] **CI Testing Data**: Create small, synthetic test PDFs that can be committed to the repository for CI testing, or implement robust mocking strategies for tests that run in CI environments without real test data.
+  - ✅ **CI Testing Data**: Create small, synthetic test PDFs that can be committed to the repository for CI testing, or implement robust mocking strategies for tests that run in CI environments without real test data.
 - **Metrics**:
   - [ ] Implement Character Error Rate (CER) / Word Error Rate (WER) calculation.
   - [ ] Explore semantic similarity metrics (BLEU, ROUGE, embedding distance).
@@ -146,18 +146,18 @@ This document outlines the plan for integrating an OCR pipeline into the documen
   - [ ] Incorporate manual review scoring system.
   - [ ] _Note:_ Advanced metrics like CLEval and specific chunking/comparison quality measures will be added incrementally as the relevant features mature.
 - **Methodology**:
-  - [x] Enforce unit tests for all modules.
+  - ✅ Enforce unit tests for all modules.
   - [ ] Develop integration tests for component interactions.
   - [ ] Build and maintain an evaluation harness script to run the full pipeline on the dataset and report metrics.
   - [ ] Track metrics across phases to demonstrate improvement.
 
 ## Optimization & Scalability Considerations
 
-- [x] **Image Processing**: Systematically test image resolution and preprocessing effects.
+- ✅ **Image Processing**: Systematically test image resolution and preprocessing effects.
 - [ ] **OCR Engine**: Benchmark Tesseract vs. alternatives (EasyOCR, Cloud APIs) if performance/accuracy demands increase.
-- [x] **Parallelization**: Profile and implement parallel execution for bottlenecks (OCR, LLM).
+- ✅ **Parallelization**: Profile and implement parallel execution for bottlenecks (OCR, LLM).
 - [ ] **LLM Inference**: Apply quantization, explore optimized serving frameworks (vLLM, TGI) if needed.
-- [x] **Caching**: Implement caching for intermediate results (images, raw OCR) to speed up development/re-runs.
+- ✅ **Caching**: Implement caching for intermediate results (images, raw OCR) to speed up development/re-runs.
 
 ## Potential Pitfalls & Mitigation
 
@@ -165,8 +165,12 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 - [ ] **LLM Inaccuracy**: Employ rigorous prompt engineering, temperature control, verification step, allow skipping LLM steps, monitor for introduced errors.
 - [ ] **Performance Bottlenecks**: Address proactively with optimization techniques (parallelization, efficient models), manage user expectations.
 - [ ] **Complex Structure Extraction**: Start simple (Markdown), use capable LLMs, combine with heuristics, consider specialized models if necessary.
-- [x] **Dependency Management**: Use Docker for environment consistency, maintain clear dependency lists (`requirements.txt`/`pyproject.toml`).
-- [x] **CI/Test Environment Discrepancies**: Ensure tests gracefully handle missing test data in CI environments by using synthetic data, mocks, or conditional test skipping. Add markers like `@pytest.mark.requires_test_data` to clearly identify tests that need real documents.
+- ✅ **Code Style Consistency**: Configure ruff to handle mixed indentation styles across modules:
+  - ✅ Use per-file-ignores in pyproject.toml for specific modules (e.g., comparison module)
+  - ✅ Add standard ignore rules for tab indentation (W191), tab docstrings (D206), and mixed indentation (E101)
+  - ✅ Maintain consistent style within each module while allowing for module-specific conventions
+- ✅ **Dependency Management**: Use Docker for environment consistency, maintain clear dependency lists (`requirements.txt`/`pyproject.toml`).
+- ✅ **CI/Test Environment Discrepancies**: Ensure tests gracefully handle missing test data in CI environments by using synthetic data, mocks, or conditional test skipping. Add markers like `@pytest.mark.requires_test_data` to clearly identify tests that need real documents.
 
 ---
 
@@ -177,24 +181,29 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 - **Goal**: Compare two processed documents (output from Phase 3+) section-by-section using embeddings, identifying major similarities/differences. Output basic annotated Markdown.
 - **Prerequisite**: Reliable structured text output (Markdown) from the core OCR pipeline (Phase 3+).
 - **Tasks**:
-  - [x] **`document_parser.py`**: Develop a module to parse the structured output (Markdown/JSON) from the OCR pipeline into logical sections/paragraphs (e.g., based on headings, semantic breaks, or fixed chunks).
-  - [ ] **`alignment.py`**:
-    - [x] Define core alignment interface and data structures
-    - [ ] Implement alignment strategy selection (heading-based, content-based, structural)
-    - [ ] Implement robust sequence alignment algorithms for document sections
-    - [ ] Add configuration options for alignment thresholds and behavior
-  - [x] **`comparison_engine.py` (Embeddings)**:
-    - [x] Integrate an embedding model (mock implementation for now)
-    - [x] Generate embeddings for each aligned section pair
-    - [x] Calculate cosine similarity between embeddings
-    - [x] Implement comparison result classification
-  - [x] **`diff_formatter.py` (Basic)**:
-    - [x] Implement logic to classify aligned sections based on similarity thresholds
-    - [x] Generate annotated output in multiple formats (Markdown, HTML, Text)
-    - [x] Add configuration for output format and detail level
-  - [x] **`pipeline.py` (Orchestration)**:
-    - [x] Implement pipeline to process documents through parsing, alignment, comparison, and formatting
-    - [x] Add caching mechanism for intermediate results
+  - ✅ **`document_parser.py`**: Develop a module to parse the structured output (Markdown/JSON) from the OCR pipeline into logical sections/paragraphs (e.g., based on headings, semantic breaks, or fixed chunks). _(Status: Core Markdown parsing refactored with delegated strategy; Pydantic models implemented; List parsing verified; Setext heading parsing fixed)_
+  - ✅ **`alignment.py`**:
+    - ✅ Define core alignment interface and data structures
+    - ✅ Implement alignment strategy selection (heading-based, content-based, structural)
+    - ✅ Implement robust sequence alignment algorithms for document sections
+    - ✅ Add configuration options for alignment thresholds and behavior
+    - ✅ Fix unhashable type issue with Section objects in sets
+    - ✅ Implement comprehensive tests covering alignment strategies
+  - ✅ **`comparison_engine.py` (Embeddings)**:
+    - ✅ Integrate an embedding model (mock implementation for now)
+    - ✅ Generate embeddings for each aligned section pair
+    - ✅ Calculate cosine similarity between embeddings
+    - ✅ Implement comparison result classification
+    - ✅ Create robust test suite for comparison methods
+  - ✅ **`diff_formatter.py` (Basic)**:
+    - ✅ Implement logic to classify aligned sections based on similarity thresholds
+    - ✅ Generate annotated output in multiple formats (Markdown, HTML, Text)
+    - ✅ Add configuration for output format and detail level
+    - ✅ Create tests for different output formats and configurations
+  - ✅ **`pipeline.py` (Orchestration)**:
+    - ✅ Implement pipeline to process documents through parsing, alignment, comparison, and formatting
+    - ✅ Add caching mechanism for intermediate results
+    - ✅ Implement comprehensive test suite for pipeline workflow
     - [ ] Complete integration with OCR pipeline for end-to-end workflow
   - [ ] **Architectural Enhancement**:
     - [ ] Consider refactoring the comparison module to follow a more modular approach similar to the RAG pipeline
@@ -204,7 +213,10 @@ This document outlines the plan for integrating an OCR pipeline into the documen
     - [ ] Clarify how S2 Chunking from Phase 5.5 will integrate with document_parser.py
     - [ ] Add adapter code to use chunked output for comparison
     - [ ] Ensure consistent document representation between chunking and comparison
-  - [ ] **Testing**: Create test cases with known document pairs (identical, slightly modified, significantly different) and evaluate alignment and similarity scoring.
+  - ✅ **Testing**: Create test cases with known document pairs (identical, slightly modified, significantly different) and evaluate alignment and similarity scoring.
+    - ✅ Test all core components
+    - ✅ Fix test issues and ensure 100% pass rate
+    - [ ] Fix linter and mypy type issues
 - **Outcome**: Ability to generate a basic Markdown diff indicating sections that are likely similar or different based on embedding similarity.
 
 ### Phase 7: Advanced Semantic Comparison with LLM
@@ -297,6 +309,21 @@ This document outlines the plan for integrating an OCR pipeline into the documen
       - [ ] _Future:_ ColBERT token-level retrieval (if integrated for comparison)
     - [ ] Create adapters for different vector stores (FAISS, Chroma, Milvus).
     - [ ] Implement caching mechanisms for frequent queries.
+    - [ ] **RAGatouille Integration**:
+      - [ ] Implement wrapper for RAGatouille with its ColBERT-based retrieval
+      - [ ] Configure RAGatouille for German language support
+        - [ ] Evaluate colbert-european-multilingual model for direct use
+        - [ ] Explore fine-tuning options with German-MiniLM or Gelectra models
+        - [ ] Implement German-specific preprocessing (lemmatization, stemming) for domain content
+      - [ ] Integrate with document processing pipeline for high-quality retrievals
+      - [ ] Benchmark RAGatouille against other retrieval methods
+        - [ ] Implement evaluation metrics: Hit@k, MRR, and nDCG
+        - [ ] Compare against BM25, FAISS (with cosine), Chroma/HNSW, and hybrid approaches
+      - [ ] Create fallback mechanisms when RAGatouille might not be optimal
+      - [ ] Design hybrid retrieval combining RAGatouille with other methods
+        - [ ] Implement fast first-pass retrieval (BM25/dense) for top-N documents
+        - [ ] Apply ColBERT reranking on this narrowed document set
+        - [ ] Explore both LangChain's retriever composition and manual implementation
   - **Re-ranking Modules**:
     - [ ] Implement different re-ranking strategies:
       - [ ] Cross-encoder re-ranking
@@ -316,6 +343,57 @@ This document outlines the plan for integrating an OCR pipeline into the documen
     - [ ] Develop batch processing capabilities for multi-document comparison.
 
 - **Outcome**: A highly adaptable retrieval system capable of supporting various use cases from simple keyword search to complex semantic comparison, with the ability to easily swap or upgrade components as requirements evolve or new technologies emerge.
+
+## RAGatouille Advanced Retrieval Integration
+
+- **Goal**: Enhance retrieval quality by integrating RAGatouille's advanced ColBERT-based retrieval capabilities into the system.
+- **Tasks**:
+
+  - [ ] **Core Implementation**:
+    - [ ] Create `src/llm_rag/retrieval/ragatouille_retriever.py` implementing the retrieval interface.
+    - [ ] Implement adapter patterns to convert between RAGatouille's data formats and our system's.
+    - [ ] Configure RAGatouille with appropriate models for German and multilingual content.
+      - [ ] Evaluate and implement colbert-european-multilingual model
+      - [ ] Explore fine-tuning pathways using German-MiniLM or Gelectra
+      - [ ] Develop domain-specific optimization if needed
+    - [ ] Integrate with the document chunking system to optimize chunk sizes for RAGatouille.
+  - [ ] **German Language Support**:
+    - [ ] Implement preprocessing pipeline specific to German text:
+      - [ ] German lemmatization for improved token matching
+      - [ ] Stemming customized for domain-specific content
+      - [ ] Special handling for compound words common in German
+      - [ ] Domain-specific vocabulary enhancement
+    - [ ] Evaluate multilingual vs. German-specific model performance
+    - [ ] Create specialized indexing configurations for German content
+  - [ ] **Configuration & Optimization**:
+    - [ ] Implement parameter management for RAGatouille's retrieval settings.
+    - [ ] Develop batching strategies for efficient processing of large document collections.
+    - [ ] Create caching mechanism for RAGatouille indices to speed up repeated queries.
+    - [ ] Explore quantization options for deployed models to reduce resource requirements.
+  - [ ] **Hybrid Approaches**:
+    - [ ] Implement fusion methods combining RAGatouille with BM25/dense retrievers.
+    - [ ] Design query routing logic to select optimal retriever based on query characteristics.
+    - [ ] Create ensemble retrieval options that combine results from multiple retrievers.
+    - [ ] Develop two-stage retrieval pipeline:
+      - [ ] Fast first-pass retrieval using BM25/vector search to identify candidate set
+      - [ ] Apply ColBERT via RAGatouille for precise reranking of top candidates
+      - [ ] Support both LangChain's retriever composition and custom implementation
+  - [ ] **Evaluation & Testing**:
+    - [ ] Benchmark RAGatouille against baseline retrievers on domain-specific test set.
+      - [ ] Implement Hit@k metrics for various k values (1, 3, 5, 10)
+      - [ ] Calculate Mean Reciprocal Rank (MRR) across test queries
+      - [ ] Measure normalized Discounted Cumulative Gain (nDCG)
+      - [ ] Compare performance against BM25, FAISS (cosine), Chroma/HNSW, and hybrids
+    - [ ] Develop specific tests for RAGatouille's late-interaction capabilities.
+    - [ ] Create visualization tools for retrieval quality assessment.
+    - [ ] Implement A/B testing framework to compare retrieval methods.
+  - [ ] **Edge Cases & Robustness**:
+    - [ ] Develop fallback strategies for when RAGatouille fails or underperforms.
+    - [ ] Create handling for very long documents and queries.
+    - [ ] Implement error recovery for model loading and prediction issues.
+    - [ ] Design graceful degradation for resource-constrained environments.
+
+- **Outcome**: A high-performance retrieval system leveraging RAGatouille's advanced late-interaction ColBERT approach, providing superior semantic search while integrating seamlessly with the existing architecture. The implementation will include hybrid approaches, robust fallbacks, and comprehensive testing to ensure reliable performance across various document types.
 
 ## Comparison Implementation Details & Strategies
 

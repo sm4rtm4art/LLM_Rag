@@ -35,14 +35,14 @@ def load_document(file_path: Union[str, Path]) -> Documents:
     """
     path = Path(file_path)
     if not path.exists():
-        raise FileNotFoundError(f"File not found: {file_path}")
+        raise FileNotFoundError(f'File not found: {file_path}')
 
     # Use the registry to find an appropriate loader
     loader = registry.create_loader_for_file(path)
 
     # Raise error if no loader is found
     if loader is None:
-        raise ValueError(f"No loader found for file type: {path.suffix}")
+        raise ValueError(f'No loader found for file type: {path.suffix}')
 
     # Load the document using the loader
     return loader.load_from_file(path)
@@ -63,7 +63,7 @@ def load_documents_from_directory(directory_path: str) -> List[dict]:
     """
     path = Path(directory_path)
     if not path.exists() or not path.is_dir():
-        raise NotADirectoryError(f"Directory not found: {directory_path}")
+        raise NotADirectoryError(f'Directory not found: {directory_path}')
 
     loader = DirectoryLoader(directory_path)
     return loader.load()
@@ -75,7 +75,7 @@ class DirectoryLoader(DocumentLoader):
     def __init__(
         self,
         directory_path: Union[str, Path],
-        glob_pattern: str = "*.*",
+        glob_pattern: str = '*.*',
         recursive: bool = False,
         loader_mapping: Optional[Dict[str, Callable]] = None,
         exclude_patterns: Optional[List[str]] = None,
@@ -109,9 +109,9 @@ class DirectoryLoader(DocumentLoader):
         self.loader_kwargs.update(kwargs)
 
         if not self.directory_path.exists():
-            logger.warning(f"Directory not found: {self.directory_path}")
+            logger.warning(f'Directory not found: {self.directory_path}')
         elif not self.directory_path.is_dir():
-            logger.warning(f"Path is not a directory: {self.directory_path}")
+            logger.warning(f'Path is not a directory: {self.directory_path}')
 
     def load(self) -> Documents:
         """Load documents from files in the directory.
@@ -124,11 +124,11 @@ class DirectoryLoader(DocumentLoader):
 
         """
         try:
-            logger.info(f"Loading documents from directory: {self.directory_path}")
+            logger.info(f'Loading documents from directory: {self.directory_path}')
 
             if not self.directory_path.exists() or not self.directory_path.is_dir():
-                logger.error(f"Invalid directory path: {self.directory_path}")
-                msg = f"Directory not found: {self.directory_path}"
+                logger.error(f'Invalid directory path: {self.directory_path}')
+                msg = f'Directory not found: {self.directory_path}'
                 raise NotADirectoryError(msg)
 
             # Use the class method for loading, delegating to it
@@ -144,14 +144,14 @@ class DirectoryLoader(DocumentLoader):
         except NotADirectoryError:
             raise
         except Exception as e:
-            logger.error(f"Error loading directory {self.directory_path}: {e}")
+            logger.error(f'Error loading directory {self.directory_path}: {e}')
             return []
 
     @classmethod
     def load_from_directory(
         cls,
         directory_path: Union[str, Path],
-        glob_pattern: str = "*.*",
+        glob_pattern: str = '*.*',
         recursive: bool = False,
         exclude_patterns: Optional[List[str]] = None,
         exclude_hidden: bool = True,
@@ -176,8 +176,8 @@ class DirectoryLoader(DocumentLoader):
         """
         path = Path(directory_path)
         if not path.exists() or not path.is_dir():
-            logger.error(f"Directory not found: {directory_path}")
-            raise NotADirectoryError(f"Directory not found: {directory_path}")
+            logger.error(f'Directory not found: {directory_path}')
+            raise NotADirectoryError(f'Directory not found: {directory_path}')
 
         # Create instance but don't call load() to avoid recursion
         loader = cls(
@@ -194,7 +194,7 @@ class DirectoryLoader(DocumentLoader):
 
         # Handle recursive vs. non-recursive
         if loader.recursive:
-            glob_path = loader.directory_path.glob("**/" + loader.glob_pattern)
+            glob_path = loader.directory_path.glob('**/' + loader.glob_pattern)
         else:
             glob_path = loader.directory_path.glob(loader.glob_pattern)
 
@@ -204,7 +204,7 @@ class DirectoryLoader(DocumentLoader):
                 continue
 
             # Skip hidden files if configured to do so
-            if loader.exclude_hidden and file_path.name.startswith("."):
+            if loader.exclude_hidden and file_path.name.startswith('.'):
                 continue
 
             # Skip files matching exclude patterns
@@ -218,13 +218,13 @@ class DirectoryLoader(DocumentLoader):
 
             try:
                 # Use function directly to avoid file not found errors in tests
-                with patch("pathlib.Path.exists", return_value=True):
-                    with patch("pathlib.Path.is_file", return_value=True):
+                with patch('pathlib.Path.exists', return_value=True):
+                    with patch('pathlib.Path.is_file', return_value=True):
                         # Key for tests - use the mocked load_document
                         file_docs = load_document(file_path)
                         documents.extend(file_docs)
             except Exception as e:
-                logger.error(f"Error loading file {file_path}: {e}")
+                logger.error(f'Error loading file {file_path}: {e}')
 
         return documents
 
@@ -242,18 +242,18 @@ class DirectoryLoader(DocumentLoader):
         from .file_loaders import CSVLoader, JSONLoader, PDFLoader, TextFileLoader, XMLLoader
 
         # Match extensions to appropriate loaders
-        if ext in [".txt", ".md", ".rst", ".log"]:
+        if ext in ['.txt', '.md', '.rst', '.log']:
             return TextFileLoader(file_path, **self.loader_kwargs)
-        elif ext == ".pdf":
+        elif ext == '.pdf':
             return PDFLoader(file_path, **self.loader_kwargs)
-        elif ext == ".csv":
+        elif ext == '.csv':
             return CSVLoader(file_path, **self.loader_kwargs)
-        elif ext == ".json":
+        elif ext == '.json':
             return JSONLoader(file_path, **self.loader_kwargs)
-        elif ext == ".xml":
+        elif ext == '.xml':
             return XMLLoader(file_path, **self.loader_kwargs)
         else:
             # Default to text for unknown types
-            msg = f"No specific loader for {ext} files. Using TextFileLoader."
+            msg = f'No specific loader for {ext} files. Using TextFileLoader.'
             logger.warning(msg)
             return TextFileLoader(file_path, **self.loader_kwargs)

@@ -38,7 +38,7 @@ class ResponseGenerator(Protocol):
     interchangeably, following the Liskov Substitution Principle.
     """
 
-    def generate(self, query: str, context: str, history: str = "", **kwargs) -> str:
+    def generate(self, query: str, context: str, history: str = '', **kwargs) -> str:
         """Generate a response based on the query and context.
 
         Args:
@@ -62,7 +62,7 @@ class BaseGenerator(ABC):
     """
 
     @abstractmethod
-    def generate(self, query: str, context: str, history: str = "", **kwargs) -> str:
+    def generate(self, query: str, context: str, history: str = '', **kwargs) -> str:
         """Generate a response based on the query and context.
 
         Args:
@@ -93,14 +93,14 @@ class BaseGenerator(ABC):
         """
         if not query or not isinstance(query, str):
             raise PipelineError(
-                "Query must be a non-empty string",
-                details={"query": query},
+                'Query must be a non-empty string',
+                details={'query': query},
             )
 
         if not isinstance(context, str):
             raise PipelineError(
-                "Context must be a string",
-                details={"context_type": type(context).__name__},
+                'Context must be a string',
+                details={'context_type': type(context).__name__},
             )
 
 
@@ -132,14 +132,14 @@ class LLMGenerator(BaseGenerator):
         if isinstance(prompt_template, str):
             self.prompt_template = PromptTemplate(
                 template=prompt_template,
-                input_variables=["context", "history", "query"],
+                input_variables=['context', 'history', 'query'],
             )
         else:
             self.prompt_template = prompt_template
 
-        logger.info(f"Initialized LLMGenerator with anti_hallucination={apply_anti_hallucination}")
+        logger.info(f'Initialized LLMGenerator with anti_hallucination={apply_anti_hallucination}')
 
-    def generate(self, query: str, context: str, history: str = "", **kwargs) -> str:
+    def generate(self, query: str, context: str, history: str = '', **kwargs) -> str:
         """Generate a response using a language model.
 
         Args:
@@ -164,26 +164,26 @@ class LLMGenerator(BaseGenerator):
             self._validate_inputs(query, context)
 
             # Get generation parameters
-            temperature = kwargs.get("temperature")
-            max_tokens = kwargs.get("max_tokens")
-            apply_anti_hallucination = kwargs.get("apply_anti_hallucination", self.apply_anti_hallucination)
+            temperature = kwargs.get('temperature')
+            max_tokens = kwargs.get('max_tokens')
+            apply_anti_hallucination = kwargs.get('apply_anti_hallucination', self.apply_anti_hallucination)
 
             # Prepare the prompt with the template
             prompt = self.prompt_template.format(
                 context=context,
-                history=history if history else "",
+                history=history if history else '',
                 query=query,
             )
 
             # Prepare generation parameters
             generation_kwargs = {}
             if temperature is not None:
-                generation_kwargs["temperature"] = temperature
+                generation_kwargs['temperature'] = temperature
             if max_tokens is not None:
-                generation_kwargs["max_tokens"] = max_tokens
+                generation_kwargs['max_tokens'] = max_tokens
 
             # Generate the response
-            logger.debug(f"Generating response for query: {query}")
+            logger.debug(f'Generating response for query: {query}')
             try:
                 if generation_kwargs:
                     response = self.llm.invoke(prompt, **generation_kwargs)
@@ -197,11 +197,11 @@ class LLMGenerator(BaseGenerator):
                     response_text = response.content
             except Exception as e:
                 raise ModelError(
-                    f"Language model failed to generate response: {str(e)}",
+                    f'Language model failed to generate response: {str(e)}',
                     original_exception=e,
                 ) from e
 
-            logger.debug("Raw response generated")
+            logger.debug('Raw response generated')
 
             # Apply post-processing to reduce hallucinations if requested
             if apply_anti_hallucination:
@@ -220,9 +220,9 @@ class LLMGenerator(BaseGenerator):
                 raise
 
             # Handle other errors
-            logger.error(f"Error generating response: {str(e)}")
+            logger.error(f'Error generating response: {str(e)}')
             raise PipelineError(
-                f"Response generation failed: {str(e)}",
+                f'Response generation failed: {str(e)}',
                 original_exception=e,
             ) from e
 
@@ -238,7 +238,7 @@ class TemplatedGenerator(LLMGenerator):
         self,
         llm: BaseLanguageModel,
         templates: Dict[str, Union[str, PromptTemplate]],
-        default_template: str = "default",
+        default_template: str = 'default',
         apply_anti_hallucination: bool = True,
     ):
         """Initialize a templated generator.
@@ -271,7 +271,7 @@ class TemplatedGenerator(LLMGenerator):
             if isinstance(template, str):
                 self.templates[name] = PromptTemplate(
                     template=template,
-                    input_variables=["context", "history", "query"],
+                    input_variables=['context', 'history', 'query'],
                 )
             else:
                 self.templates[name] = template
@@ -280,7 +280,7 @@ class TemplatedGenerator(LLMGenerator):
 
         logger.info(f"Initialized TemplatedGenerator with {len(templates)} templates, default='{default_template}'")
 
-    def generate(self, query: str, context: str, history: str = "", **kwargs) -> str:
+    def generate(self, query: str, context: str, history: str = '', **kwargs) -> str:
         """Generate a response using a language model with template selection.
 
         Args:
@@ -300,7 +300,7 @@ class TemplatedGenerator(LLMGenerator):
 
         """
         # Get template from kwargs or use default
-        template_name = kwargs.get("template", self.default_template)
+        template_name = kwargs.get('template', self.default_template)
 
         if template_name not in self.templates:
             raise ValueError(
@@ -333,30 +333,30 @@ def create_generator(
 
     """
     # Special handling for unittest.mock.MagicMock during testing
-    if hasattr(llm, "_extract_mock_name") and callable(getattr(llm, "_extract_mock_name", None)):
+    if hasattr(llm, '_extract_mock_name') and callable(getattr(llm, '_extract_mock_name', None)):
         # This is a MagicMock - create a custom generator for testing
         class MockGenerator(BaseGenerator):
             def __init__(self, mock_llm):
                 self.mock_llm = mock_llm
 
-            def generate(self, query: str, context: str, history: str = "", **kwargs) -> str:
+            def generate(self, query: str, context: str, history: str = '', **kwargs) -> str:
                 # For tests, use invoke if available
-                if hasattr(self.mock_llm, "invoke") and hasattr(self.mock_llm.invoke(), "content"):
+                if hasattr(self.mock_llm, 'invoke') and hasattr(self.mock_llm.invoke(), 'content'):
                     return self.mock_llm.invoke().content
                 # Fall back to predict if invoke is not available
-                elif hasattr(self.mock_llm, "predict"):
+                elif hasattr(self.mock_llm, 'predict'):
                     return self.mock_llm.predict()
                 # If all else fails, return a generic response
-                return "This is a test response."
+                return 'This is a test response.'
 
         return MockGenerator(llm)
 
     # If templates are provided, create a TemplatedGenerator
-    templates = kwargs.get("templates")
+    templates = kwargs.get('templates')
     if templates:
-        default_template = kwargs.get("default_template", "default")
-        if prompt_template and "default" not in templates:
-            templates["default"] = prompt_template
+        default_template = kwargs.get('default_template', 'default')
+        if prompt_template and 'default' not in templates:
+            templates['default'] = prompt_template
 
         return TemplatedGenerator(
             llm=llm,

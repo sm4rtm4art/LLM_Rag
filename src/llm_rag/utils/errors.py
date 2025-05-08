@@ -17,69 +17,69 @@ from llm_rag.utils.logging import get_logger
 logger = get_logger(__name__)
 
 # Type variable for function return types
-T = TypeVar("T")
+T = TypeVar('T')
 
 
 # Define error categories and codes
 class ErrorCategory:
     """Enumeration of error categories for grouping related errors."""
 
-    CONFIGURATION = "CONFIGURATION"
-    DATA_ACCESS = "DATA_ACCESS"
-    EXTERNAL_SERVICE = "EXTERNAL_SERVICE"
-    INPUT_VALIDATION = "INPUT_VALIDATION"
-    INTERNAL = "INTERNAL"
-    MODEL = "MODEL"
-    PIPELINE = "PIPELINE"
-    VECTORSTORE = "VECTORSTORE"
-    DOCUMENT_PROCESSING = "DOCUMENT_PROCESSING"
+    CONFIGURATION = 'CONFIGURATION'
+    DATA_ACCESS = 'DATA_ACCESS'
+    EXTERNAL_SERVICE = 'EXTERNAL_SERVICE'
+    INPUT_VALIDATION = 'INPUT_VALIDATION'
+    INTERNAL = 'INTERNAL'
+    MODEL = 'MODEL'
+    PIPELINE = 'PIPELINE'
+    VECTORSTORE = 'VECTORSTORE'
+    DOCUMENT_PROCESSING = 'DOCUMENT_PROCESSING'
 
 
 class ErrorCode:
     """Error codes with categories for specific error conditions."""
 
     # Configuration errors (1xx)
-    INVALID_CONFIG = f"{ErrorCategory.CONFIGURATION}:101"
-    MISSING_CONFIG = f"{ErrorCategory.CONFIGURATION}:102"
-    ENV_VAR_NOT_SET = f"{ErrorCategory.CONFIGURATION}:103"
+    INVALID_CONFIG = f'{ErrorCategory.CONFIGURATION}:101'
+    MISSING_CONFIG = f'{ErrorCategory.CONFIGURATION}:102'
+    ENV_VAR_NOT_SET = f'{ErrorCategory.CONFIGURATION}:103'
 
     # Data access errors (2xx)
-    FILE_NOT_FOUND = f"{ErrorCategory.DATA_ACCESS}:201"
-    PERMISSION_DENIED = f"{ErrorCategory.DATA_ACCESS}:202"
-    INVALID_FILE_FORMAT = f"{ErrorCategory.DATA_ACCESS}:203"
+    FILE_NOT_FOUND = f'{ErrorCategory.DATA_ACCESS}:201'
+    PERMISSION_DENIED = f'{ErrorCategory.DATA_ACCESS}:202'
+    INVALID_FILE_FORMAT = f'{ErrorCategory.DATA_ACCESS}:203'
 
     # External service errors (3xx)
-    SERVICE_UNAVAILABLE = f"{ErrorCategory.EXTERNAL_SERVICE}:301"
-    API_ERROR = f"{ErrorCategory.EXTERNAL_SERVICE}:302"
-    RATE_LIMIT_EXCEEDED = f"{ErrorCategory.EXTERNAL_SERVICE}:303"
+    SERVICE_UNAVAILABLE = f'{ErrorCategory.EXTERNAL_SERVICE}:301'
+    API_ERROR = f'{ErrorCategory.EXTERNAL_SERVICE}:302'
+    RATE_LIMIT_EXCEEDED = f'{ErrorCategory.EXTERNAL_SERVICE}:303'
 
     # Input validation errors (4xx)
-    INVALID_INPUT = f"{ErrorCategory.INPUT_VALIDATION}:401"
-    MISSING_PARAMETER = f"{ErrorCategory.INPUT_VALIDATION}:402"
-    UNSUPPORTED_OPERATION = f"{ErrorCategory.INPUT_VALIDATION}:403"
+    INVALID_INPUT = f'{ErrorCategory.INPUT_VALIDATION}:401'
+    MISSING_PARAMETER = f'{ErrorCategory.INPUT_VALIDATION}:402'
+    UNSUPPORTED_OPERATION = f'{ErrorCategory.INPUT_VALIDATION}:403'
 
     # Internal errors (5xx)
-    UNEXPECTED_ERROR = f"{ErrorCategory.INTERNAL}:501"
-    NOT_IMPLEMENTED = f"{ErrorCategory.INTERNAL}:502"
+    UNEXPECTED_ERROR = f'{ErrorCategory.INTERNAL}:501'
+    NOT_IMPLEMENTED = f'{ErrorCategory.INTERNAL}:502'
 
     # Model errors (6xx)
-    MODEL_NOT_FOUND = f"{ErrorCategory.MODEL}:601"
-    MODEL_LOAD_ERROR = f"{ErrorCategory.MODEL}:602"
-    INFERENCE_ERROR = f"{ErrorCategory.MODEL}:603"
+    MODEL_NOT_FOUND = f'{ErrorCategory.MODEL}:601'
+    MODEL_LOAD_ERROR = f'{ErrorCategory.MODEL}:602'
+    INFERENCE_ERROR = f'{ErrorCategory.MODEL}:603'
 
     # Pipeline errors (7xx)
-    PIPELINE_CONFIG_ERROR = f"{ErrorCategory.PIPELINE}:701"
-    RETRIEVAL_ERROR = f"{ErrorCategory.PIPELINE}:702"
-    GENERATION_ERROR = f"{ErrorCategory.PIPELINE}:703"
+    PIPELINE_CONFIG_ERROR = f'{ErrorCategory.PIPELINE}:701'
+    RETRIEVAL_ERROR = f'{ErrorCategory.PIPELINE}:702'
+    GENERATION_ERROR = f'{ErrorCategory.PIPELINE}:703'
 
     # Vectorstore errors (8xx)
-    VECTORSTORE_CONNECTION_ERROR = f"{ErrorCategory.VECTORSTORE}:801"
-    EMBEDDING_ERROR = f"{ErrorCategory.VECTORSTORE}:802"
-    QUERY_ERROR = f"{ErrorCategory.VECTORSTORE}:803"
+    VECTORSTORE_CONNECTION_ERROR = f'{ErrorCategory.VECTORSTORE}:801'
+    EMBEDDING_ERROR = f'{ErrorCategory.VECTORSTORE}:802'
+    QUERY_ERROR = f'{ErrorCategory.VECTORSTORE}:803'
 
     # Document processing errors (9xx)
-    DOCUMENT_PARSE_ERROR = f"{ErrorCategory.DOCUMENT_PROCESSING}:901"
-    CHUNK_ERROR = f"{ErrorCategory.DOCUMENT_PROCESSING}:902"
+    DOCUMENT_PARSE_ERROR = f'{ErrorCategory.DOCUMENT_PROCESSING}:901'
+    CHUNK_ERROR = f'{ErrorCategory.DOCUMENT_PROCESSING}:902'
 
 
 class LLMRagError(Exception):
@@ -110,9 +110,9 @@ class LLMRagError(Exception):
         self.details = details or {}
 
         # Build the full message
-        full_message = f"[{error_code}] {message}"
+        full_message = f'[{error_code}] {message}'
         if original_exception:
-            full_message += f" (Original error: {str(original_exception)})"
+            full_message += f' (Original error: {str(original_exception)})'
 
         super().__init__(full_message)
 
@@ -126,15 +126,15 @@ class LLMRagError(Exception):
 
         """
         result = {
-            "error_code": self.error_code,
-            "message": str(self),
-            "details": self.details,
+            'error_code': self.error_code,
+            'message': str(self),
+            'details': self.details,
         }
 
         if self.original_exception:
-            result["original_error"] = {
-                "type": type(self.original_exception).__name__,
-                "message": str(self.original_exception),
+            result['original_error'] = {
+                'type': type(self.original_exception).__name__,
+                'message': str(self.original_exception),
             }
 
         return result
@@ -320,7 +320,7 @@ class DocumentProcessingError(LLMRagError):
 def handle_exceptions(
     error_type: Type[LLMRagError] = LLMRagError,
     error_code: str = ErrorCode.UNEXPECTED_ERROR,
-    default_message: str = "An unexpected error occurred",
+    default_message: str = 'An unexpected error occurred',
     log_exception: bool = True,
     reraise: bool = False,
     reraise_for_testing: bool = False,
@@ -353,25 +353,25 @@ def handle_exceptions(
                 # Skip wrapping if it's already the target error type
                 if isinstance(e, error_type):
                     if log_exception:
-                        logger.error(f"Error in {func.__name__}: {str(e)}")
+                        logger.error(f'Error in {func.__name__}: {str(e)}')
                     if reraise:
                         raise
                     return None
 
                 # Get function details for better error reporting
                 module = inspect.getmodule(func)
-                module_name = module.__name__ if module else "unknown_module"
+                module_name = module.__name__ if module else 'unknown_module'
 
                 # Build error message and details
                 message = default_message
-                if hasattr(e, "__str__"):
-                    message = f"{default_message}: {str(e)}"
+                if hasattr(e, '__str__'):
+                    message = f'{default_message}: {str(e)}'
 
                 details = {
-                    "function": func.__name__,
-                    "module": module_name,
-                    "args": str(args),
-                    "kwargs": str(kwargs),
+                    'function': func.__name__,
+                    'module': module_name,
+                    'args': str(args),
+                    'kwargs': str(kwargs),
                 }
 
                 # Create and log the wrapped exception
@@ -384,13 +384,13 @@ def handle_exceptions(
 
                 if log_exception:
                     logger.error(
-                        f"Error in {func.__name__}: {str(wrapped_error)}",
+                        f'Error in {func.__name__}: {str(wrapped_error)}',
                         exc_info=True,
                     )
 
                 # Check if we should reraise for testing
                 should_reraise_for_testing = reraise_for_testing and (
-                    "test_" in module_name or module_name.startswith("tests.")
+                    'test_' in module_name or module_name.startswith('tests.')
                 )
 
                 if reraise or should_reraise_for_testing:
@@ -421,7 +421,7 @@ def convert_exception(
         A LLMRagError instance
 
     """
-    default_message = message or f"An error occurred: {str(exception)}"
+    default_message = message or f'An error occurred: {str(exception)}'
 
     return error_type(
         message=default_message,
@@ -440,7 +440,7 @@ def get_exception_details() -> Dict[str, Any]:
     exc_type, exc_value, exc_traceback = sys.exc_info()
 
     if not exc_type or not exc_value:
-        return {"error": "No active exception"}
+        return {'error': 'No active exception'}
 
     tb_list = traceback.extract_tb(exc_traceback)
     frames = []
@@ -448,15 +448,15 @@ def get_exception_details() -> Dict[str, Any]:
     for tb_frame in tb_list:
         frames.append(
             {
-                "filename": tb_frame.filename,
-                "line": tb_frame.lineno,
-                "name": tb_frame.name,
-                "line_content": tb_frame.line,
+                'filename': tb_frame.filename,
+                'line': tb_frame.lineno,
+                'name': tb_frame.name,
+                'line_content': tb_frame.line,
             }
         )
 
     return {
-        "type": exc_type.__name__,
-        "message": str(exc_value),
-        "traceback": frames,
+        'type': exc_type.__name__,
+        'message': str(exc_value),
+        'traceback': frames,
     }

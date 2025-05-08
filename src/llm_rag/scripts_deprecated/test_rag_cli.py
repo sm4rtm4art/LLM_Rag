@@ -8,13 +8,13 @@ def main():
     try:
         # Initialize RAG pipeline
         RAGPipeline()
-        print("RAG pipeline initialized successfully")
+        print('RAG pipeline initialized successfully')
     except Exception as e:
-        print(f"Error initializing RAG pipeline: {e}")
+        print(f'Error initializing RAG pipeline: {e}')
         return 1
 
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     exit(main())
