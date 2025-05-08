@@ -33,15 +33,15 @@ def character_chunker():
 @pytest.fixture
 def long_text():
     """Create a long text for testing."""
-    return "This is a test document. " * 20
+    return 'This is a test document. ' * 20
 
 
 @pytest.fixture
 def text_with_sentences():
     """Create a text with multiple sentences for testing."""
     return (
-        "This is the first sentence. This is the second sentence. "
-        "This is the third sentence. This is the fourth sentence."
+        'This is the first sentence. This is the second sentence. '
+        'This is the third sentence. This is the fourth sentence.'
     )
 
 
@@ -70,7 +70,7 @@ class TestRecursiveTextChunker:
 
             # Check for partial overlap - at least some characters should match
             overlap_chars = set(first_chunk_end) & set(second_chunk_start)
-            assert len(overlap_chars) > 0, "Chunks should have some overlap"
+            assert len(overlap_chars) > 0, 'Chunks should have some overlap'
 
 
 class TestCharacterTextChunker:
@@ -88,11 +88,11 @@ class TestCharacterTextChunker:
     def test_empty_text(self, character_chunker):
         """Test splitting an empty text."""
         # Act
-        chunks = character_chunker.split_text("")
+        chunks = character_chunker.split_text('')
 
         # Assert
         # Empty text might return empty list or list with empty string
-        assert len(chunks) == 0 or (len(chunks) == 1 and chunks[0] == "")
+        assert len(chunks) == 0 or (len(chunks) == 1 and chunks[0] == '')
 
 
 class TestSentenceSplitting:
@@ -108,4 +108,4 @@ class TestSentenceSplitting:
 
         # Check for sentence-ending punctuation
         endings = [chunk.strip()[-1] for chunk in chunks if chunk.strip()]
-        assert any(end in [".", "!", "?"] for end in endings), "Some chunks should end with sentence punctuation"
+        assert any(end in ['.', '!', '?'] for end in endings), 'Some chunks should end with sentence punctuation'

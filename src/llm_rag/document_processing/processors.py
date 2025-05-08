@@ -45,7 +45,7 @@ class TextSplitter:
             )
 
         if separators is None:
-            separators = ["\n\n", "\n", " ", ""]
+            separators = ['\n\n', '\n', ' ', '']
 
         self.splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
@@ -98,8 +98,8 @@ class TextSplitter:
 
         lc_docs = [
             LangChainDocument(
-                page_content=(str(doc["content"]) if not isinstance(doc["content"], str) else doc["content"]),
-                metadata=doc["metadata"],
+                page_content=(str(doc['content']) if not isinstance(doc['content'], str) else doc['content']),
+                metadata=doc['metadata'],
             )
             for doc in documents
         ]
@@ -108,7 +108,7 @@ class TextSplitter:
         split_docs = self.splitter.split_documents(lc_docs)
 
         # Convert back to our format
-        return [{"content": doc.page_content, "metadata": doc.metadata} for doc in split_docs]
+        return [{'content': doc.page_content, 'metadata': doc.metadata} for doc in split_docs]
 
 
 class DocumentProcessor:
@@ -141,10 +141,10 @@ class DocumentProcessor:
             doc
             for doc in documents
             if (
-                doc.get("content")
+                doc.get('content')
                 and (
-                    (isinstance(doc["content"], str) and doc["content"].strip())
-                    or (not isinstance(doc["content"], str))
+                    (isinstance(doc['content'], str) and doc['content'].strip())
+                    or (not isinstance(doc['content'], str))
                 )
             )
         ]

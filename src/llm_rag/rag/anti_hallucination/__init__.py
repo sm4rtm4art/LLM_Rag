@@ -18,7 +18,7 @@ _MODULAR_IMPORT_SUCCESS = False
 # Emit a warning if using stub implementations
 if not _MODULAR_IMPORT_SUCCESS:
     warnings.warn(
-        "Using stub implementation for anti-hallucination module. Functionality will be limited.", stacklevel=2
+        'Using stub implementation for anti-hallucination module. Functionality will be limited.', stacklevel=2
     )
 
     # Stub implementations for use in tests
@@ -29,7 +29,7 @@ if not _MODULAR_IMPORT_SUCCESS:
             self,
             entity_threshold: float = 0.7,
             embedding_threshold: float = 0.75,
-            model_name: str = "paraphrase-MiniLM-L6-v2",
+            model_name: str = 'paraphrase-MiniLM-L6-v2',
             entity_weight: float = 0.6,
             human_review_threshold: float = 0.5,
             entity_critical_threshold: float = 0.3,
@@ -63,7 +63,7 @@ if not _MODULAR_IMPORT_SUCCESS:
         return None
 
     def embedding_based_verification(
-        response: str, context: str, threshold: float = 0.75, model_name: str = "paraphrase-MiniLM-L6-v2"
+        response: str, context: str, threshold: float = 0.75, model_name: str = 'paraphrase-MiniLM-L6-v2'
     ) -> Tuple[bool, float]:
         """Stub for embedding verification."""
         return True, 1.0
@@ -78,7 +78,7 @@ if not _MODULAR_IMPORT_SUCCESS:
 
     def needs_human_review(
         hallucination_score: float,
-        config: Optional["HallucinationConfig"] = None,
+        config: Optional['HallucinationConfig'] = None,
         critical_threshold: Optional[float] = None,
         entity_coverage: Optional[float] = None,
         entity_critical_threshold: Optional[float] = None,
@@ -95,12 +95,12 @@ if not _MODULAR_IMPORT_SUCCESS:
         human_review: bool = False,
     ) -> str:
         """Stub for warning generation."""
-        return ""
+        return ''
 
     def post_process_response(
         response: str,
         context: str,
-        config: Optional["HallucinationConfig"] = None,
+        config: Optional['HallucinationConfig'] = None,
         threshold: Optional[float] = None,
         entity_threshold: Optional[float] = None,
         embedding_threshold: Optional[float] = None,
@@ -118,13 +118,13 @@ if not _MODULAR_IMPORT_SUCCESS:
     def advanced_verify_response(
         response: str,
         context: str,
-        config: Optional["HallucinationConfig"] = None,
+        config: Optional['HallucinationConfig'] = None,
         languages: Optional[List[str]] = None,
     ) -> Tuple[bool, float, float, List[str]]:
         """Stub for advanced verification."""
         return True, 1.0, 1.0, []
 
-    def load_stopwords(language: str = "en") -> Set[str]:
+    def load_stopwords(language: str = 'en') -> Set[str]:
         """Stub for stopwords loading."""
         return set()
 
@@ -144,20 +144,20 @@ else:
 
 __all__ = [
     # Config
-    "HallucinationConfig",
+    'HallucinationConfig',
     # Entity verification
-    "extract_key_entities",
-    "verify_entities_in_context",
+    'extract_key_entities',
+    'verify_entities_in_context',
     # Similarity verification
-    "embedding_based_verification",
-    "get_sentence_transformer_model",
+    'embedding_based_verification',
+    'get_sentence_transformer_model',
     # Processing and scoring
-    "calculate_hallucination_score",
-    "generate_verification_warning",
-    "needs_human_review",
-    "post_process_response",
+    'calculate_hallucination_score',
+    'generate_verification_warning',
+    'needs_human_review',
+    'post_process_response',
     # Combined verification
-    "advanced_verify_response",
+    'advanced_verify_response',
     # Utilities
-    "load_stopwords",
+    'load_stopwords',
 ]

@@ -21,7 +21,7 @@ try:
     REQUESTS_AVAILABLE = True
 except ImportError:
     REQUESTS_AVAILABLE = False
-    logger.warning("Requests library not available. Web loading capabilities will be limited.")
+    logger.warning('Requests library not available. Web loading capabilities will be limited.')
 
 # Check if BeautifulSoup is available
 try:
@@ -32,7 +32,7 @@ try:
     BEAUTIFULSOUP_AVAILABLE = True
 except ImportError:
     BEAUTIFULSOUP_AVAILABLE = False
-    logger.warning("BeautifulSoup not available. HTML processing will be limited.")
+    logger.warning('BeautifulSoup not available. HTML processing will be limited.')
 
 
 class WebLoader(DocumentLoader, WebLoaderProtocol):
@@ -49,8 +49,8 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
         headers: Optional[Dict[str, str]] = None,
         extract_metadata: bool = True,
         extract_images: bool = False,
-        encoding: str = "utf-8",
-        html_mode: str = "text",  # 'text', 'html', or 'markdown'
+        encoding: str = 'utf-8',
+        html_mode: str = 'text',  # 'text', 'html', or 'markdown'
         timeout: int = 10,
         verify_ssl: bool = True,
     ):
@@ -83,8 +83,8 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
         self.url = url
         self.headers = headers or {}
         # Add default User-Agent if not provided
-        if "User-Agent" not in self.headers:
-            self.headers["User-Agent"] = "Mozilla/5.0 (compatible; LLM-RAG/1.0; +https://github.com/example/llm-rag)"
+        if 'User-Agent' not in self.headers:
+            self.headers['User-Agent'] = 'Mozilla/5.0 (compatible; LLM-RAG/1.0; +https://github.com/example/llm-rag)'
         self.extract_metadata = extract_metadata
         self.extract_images = extract_images
         self.encoding = encoding
@@ -93,22 +93,22 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
         self.verify_ssl = verify_ssl
 
         # Validate HTML mode
-        if html_mode not in ["text", "html", "markdown"]:
+        if html_mode not in ['text', 'html', 'markdown']:
             raise ValueError("Invalid HTML mode. Must be one of: 'text', 'html', 'markdown'")
 
         # Check if we have markdown support if needed
-        if html_mode == "markdown":
+        if html_mode == 'markdown':
             try:
                 import importlib.util
 
-                if importlib.util.find_spec("html2text") is not None:
+                if importlib.util.find_spec('html2text') is not None:
                     self._has_html2text = True
                 else:
-                    raise ImportError("html2text module not found")
+                    raise ImportError('html2text module not found')
             except ImportError:
-                logger.warning("html2text not available. Using plain text extraction instead.")
+                logger.warning('html2text not available. Using plain text extraction instead.')
                 self._has_html2text = False
-                self.html_mode = "text"
+                self.html_mode = 'text'
         else:
             self._has_html2text = False
 
@@ -127,7 +127,7 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
 
         """
         if not self.url:
-            raise ValueError("No URL provided. Either initialize with a URL or use load_from_url.")
+            raise ValueError('No URL provided. Either initialize with a URL or use load_from_url.')
 
         return self.load_from_url(self.url, self.headers)
 
@@ -164,46 +164,46 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
             response.raise_for_status()  # Raise exception for HTTP errors
 
             # Determine content type
-            content_type = response.headers.get("Content-Type", "").lower()
+            content_type = response.headers.get('Content-Type', '').lower()
 
             # Create base metadata
             metadata = {
-                "source": url,
-                "content_type": content_type,
-                "status_code": response.status_code,
+                'source': url,
+                'content_type': content_type,
+                'status_code': response.status_code,
             }
 
             # Extract domain for metadata
             parsed_url = urlparse(url)
-            metadata["domain"] = parsed_url.netloc
+            metadata['domain'] = parsed_url.netloc
 
             # Check if this is HTML content and if BeautifulSoup is available
-            if "text/html" in content_type:
+            if 'text/html' in content_type:
                 # Return raw HTML if BeautifulSoup is not available
                 # (or being mocked out in tests)
-                if not BEAUTIFULSOUP_AVAILABLE or "bs4" not in sys.modules or sys.modules["bs4"] is None:
-                    documents = [{"content": response.text, "metadata": metadata}]
+                if not BEAUTIFULSOUP_AVAILABLE or 'bs4' not in sys.modules or sys.modules['bs4'] is None:
+                    documents = [{'content': response.text, 'metadata': metadata}]
                 else:
                     documents = self._process_html(response.text, url, metadata)
             else:
                 # Process as plain text
-                documents = [{"content": response.text, "metadata": metadata}]
+                documents = [{'content': response.text, 'metadata': metadata}]
 
             return documents
 
         except requests.exceptions.ConnectionError as e:
             # Network connection error
-            logger.error(f"Connection error loading URL {url}: {e}")
+            logger.error(f'Connection error loading URL {url}: {e}')
             raise
 
         except requests.exceptions.HTTPError as e:
             # HTTP error (404, 500, etc.)
-            logger.error(f"HTTP error loading URL {url}: {e}")
+            logger.error(f'HTTP error loading URL {url}: {e}')
             raise ValueError(str(e)) from e
 
         except Exception as e:
             # Other unexpected errors
-            logger.error(f"Error loading URL {url}: {e}")
+            logger.error(f'Error loading URL {url}: {e}')
             raise
 
     def _process_html(self, html_content: str, url: str, metadata: Dict) -> Documents:
@@ -225,35 +225,35 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
 
         """
         # Get BeautifulSoup from sys.modules to ensure we use any mocks in tests
-        bs4_module = sys.modules.get("bs4")
+        bs4_module = sys.modules.get('bs4')
         if bs4_module is None:
-            return [{"content": html_content, "metadata": metadata}]
+            return [{'content': html_content, 'metadata': metadata}]
 
         BeautifulSoup = bs4_module.BeautifulSoup
-        soup = BeautifulSoup(html_content, "html.parser")
+        soup = BeautifulSoup(html_content, 'html.parser')
 
         # Extract metadata if requested
         if self.extract_metadata:
             # Title
-            title_tag = soup.find("title")
+            title_tag = soup.find('title')
             if title_tag and title_tag.text:
-                metadata["title"] = title_tag.text.strip()
+                metadata['title'] = title_tag.text.strip()
 
             # Description
-            meta_desc = soup.find("meta", attrs={"name": "description"})
-            if meta_desc and meta_desc.get("content"):
-                metadata["description"] = meta_desc["content"].strip()
+            meta_desc = soup.find('meta', attrs={'name': 'description'})
+            if meta_desc and meta_desc.get('content'):
+                metadata['description'] = meta_desc['content'].strip()
 
             # Author
-            meta_author = soup.find("meta", attrs={"name": "author"})
-            if meta_author and meta_author.get("content"):
-                metadata["author"] = meta_author["content"].strip()
+            meta_author = soup.find('meta', attrs={'name': 'author'})
+            if meta_author and meta_author.get('content'):
+                metadata['author'] = meta_author['content'].strip()
 
         # Extract text based on chosen mode
-        if self.html_mode == "html":
+        if self.html_mode == 'html':
             # Return HTML as-is
             content = html_content
-        elif self.html_mode == "markdown" and self._has_html2text:
+        elif self.html_mode == 'markdown' and self._has_html2text:
             # Convert to markdown using html2text
             import html2text
 
@@ -264,28 +264,28 @@ class WebLoader(DocumentLoader, WebLoaderProtocol):
         else:
             # Extract just the text
             # Remove script and style elements
-            for script in soup(["script", "style"]):
+            for script in soup(['script', 'style']):
                 script.extract()
 
             # Get text and clean it
-            content = soup.get_text(separator=" ")
+            content = soup.get_text(separator=' ')
             # Clean up whitespace
             lines = (line.strip() for line in content.splitlines())
-            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-            content = " ".join(chunk for chunk in chunks if chunk)
+            chunks = (phrase.strip() for line in lines for phrase in line.split('  '))
+            content = ' '.join(chunk for chunk in chunks if chunk)
 
         # Extract image URLs if requested
-        if self.extract_images and "text/html" in metadata.get("content_type", ""):
-            image_urls = [img.get("src") for img in soup.find_all("img") if img.get("src")]
+        if self.extract_images and 'text/html' in metadata.get('content_type', ''):
+            image_urls = [img.get('src') for img in soup.find_all('img') if img.get('src')]
             if image_urls:
-                metadata["image_urls"] = image_urls
+                metadata['image_urls'] = image_urls
 
-        return [{"content": content, "metadata": metadata}]
+        return [{'content': content, 'metadata': metadata}]
 
 
 # Register the loader
-registry.register(WebLoader, extensions=["html", "htm"])
+registry.register(WebLoader, extensions=['html', 'htm'])
 
 # Alias for backward compatibility
 WebPageLoader = WebLoader
-registry.register(WebPageLoader, name="WebPageLoader")
+registry.register(WebPageLoader, name='WebPageLoader')

@@ -13,22 +13,22 @@ import sys
 from pathlib import Path
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
 def parse_arguments():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Test structural image extraction from PDFs")
-    parser.add_argument("pdf_path", type=str, help="Path to a PDF file or directory containing PDF files")
+    parser = argparse.ArgumentParser(description='Test structural image extraction from PDFs')
+    parser.add_argument('pdf_path', type=str, help='Path to a PDF file or directory containing PDF files')
     parser.add_argument(
-        "--output-dir", type=str, default=None, help="Directory to save output files (defaults to current directory)"
+        '--output-dir', type=str, default=None, help='Directory to save output files (defaults to current directory)'
     )
-    parser.add_argument("--save-images", action="store_true", help="Save extracted images to disk")
+    parser.add_argument('--save-images', action='store_true', help='Save extracted images to disk')
     parser.add_argument(
-        "--compare", action="store_true", help="Compare structural extraction with text-based extraction"
+        '--compare', action='store_true', help='Compare structural extraction with text-based extraction'
     )
-    parser.add_argument("--verbose", action="store_true", help="Print verbose output")
+    parser.add_argument('--verbose', action='store_true', help='Print verbose output')
 
     return parser.parse_args()
 
@@ -50,7 +50,7 @@ def extract_images_from_pdf(pdf_path, output_dir=None, save_images=False, compar
     try:
         from scripts.analytics.pdf_extractor import PDFStructureExtractor
     except ImportError:
-        logger.error("Could not import PDFStructureExtractor")
+        logger.error('Could not import PDFStructureExtractor')
         logger.error("Make sure you're running from the project root directory")
         return None
 
@@ -60,7 +60,7 @@ def extract_images_from_pdf(pdf_path, output_dir=None, save_images=False, compar
     )
 
     # Extract with structural method
-    logger.info(f"Extracting images from {pdf_path}")
+    logger.info(f'Extracting images from {pdf_path}')
     structural_result = structural_extractor.extract_from_pdf(pdf_path, output_dir)
 
     if compare:
@@ -70,21 +70,21 @@ def extract_images_from_pdf(pdf_path, output_dir=None, save_images=False, compar
         )
 
         # Extract with text-based method
-        logger.info(f"Extracting images from {pdf_path} using text-based extraction")
+        logger.info(f'Extracting images from {pdf_path} using text-based extraction')
         text_result = text_extractor.extract_from_pdf(pdf_path, output_dir)
 
         # Compare results
-        structural_images = structural_result.get("images", [])
-        text_images = text_result.get("images", [])
+        structural_images = structural_result.get('images', [])
+        text_images = text_result.get('images', [])
 
-        logger.info(f"Structural extraction found {len(structural_images)} images")
-        logger.info(f"Text-based extraction found {len(text_images)} images")
+        logger.info(f'Structural extraction found {len(structural_images)} images')
+        logger.info(f'Text-based extraction found {len(text_images)} images')
 
         # Add comparison to result
-        structural_result["comparison"] = {
-            "structural_count": len(structural_images),
-            "text_based_count": len(text_images),
-            "difference": len(structural_images) - len(text_images),
+        structural_result['comparison'] = {
+            'structural_count': len(structural_images),
+            'text_based_count': len(text_images),
+            'difference': len(structural_images) - len(text_images),
         }
 
     return structural_result
@@ -105,17 +105,17 @@ def process_directory(directory, output_dir=None, save_images=False, compare=Fal
 
     """
     results = {}
-    pdf_files = list(Path(directory).glob("**/*.pdf"))
+    pdf_files = list(Path(directory).glob('**/*.pdf'))
 
     if not pdf_files:
-        logger.warning(f"No PDF files found in {directory}")
+        logger.warning(f'No PDF files found in {directory}')
         return results
 
-    logger.info(f"Processing {len(pdf_files)} PDF files in {directory}")
+    logger.info(f'Processing {len(pdf_files)} PDF files in {directory}')
 
     for pdf_file in pdf_files:
         pdf_path = str(pdf_file)
-        logger.info(f"Processing {pdf_path}")
+        logger.info(f'Processing {pdf_path}')
 
         try:
             result = extract_images_from_pdf(
@@ -123,8 +123,8 @@ def process_directory(directory, output_dir=None, save_images=False, compare=Fal
             )
             results[pdf_path] = result
         except Exception as e:
-            logger.error(f"Error processing {pdf_path}: {e}")
-            results[pdf_path] = {"error": str(e)}
+            logger.error(f'Error processing {pdf_path}: {e}')
+            results[pdf_path] = {'error': str(e)}
 
     return results
 
@@ -141,7 +141,7 @@ def main():
     # Process PDF file or directory
     path = Path(args.pdf_path)
 
-    if path.is_file() and path.suffix.lower() == ".pdf":
+    if path.is_file() and path.suffix.lower() == '.pdf':
         # Process single PDF file
         result = extract_images_from_pdf(
             str(path), output_dir=output_dir, save_images=args.save_images, compare=args.compare, verbose=args.verbose
@@ -149,23 +149,23 @@ def main():
 
         # Print summary
         if result:
-            images = result.get("images", [])
-            logger.info(f"Found {len(images)} images in {path}")
+            images = result.get('images', [])
+            logger.info(f'Found {len(images)} images in {path}')
 
             if args.verbose:
                 # Print details of first 5 images
                 for i, image in enumerate(images[:5]):
-                    logger.info(f"Image {i + 1}:")
+                    logger.info(f'Image {i + 1}:')
                     for key, value in image.items():
-                        if key != "text" and key != "surrounding_text":
-                            logger.info(f"  {key}: {value}")
+                        if key != 'text' and key != 'surrounding_text':
+                            logger.info(f'  {key}: {value}')
 
             if args.compare:
-                comparison = result.get("comparison", {})
-                logger.info("Comparison results:")
-                logger.info(f"  Structural extraction: {comparison.get('structural_count', 0)} images")
-                logger.info(f"  Text-based extraction: {comparison.get('text_based_count', 0)} images")
-                logger.info(f"  Difference: {comparison.get('difference', 0)} images")
+                comparison = result.get('comparison', {})
+                logger.info('Comparison results:')
+                logger.info(f'  Structural extraction: {comparison.get("structural_count", 0)} images')
+                logger.info(f'  Text-based extraction: {comparison.get("text_based_count", 0)} images')
+                logger.info(f'  Difference: {comparison.get("difference", 0)} images')
 
     elif path.is_dir():
         # Process directory of PDF files
@@ -178,33 +178,33 @@ def main():
         total_text_based = 0
 
         for pdf_path, result in results.items():
-            if "error" in result:
+            if 'error' in result:
                 continue
 
-            images = result.get("images", [])
-            logger.info(f"Found {len(images)} images in {pdf_path}")
+            images = result.get('images', [])
+            logger.info(f'Found {len(images)} images in {pdf_path}')
 
             if args.compare:
-                comparison = result.get("comparison", {})
-                structural_count = comparison.get("structural_count", 0)
-                text_based_count = comparison.get("text_based_count", 0)
+                comparison = result.get('comparison', {})
+                structural_count = comparison.get('structural_count', 0)
+                text_based_count = comparison.get('text_based_count', 0)
 
                 total_structural += structural_count
                 total_text_based += text_based_count
 
         if args.compare:
-            logger.info("\nOverall comparison results:")
-            logger.info(f"  Total structural extraction: {total_structural} images")
-            logger.info(f"  Total text-based extraction: {total_text_based} images")
-            logger.info(f"  Difference: {total_structural - total_text_based} images")
+            logger.info('\nOverall comparison results:')
+            logger.info(f'  Total structural extraction: {total_structural} images')
+            logger.info(f'  Total text-based extraction: {total_text_based} images')
+            logger.info(f'  Difference: {total_structural - total_text_based} images')
 
     else:
-        logger.error(f"Invalid path: {path}")
-        logger.error("Please provide a PDF file or a directory containing PDF files")
+        logger.error(f'Invalid path: {path}')
+        logger.error('Please provide a PDF file or a directory containing PDF files')
         return 1
 
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

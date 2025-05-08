@@ -54,8 +54,8 @@ class LLMCleanerConfig:
 
     """
 
-    model_name: str = "gemma-2b"
-    model_backend: str = "ollama"
+    model_name: str = 'gemma-2b'
+    model_backend: str = 'ollama'
     confidence_threshold: float = 0.8
     min_error_rate: float = 0.05
     async_processing: bool = False
@@ -95,13 +95,13 @@ class LLMCleaner:
 
         """
         self.config = config or LLMCleanerConfig()
-        logger.info(f"Initializing LLMCleaner with model: {self.config.model_name}")
+        logger.info(f'Initializing LLMCleaner with model: {self.config.model_name}')
 
         # Set up thread pool for async processing if enabled
         self._executor = None
         if self.config.async_processing:
             self._executor = ThreadPoolExecutor(max_workers=self.config.max_workers)
-            logger.info(f"Async processing enabled with {self.config.max_workers} workers")
+            logger.info(f'Async processing enabled with {self.config.max_workers} workers')
 
         # Lazy initialization of model - only load when needed
         self._model = None
@@ -121,10 +121,10 @@ class LLMCleaner:
                     max_tokens=512,
                     temperature=0.7,
                 )
-                logger.info(f"Loaded model: {self.config.model_name} using backend: {backend}")
+                logger.info(f'Loaded model: {self.config.model_name} using backend: {backend}')
             except Exception as e:
-                logger.error(f"Failed to load model {self.config.model_name}: {e}")
-                raise ModelError(f"Failed to load model: {str(e)}") from e
+                logger.error(f'Failed to load model {self.config.model_name}: {e}')
+                raise ModelError(f'Failed to load model: {str(e)}') from e
         return self._model
 
     def detect_language(self, text: str) -> Optional[str]:
@@ -150,10 +150,10 @@ class LLMCleaner:
             # Use a larger sample for better accuracy
             sample_text = text[: min(5000, len(text))]
             lang_code = langdetect.detect(sample_text)
-            logger.info(f"Detected language: {lang_code}")
+            logger.info(f'Detected language: {lang_code}')
             return lang_code
         except Exception as e:
-            logger.warning(f"Language detection failed: {e}")
+            logger.warning(f'Language detection failed: {e}')
             return None
 
     def get_model_for_language(self, language_code: Optional[str]) -> Any:
@@ -186,10 +186,10 @@ class LLMCleaner:
                 temperature=0.7,
             )
             self._language_specific_models[model_name] = model
-            logger.info(f"Created language-specific model for {language_code}: {model_name}")
+            logger.info(f'Created language-specific model for {language_code}: {model_name}')
             return model
         except Exception as e:
-            logger.error(f"Failed to load language model {model_name}: {e}")
+            logger.error(f'Failed to load language model {model_name}: {e}')
             # Fall back to default model
             return self.model
 
@@ -213,7 +213,7 @@ class LLMCleaner:
 
         try:
             # Special handling for Ollama models
-            if self.config.model_backend == "ollama":
+            if self.config.model_backend == 'ollama':
                 # For LangChain's Ollama implementation, use __call__ directly
                 # This avoids issues with the implementation details of different LangChain versions
                 try:
@@ -221,42 +221,42 @@ class LLMCleaner:
                     if callable(self.model):
                         return str(self.model(prompt))
                 except Exception as e:
-                    logger.warning(f"Direct model call failed: {e}. Using fallback method.")
+                    logger.warning(f'Direct model call failed: {e}. Using fallback method.')
                     # If all else fails, let's try a couple of options
                     try:
                         # Try the simple invoke method if available
-                        if hasattr(self.model, "invoke"):
+                        if hasattr(self.model, 'invoke'):
                             return str(self.model.invoke(prompt))
                     except Exception as e:
-                        logger.warning(f"Model invoke failed: {e}")
+                        logger.warning(f'Model invoke failed: {e}')
                         # Return original text to avoid pipeline failure
-                        logger.warning("All Ollama API attempts failed, returning original text")
+                        logger.warning('All Ollama API attempts failed, returning original text')
                         return prompt
 
             # Standard LLM approach for non-Ollama models
-            if hasattr(self.model, "generate"):
+            if hasattr(self.model, 'generate'):
                 try:
                     return str(self.model.generate(prompt, max_tokens=max_tokens, timeout=timeout))
                 except Exception as e:
-                    logger.warning(f"Model generate failed: {e}. Trying alternative methods.")
+                    logger.warning(f'Model generate failed: {e}. Trying alternative methods.')
 
             # Try invoke method
-            if hasattr(self.model, "invoke"):
+            if hasattr(self.model, 'invoke'):
                 try:
                     return str(self.model.invoke(prompt))
                 except Exception as e:
-                    logger.warning(f"Model invoke failed: {e}. Trying alternative methods.")
+                    logger.warning(f'Model invoke failed: {e}. Trying alternative methods.')
 
             # Last resort, try direct callable
             if callable(self.model):
                 return str(self.model(prompt))
 
             # If nothing worked, at least return something
-            logger.warning("All model API approaches failed, returning original prompt")
+            logger.warning('All model API approaches failed, returning original prompt')
             return prompt
 
         except Exception as e:
-            logger.error(f"Error generating text: {e}")
+            logger.error(f'Error generating text: {e}')
             raise
 
     def clean_text(
@@ -275,26 +275,26 @@ class LLMCleaner:
         """
         # Skip cleaning if confidence is high enough
         if confidence_score is not None and confidence_score > self.config.confidence_threshold:
-            logger.info(f"Skipping LLM cleaning - high confidence score: {confidence_score:.2f}")
+            logger.info(f'Skipping LLM cleaning - high confidence score: {confidence_score:.2f}')
             return ocr_text
 
         # Check for estimated error rate and skip if too low
         error_rate = self._estimate_error_rate(ocr_text)
         if error_rate < self.config.min_error_rate:
-            logger.info(f"Skipping LLM cleaning - low estimated error rate: {error_rate:.2f}")
+            logger.info(f'Skipping LLM cleaning - low estimated error rate: {error_rate:.2f}')
             return ocr_text
 
-        logger.info(f"Cleaning OCR text with LLM (estimated error rate: {error_rate:.2f})")
+        logger.info(f'Cleaning OCR text with LLM (estimated error rate: {error_rate:.2f})')
 
         # Detect language if configured to do so and not provided in metadata
         detected_language = None
-        if self.config.detect_language and (not metadata or "language" not in metadata):
+        if self.config.detect_language and (not metadata or 'language' not in metadata):
             detected_language = self.detect_language(ocr_text)
             if metadata is None:
                 metadata = {}
             if detected_language:
-                metadata["language"] = detected_language
-                logger.info(f"Detected document language: {detected_language}")
+                metadata['language'] = detected_language
+                logger.info(f'Detected document language: {detected_language}')
 
         # If text is too long, split into chunks
         if len(ocr_text) > self.config.max_chunk_size:
@@ -318,7 +318,7 @@ class LLMCleaner:
 
         """
         if not self.config.async_processing:
-            logger.warning("Async processing not enabled, processing synchronously")
+            logger.warning('Async processing not enabled, processing synchronously')
             return self.clean_text(ocr_text, confidence_score, metadata)
 
         # Create a partial function with all arguments
@@ -341,18 +341,18 @@ class LLMCleaner:
 
         """
         # Count words and check what percentage might be misspelled
-        words = re.findall(r"\b\w+\b", text.lower())
+        words = re.findall(r'\b\w+\b', text.lower())
         if not words:
             return 0.0
 
         # Simple heuristics to detect likely OCR errors - these are common patterns
         error_patterns = [
-            r"\bI[^a-zA-Z\s]",  # I followed by punctuation (likely 1)
-            r"[a-z][A-Z]",  # Mid-word capitals (likely OCR error)
-            r"[0-9][a-zA-Z]|[a-zA-Z][0-9]",  # Letters adjacent to numbers
-            r"vv|rn",  # common substitutions
-            r"l1|11",  # l → 1 confusion
-            r"([^\w\s])\1{2,}",  # Repeated punctuation
+            r'\bI[^a-zA-Z\s]',  # I followed by punctuation (likely 1)
+            r'[a-z][A-Z]',  # Mid-word capitals (likely OCR error)
+            r'[0-9][a-zA-Z]|[a-zA-Z][0-9]',  # Letters adjacent to numbers
+            r'vv|rn',  # common substitutions
+            r'l1|11',  # l → 1 confusion
+            r'([^\w\s])\1{2,}',  # Repeated punctuation
         ]
 
         potential_errors = 0
@@ -361,7 +361,7 @@ class LLMCleaner:
 
         # Check for words with unusual character combos that might be OCR errors
         unusual_character_patterns = [
-            r"\b\w*[^a-zA-Z0-9\s.,;:!?-]\w*\b",  # Words with unusual characters
+            r'\b\w*[^a-zA-Z0-9\s.,;:!?-]\w*\b',  # Words with unusual characters
         ]
 
         for pattern in unusual_character_patterns:
@@ -384,49 +384,49 @@ class LLMCleaner:
 
         """
         layout_instruction = (
-            "Preserve the original document layout including paragraphs, lists, and headings."
+            'Preserve the original document layout including paragraphs, lists, and headings.'
             if self.config.preserve_layout
-            else ""
+            else ''
         )
 
         # Add document-specific context if available
-        context = ""
-        language_instruction = ""
+        context = ''
+        language_instruction = ''
 
         # Determine language handling
         document_language = None
-        if metadata and metadata.get("language"):
-            document_language = metadata.get("language")
-            context += f"This document is in {document_language}. "
+        if metadata and metadata.get('language'):
+            document_language = metadata.get('language')
+            context += f'This document is in {document_language}. '
 
         # Language preservation or translation instruction
         if self.config.translate_to_language:
             target_lang = self.config.translate_to_language
-            language_instruction = f"Translate the text to {target_lang} while fixing OCR errors. "
+            language_instruction = f'Translate the text to {target_lang} while fixing OCR errors. '
             if document_language:
                 language_instruction = (
-                    f"Translate the text from {document_language} to {target_lang} while fixing OCR errors. "
+                    f'Translate the text from {document_language} to {target_lang} while fixing OCR errors. '
                 )
         elif self.config.preserve_language and document_language:
             language_instruction = (
-                f"Keep the text in the original {document_language} language - DO NOT translate to English. "
+                f'Keep the text in the original {document_language} language - DO NOT translate to English. '
             )
         else:
             # Default behavior - preserve language but don't specify it explicitly
-            language_instruction = "Preserve the original language of the document. DO NOT translate the content. "
+            language_instruction = 'Preserve the original language of the document. DO NOT translate the content. '
 
         # Add document type if available
-        if metadata and metadata.get("document_type"):
-            context += f"This is a {metadata['document_type']}. "
+        if metadata and metadata.get('document_type'):
+            context += f'This is a {metadata["document_type"]}. '
 
         # Format prompt with proper line breaks to stay within line limits
         prompt = (
-            f"Fix OCR errors in the following text. {language_instruction}"
-            f"Correct spelling, punctuation, and formatting issues while preserving the "
-            f"original meaning and technical terms. "
-            f"{layout_instruction} {context}\n\n"
-            f"OCR TEXT:\n{text}\n\n"
-            f"CORRECTED TEXT:\n"
+            f'Fix OCR errors in the following text. {language_instruction}'
+            f'Correct spelling, punctuation, and formatting issues while preserving the '
+            f'original meaning and technical terms. '
+            f'{layout_instruction} {context}\n\n'
+            f'OCR TEXT:\n{text}\n\n'
+            f'CORRECTED TEXT:\n'
         )
         return prompt
 
@@ -445,8 +445,8 @@ class LLMCleaner:
 
         # Select the appropriate model based on language
         current_model = self.model
-        if metadata and "language" in metadata and self.config.language_models:
-            language = metadata["language"]
+        if metadata and 'language' in metadata and self.config.language_models:
+            language = metadata['language']
             current_model = self.get_model_for_language(language)
 
         # Try multiple times in case of model errors
@@ -457,17 +457,17 @@ class LLMCleaner:
                 # Generate text using the selected model or our default model
                 if current_model != self.model:
                     # Use the language-specific model
-                    if hasattr(current_model, "generate"):
+                    if hasattr(current_model, 'generate'):
                         response = str(
                             current_model.generate(prompt, max_tokens=int(len(text) * 1.2), timeout=self.config.timeout)
                         )
-                    elif hasattr(current_model, "invoke"):
+                    elif hasattr(current_model, 'invoke'):
                         response = str(current_model.invoke(prompt))
                     elif callable(current_model):
                         response = str(current_model(prompt))
                     else:
                         # Fallback to default model
-                        logger.warning("Language-specific model API not supported, falling back to default model")
+                        logger.warning('Language-specific model API not supported, falling back to default model')
                         response = self._generate_text(
                             prompt, max_tokens=int(len(text) * 1.2), timeout=self.config.timeout
                         )
@@ -476,21 +476,21 @@ class LLMCleaner:
                     response = self._generate_text(prompt, max_tokens=int(len(text) * 1.2), timeout=self.config.timeout)
 
                 duration = time.time() - start_time
-                logger.debug(f"LLM processing took {duration:.2f} seconds")
+                logger.debug(f'LLM processing took {duration:.2f} seconds')
 
                 # Extract the corrected text from the response
                 # The model should follow the instruction and output the corrected text
-                if "CORRECTED TEXT:" in response:
+                if 'CORRECTED TEXT:' in response:
                     # Extract only the part after "CORRECTED TEXT:"
-                    return response.split("CORRECTED TEXT:", 1)[1].strip()
+                    return response.split('CORRECTED TEXT:', 1)[1].strip()
                 return response
 
             except Exception as e:
                 if attempt < self.config.max_retry_attempts:
-                    logger.warning(f"LLM processing failed (attempt {attempt + 1}): {e}. Retrying...")
+                    logger.warning(f'LLM processing failed (attempt {attempt + 1}): {e}. Retrying...')
                     time.sleep(1)  # Small delay before retry
                 else:
-                    logger.error(f"LLM processing failed after {self.config.max_retry_attempts + 1} attempts: {e}")
+                    logger.error(f'LLM processing failed after {self.config.max_retry_attempts + 1} attempts: {e}')
                     # Return original text if all attempts fail
                     return text
 
@@ -505,10 +505,10 @@ class LLMCleaner:
             Processed text
 
         """
-        logger.info(f"Splitting text of length {len(text)} into chunks")
+        logger.info(f'Splitting text of length {len(text)} into chunks')
 
         # Split text into paragraph chunks for more natural boundaries
-        paragraphs = re.split(r"\n\s*\n", text)
+        paragraphs = re.split(r'\n\s*\n', text)
 
         chunks = []
         current_chunk = []
@@ -518,7 +518,7 @@ class LLMCleaner:
         for para in paragraphs:
             if current_length + len(para) > self.config.max_chunk_size and current_chunk:
                 # Add the current chunk to chunks and start a new one
-                chunks.append("\n\n".join(current_chunk))
+                chunks.append('\n\n'.join(current_chunk))
                 current_chunk = [para]
                 current_length = len(para)
             else:
@@ -527,19 +527,19 @@ class LLMCleaner:
 
         # Add the last chunk if it's not empty
         if current_chunk:
-            chunks.append("\n\n".join(current_chunk))
+            chunks.append('\n\n'.join(current_chunk))
 
-        logger.info(f"Processing {len(chunks)} text chunks")
+        logger.info(f'Processing {len(chunks)} text chunks')
 
         # Process each chunk
         processed_chunks = []
         for i, chunk in enumerate(chunks):
-            logger.debug(f"Processing chunk {i + 1}/{len(chunks)}")
+            logger.debug(f'Processing chunk {i + 1}/{len(chunks)}')
             processed_chunk = self._process_with_llm(chunk, metadata)
             processed_chunks.append(processed_chunk)
 
         # Combine the processed chunks
-        return "\n\n".join(processed_chunks)
+        return '\n\n'.join(processed_chunks)
 
 
 class AsyncLLMProcessor:
@@ -572,7 +572,7 @@ class AsyncLLMProcessor:
         """Start the background processing task."""
         if self._processing_task is None:
             self._processing_task = asyncio.create_task(self._process_queue())
-            logger.info("Started background LLM processing task")
+            logger.info('Started background LLM processing task')
 
     async def stop_processing(self):
         """Stop the background processing task."""
@@ -583,7 +583,7 @@ class AsyncLLMProcessor:
             except asyncio.CancelledError:
                 pass
             self._processing_task = None
-            logger.info("Stopped background LLM processing task")
+            logger.info('Stopped background LLM processing task')
 
     async def submit_text(
         self,
@@ -610,7 +610,7 @@ class AsyncLLMProcessor:
 
         # Add to queue
         await self.processing_queue.put((document_id, ocr_text, confidence_score, metadata))
-        logger.info(f"Submitted document {document_id} for background processing")
+        logger.info(f'Submitted document {document_id} for background processing')
 
         # Return original text immediately
         return ocr_text
@@ -644,13 +644,13 @@ class AsyncLLMProcessor:
                 document_id, ocr_text, confidence_score, metadata = await self.processing_queue.get()
 
                 # Process the text
-                logger.info(f"Processing document {document_id} in background")
+                logger.info(f'Processing document {document_id} in background')
                 start_time = time.time()
 
                 cleaned_text = await self.cleaner.clean_text_async(ocr_text, confidence_score, metadata)
 
                 duration = time.time() - start_time
-                logger.info(f"Background processing of document {document_id} completed in {duration:.2f}s")
+                logger.info(f'Background processing of document {document_id} completed in {duration:.2f}s')
 
                 # Store the result
                 self._results[document_id] = cleaned_text
@@ -659,8 +659,8 @@ class AsyncLLMProcessor:
                 self.processing_queue.task_done()
 
             except asyncio.CancelledError:
-                logger.info("Background processing task cancelled")
+                logger.info('Background processing task cancelled')
                 break
             except Exception as e:
-                logger.error(f"Error in background processing: {e}")
+                logger.error(f'Error in background processing: {e}')
                 # Continue with the next item

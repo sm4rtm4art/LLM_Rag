@@ -18,15 +18,15 @@ logger = logging.getLogger(__name__)
 class HuggingFaceLLM(LLM):
     """Hugging Face model implementation for the LLM RAG system."""
 
-    model_name: str = Field(description="The name of the model")
-    tokenizer: Optional[Any] = Field(default=None, description="The tokenizer to use")
-    model: Optional[Any] = Field(default=None, description="The model to use")
-    device: str = Field(default="cpu", description="The device to use (cpu or cuda)")
-    max_tokens: int = Field(default=512, description="The maximum number of tokens to generate")
-    temperature: float = Field(default=0.7, description="The temperature to use for generation")
-    top_p: float = Field(default=0.9, description="The top_p value to use for generation")
-    do_sample: bool = Field(default=True, description="Whether to use sampling")
-    pipeline: Optional[Any] = Field(default=None, description="The pipeline to use")
+    model_name: str = Field(description='The name of the model')
+    tokenizer: Optional[Any] = Field(default=None, description='The tokenizer to use')
+    model: Optional[Any] = Field(default=None, description='The model to use')
+    device: str = Field(default='cpu', description='The device to use (cpu or cuda)')
+    max_tokens: int = Field(default=512, description='The maximum number of tokens to generate')
+    temperature: float = Field(default=0.7, description='The temperature to use for generation')
+    top_p: float = Field(default=0.9, description='The top_p value to use for generation')
+    do_sample: bool = Field(default=True, description='Whether to use sampling')
+    pipeline: Optional[Any] = Field(default=None, description='The pipeline to use')
 
     def __init__(self, **kwargs: Any) -> None:
         """Initialize the HuggingFaceLLM.
@@ -41,21 +41,21 @@ class HuggingFaceLLM(LLM):
             try:
                 self.model, self.tokenizer = self._load_model_and_tokenizer()
             except Exception as e:
-                logger.warning(f"Failed to load model and tokenizer: {e}")
+                logger.warning(f'Failed to load model and tokenizer: {e}')
                 # Don't raise an exception here to allow for testing
 
     def _llm_type(self) -> str:
         """Return the type of LLM."""
-        return "huggingface"
+        return 'huggingface'
 
     def _get_parameters(self) -> Dict[str, Any]:
         """Get the parameters for the LLM."""
         return {
-            "model_name": self.model_name,
-            "device": self.device,
-            "max_tokens": self.max_tokens,
-            "temperature": self.temperature,
-            "top_p": self.top_p,
+            'model_name': self.model_name,
+            'device': self.device,
+            'max_tokens': self.max_tokens,
+            'temperature': self.temperature,
+            'top_p': self.top_p,
         }
 
     def _load_model_and_tokenizer(self) -> Tuple[Any, Any]:
@@ -66,7 +66,7 @@ class HuggingFaceLLM(LLM):
 
         """
         try:
-            logger.info(f"Loading model {self.model_name} on {self.device}")
+            logger.info(f'Loading model {self.model_name} on {self.device}')
             tokenizer = AutoTokenizer.from_pretrained(self.model_name)
             model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
@@ -75,7 +75,7 @@ class HuggingFaceLLM(LLM):
             )
             return model, tokenizer
         except Exception as e:
-            logger.error(f"Error loading model and tokenizer: {e}")
+            logger.error(f'Error loading model and tokenizer: {e}')
             raise
 
     def _format_prompt(self, prompt: str) -> str:
@@ -89,8 +89,8 @@ class HuggingFaceLLM(LLM):
 
         """
         # Special handling for Llama models
-        if "llama" in self.model_name.lower():
-            return f"<|begin_of_text|><|prompt|>{prompt}<|answer|>"
+        if 'llama' in self.model_name.lower():
+            return f'<|begin_of_text|><|prompt|>{prompt}<|answer|>'
         return prompt
 
     def _call(self, prompt: str, **kwargs: Any) -> str:
@@ -112,11 +112,11 @@ class HuggingFaceLLM(LLM):
             )
 
             # Extract the generated text
-            generated_text = response[0]["generated_text"]
+            generated_text = response[0]['generated_text']
 
             # Handle stop sequences
-            if "stop" in kwargs and kwargs["stop"]:
-                for stop_seq in kwargs["stop"]:
+            if 'stop' in kwargs and kwargs['stop']:
+                for stop_seq in kwargs['stop']:
                     if stop_seq in generated_text:
                         idx = generated_text.find(stop_seq)
                         end_idx = idx + len(stop_seq)
@@ -143,7 +143,7 @@ class HuggingFaceLLM(LLM):
         try:
             # Ensure we have a model and tokenizer
             if self.model is None or self.tokenizer is None:
-                return "Model or tokenizer not initialized"
+                return 'Model or tokenizer not initialized'
 
             # Ensure the tokenizer has a padding token
             tokenizer_obj = self.tokenizer
@@ -151,16 +151,16 @@ class HuggingFaceLLM(LLM):
                 tokenizer_obj.pad_token = tokenizer_obj.eos_token
 
             # Encode the input and create attention mask
-            inputs = tokenizer_obj(prompt, return_tensors="pt", padding=True)
+            inputs = tokenizer_obj(prompt, return_tensors='pt', padding=True)
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
             # Generate text with the model
             model_obj = self.model
             with torch.no_grad():
                 output = model_obj.generate(
-                    inputs["input_ids"],
-                    attention_mask=inputs["attention_mask"],
-                    max_length=len(inputs["input_ids"][0]) + self.max_tokens,
+                    inputs['input_ids'],
+                    attention_mask=inputs['attention_mask'],
+                    max_length=len(inputs['input_ids'][0]) + self.max_tokens,
                     num_return_sequences=1,
                     eos_token_id=tokenizer_obj.eos_token_id,
                     do_sample=self.do_sample,
@@ -180,5 +180,5 @@ class HuggingFaceLLM(LLM):
             # Return the response as a string directly
             return response_text
         except Exception as e:
-            logger.error(f"Error generating response: {e}")
-            return "I encountered an error while generating a response."
+            logger.error(f'Error generating response: {e}')
+            return 'I encountered an error while generating a response.'

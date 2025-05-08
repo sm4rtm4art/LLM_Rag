@@ -26,44 +26,44 @@ def _process_document(document: Any) -> Optional[Dict[str, Any]]:
     """
     try:
         # Handle different document types
-        if hasattr(document, "page_content") and hasattr(document, "metadata"):
+        if hasattr(document, 'page_content') and hasattr(document, 'metadata'):
             # Standard LangChain document
             return {
-                "content": document.page_content,
-                "metadata": document.metadata,
+                'content': document.page_content,
+                'metadata': document.metadata,
             }
-        elif isinstance(document, dict) and "content" in document:
+        elif isinstance(document, dict) and 'content' in document:
             # Dictionary with content field
-            metadata = document.get("metadata", {})
+            metadata = document.get('metadata', {})
             if not isinstance(metadata, dict):
-                metadata = {"raw_metadata": str(metadata)}
+                metadata = {'raw_metadata': str(metadata)}
             return {
-                "content": document["content"],
-                "metadata": metadata,
+                'content': document['content'],
+                'metadata': metadata,
             }
-        elif isinstance(document, dict) and "page_content" in document:
+        elif isinstance(document, dict) and 'page_content' in document:
             # Dictionary with page_content field (LangChain style)
-            metadata = document.get("metadata", {})
+            metadata = document.get('metadata', {})
             if not isinstance(metadata, dict):
-                metadata = {"raw_metadata": str(metadata)}
+                metadata = {'raw_metadata': str(metadata)}
             return {
-                "content": document["page_content"],
-                "metadata": metadata,
+                'content': document['page_content'],
+                'metadata': metadata,
             }
-        elif isinstance(document, dict) and "text" in document:
+        elif isinstance(document, dict) and 'text' in document:
             # Dictionary with text field
-            metadata = document.get("metadata", {})
+            metadata = document.get('metadata', {})
             if not isinstance(metadata, dict):
-                metadata = {"raw_metadata": str(metadata)}
+                metadata = {'raw_metadata': str(metadata)}
             return {
-                "content": document["text"],
-                "metadata": metadata,
+                'content': document['text'],
+                'metadata': metadata,
             }
         elif isinstance(document, str):
             # Plain text
             return {
-                "content": document,
-                "metadata": {},
+                'content': document,
+                'metadata': {},
             }
         else:
             # Try to extract content and metadata using common attribute patterns
@@ -71,31 +71,31 @@ def _process_document(document: Any) -> Optional[Dict[str, Any]]:
             metadata = {}
 
             # Check for content attributes
-            for attr in ["content", "page_content", "text", "body"]:
+            for attr in ['content', 'page_content', 'text', 'body']:
                 if hasattr(document, attr):
                     content = getattr(document, attr)
                     break
 
             # Check for metadata attributes
-            if hasattr(document, "metadata"):
+            if hasattr(document, 'metadata'):
                 metadata = document.metadata
                 if not isinstance(metadata, dict):
-                    metadata = {"raw_metadata": str(metadata)}
+                    metadata = {'raw_metadata': str(metadata)}
 
             # If content was found, return the processed document
             if content is not None:
                 return {
-                    "content": content,
-                    "metadata": metadata,
+                    'content': content,
+                    'metadata': metadata,
                 }
 
             # Last resort: try to convert the entire document to a string
             return {
-                "content": str(document),
-                "metadata": {},
+                'content': str(document),
+                'metadata': {},
             }
     except Exception as e:
-        logger.warning(f"Error processing document: {str(e)}")
+        logger.warning(f'Error processing document: {str(e)}')
         return None
 
 

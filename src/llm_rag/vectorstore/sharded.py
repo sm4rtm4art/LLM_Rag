@@ -36,7 +36,7 @@ class ShardedChromaVectorStore(VectorStore):
     def __init__(
         self,
         shard_capacity: int = 10000,
-        base_persist_directory: str = "sharded_chroma_db",
+        base_persist_directory: str = 'sharded_chroma_db',
         max_workers: int = 4,
         **chroma_kwargs: Any,
     ) -> None:
@@ -61,11 +61,11 @@ class ShardedChromaVectorStore(VectorStore):
     def _create_new_shard(self) -> None:
         """Create a new shard and append it to the shards list."""
         shard_index = len(self.shards)
-        shard_dir = os.path.join(self.base_persist_directory, f"shard_{shard_index}")
+        shard_dir = os.path.join(self.base_persist_directory, f'shard_{shard_index}')
         os.makedirs(shard_dir, exist_ok=True)
         new_shard = ChromaVectorStore(persist_directory=shard_dir, **self.chroma_kwargs)
         self.shards.append(new_shard)
-        logger.info(f"Created new shard at {shard_dir}")
+        logger.info(f'Created new shard at {shard_dir}')
 
     def add_documents(
         self,
@@ -91,18 +91,18 @@ class ShardedChromaVectorStore(VectorStore):
 
             for doc in documents:
                 if not isinstance(doc, dict):
-                    raise ValueError("All documents must be of same type (str or dict).")
+                    raise ValueError('All documents must be of same type (str or dict).')
 
-                if "content" not in doc:
+                if 'content' not in doc:
                     raise ValueError("Dict documents must contain a 'content' key.")
 
                 # Extract content for vector embedding
-                processed_docs.append(doc["content"])
+                processed_docs.append(doc['content'])
 
                 # Extract metadata if available
                 meta = {}
-                if "metadata" in doc:
-                    meta = doc["metadata"]
+                if 'metadata' in doc:
+                    meta = doc['metadata']
                 processed_metadatas.append(meta)
 
         # If metadatas is None but we added some from documents, use our processed list
@@ -113,7 +113,7 @@ class ShardedChromaVectorStore(VectorStore):
         current_shard = self.shards[-1]
 
         # Get the current count of documents in the shard
-        current_count = current_shard.get_collection_size() if hasattr(current_shard, "get_collection_size") else 0
+        current_count = current_shard.get_collection_size() if hasattr(current_shard, 'get_collection_size') else 0
 
         # Check if we need a new shard
         if current_count + len(processed_docs) > self.shard_capacity:
@@ -123,10 +123,10 @@ class ShardedChromaVectorStore(VectorStore):
         # Add documents to the current shard
         current_shard.add_documents(processed_docs, metadatas, ids)
 
-        shard_count = current_shard.get_collection_size() if hasattr(current_shard, "get_collection_size") else 0
+        shard_count = current_shard.get_collection_size() if hasattr(current_shard, 'get_collection_size') else 0
 
         logger.info(
-            f"Added {len(processed_docs)} documents to shard {len(self.shards) - 1}. Total in shard: {shard_count}"
+            f'Added {len(processed_docs)} documents to shard {len(self.shards) - 1}. Total in shard: {shard_count}'
         )
 
     def _search_shard(
@@ -168,15 +168,15 @@ class ShardedChromaVectorStore(VectorStore):
                     results = future.result()
                     all_results.extend(results)
                 except Exception as exc:
-                    logger.error(f"Shard search generated an exception: {exc}")
+                    logger.error(f'Shard search generated an exception: {exc}')
 
         # Sort all results by relevance score (lower is better for distance metrics)
-        all_results.sort(key=lambda x: x.get("score", float("inf")))
+        all_results.sort(key=lambda x: x.get('score', float('inf')))
 
         # Limit to the top n_results
         top_results = all_results[:n_results]
 
-        logger.info(f"Total aggregated results: {len(top_results)}")
+        logger.info(f'Total aggregated results: {len(top_results)}')
         return top_results
 
     def count(self) -> int:
@@ -186,8 +186,8 @@ class ShardedChromaVectorStore(VectorStore):
             Total document count as an integer.
 
         """
-        total = sum(shard.get_collection_size() for shard in self.shards if hasattr(shard, "get_collection_size"))
-        logger.info(f"Total document count across all shards: {total}")
+        total = sum(shard.get_collection_size() for shard in self.shards if hasattr(shard, 'get_collection_size'))
+        logger.info(f'Total document count across all shards: {total}')
         return total
 
     def as_retriever(self, **kwargs: Any) -> Any:
@@ -210,7 +210,7 @@ class ShardedChromaVectorStore(VectorStore):
         for shard in self.shards:
             shard.delete_collection()
         self.shards = []
-        logger.info("Deleted all shard collections")
+        logger.info('Deleted all shard collections')
 
     def similarity_search(
         self,
@@ -246,8 +246,8 @@ class ShardedChromaVectorStore(VectorStore):
         for result in results:
             documents.append(
                 Document(
-                    page_content=result["document"],
-                    metadata=result["metadata"] or {},
+                    page_content=result['document'],
+                    metadata=result['metadata'] or {},
                 )
             )
 

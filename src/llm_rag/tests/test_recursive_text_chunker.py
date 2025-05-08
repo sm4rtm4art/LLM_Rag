@@ -11,7 +11,7 @@ class TestRecursiveTextChunker(unittest.TestCase):
 
     def test_init_with_separators(self):
         """Test initialization with separators list."""
-        separators = ["\n\n", "\n", ".", " "]
+        separators = ['\n\n', '\n', '.', ' ']
         chunker = RecursiveTextChunker(
             chunk_size=100,
             chunk_overlap=20,
@@ -21,12 +21,12 @@ class TestRecursiveTextChunker(unittest.TestCase):
 
     def test_init_with_separator(self):
         """Test initialization with single separator (deprecated)."""
-        separator = ";"
+        separator = ';'
         # Use with statement to ignore the DeprecationWarning
         import warnings
 
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+            warnings.simplefilter('always')
             chunker = RecursiveTextChunker(
                 chunk_size=100,
                 chunk_overlap=20,
@@ -34,20 +34,20 @@ class TestRecursiveTextChunker(unittest.TestCase):
             )
             # Check that a DeprecationWarning was raised
             self.assertTrue(any(issubclass(warning.category, DeprecationWarning) for warning in w))
-            self.assertTrue(any("deprecated" in str(warning.message) for warning in w))
+            self.assertTrue(any('deprecated' in str(warning.message) for warning in w))
 
         # Verify that the separator was converted to a list
         self.assertEqual(chunker.separators, [separator])
 
     def test_init_with_both_separator_and_separators(self):
         """Test initialization with both separator and separators parameters."""
-        separator = ";"
-        separators = ["\n\n", "\n", ".", " "]
+        separator = ';'
+        separators = ['\n\n', '\n', '.', ' ']
         # Use with statement to ignore the DeprecationWarning
         import warnings
 
         with warnings.catch_warnings(record=True):
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             chunker = RecursiveTextChunker(
                 chunk_size=100,
                 chunk_overlap=20,
@@ -62,7 +62,7 @@ class TestRecursiveTextChunker(unittest.TestCase):
         """Test initialization with default parameters."""
         chunker = RecursiveTextChunker()
         # Default separators
-        default_separators = ["\n\n", "\n", ". ", ".", " ", ""]
+        default_separators = ['\n\n', '\n', '. ', '.', ' ', '']
         self.assertEqual(chunker.separators, default_separators)
 
     def test_validation_errors(self):
@@ -81,7 +81,7 @@ class TestRecursiveTextChunker(unittest.TestCase):
 
     def test_split_text(self):
         """Test splitting text."""
-        text = "This is a test.\nWith multiple lines.\nAnd some more text."
+        text = 'This is a test.\nWith multiple lines.\nAnd some more text.'
         chunker = RecursiveTextChunker(chunk_size=20, chunk_overlap=0)
         chunks = chunker.split_text(text)
         self.assertIsInstance(chunks, List)
@@ -94,12 +94,12 @@ class TestRecursiveTextChunker(unittest.TestCase):
         """Test splitting documents."""
         documents = [
             {
-                "content": "This is a test document with some content.",
-                "metadata": {"source": "test1.txt"},
+                'content': 'This is a test document with some content.',
+                'metadata': {'source': 'test1.txt'},
             },
             {
-                "content": "This is another test document with different content.",
-                "metadata": {"source": "test2.txt"},
+                'content': 'This is another test document with different content.',
+                'metadata': {'source': 'test2.txt'},
             },
         ]
         chunker = RecursiveTextChunker(chunk_size=20, chunk_overlap=0)
@@ -107,12 +107,12 @@ class TestRecursiveTextChunker(unittest.TestCase):
         self.assertIsInstance(chunks, List)
         self.assertGreater(len(chunks), 2)  # Should have more chunks than original documents
         for chunk in chunks:
-            self.assertIn("content", chunk)
-            self.assertIn("metadata", chunk)
+            self.assertIn('content', chunk)
+            self.assertIn('metadata', chunk)
             # Check that content is a string and less than or equal to chunk_size
-            self.assertIsInstance(chunk["content"], str)
-            self.assertLessEqual(len(chunk["content"]), 20)
+            self.assertIsInstance(chunk['content'], str)
+            self.assertLessEqual(len(chunk['content']), 20)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

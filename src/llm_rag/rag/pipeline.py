@@ -33,7 +33,7 @@ try:
     _MODULAR_IMPORT_SUCCESS = True
 except ImportError as e:
     # If import fails, use stub classes
-    warnings.warn(f"Failed to import modular RAG pipeline components: {e}. Using stub classes.", stacklevel=2)
+    warnings.warn(f'Failed to import modular RAG pipeline components: {e}. Using stub classes.', stacklevel=2)
     _MODULAR_IMPORT_SUCCESS = False
 
 # Local imports
@@ -78,14 +78,14 @@ if _MODULAR_IMPORT_SUCCESS:
         @property
         def _test_mode(self):
             """Get the test mode flag."""
-            return getattr(self, "__test_mode", False)
+            return getattr(self, '__test_mode', False)
 
         @_test_mode.setter
         def _test_mode(self, value):
             """Set the test mode flag."""
             self.__test_mode = value
             # Also set test mode on the formatter if it has that attribute
-            if hasattr(self._formatter, "test_mode"):
+            if hasattr(self._formatter, 'test_mode'):
                 self._formatter.test_mode = value
 
         def retrieve(self, query: str) -> List[Dict[str, Any]]:
@@ -101,9 +101,9 @@ if _MODULAR_IMPORT_SUCCESS:
             try:
                 return self._retriever.retrieve(query)
             except Exception as e:
-                logger.debug(f"Retrieval failed: {e}")
+                logger.debug(f'Retrieval failed: {e}')
                 raise PipelineError(
-                    f"Document retrieval failed: {str(e)}",
+                    f'Document retrieval failed: {str(e)}',
                     original_exception=e,
                 ) from e
 
@@ -120,13 +120,13 @@ if _MODULAR_IMPORT_SUCCESS:
             try:
                 return self._formatter.format_context(documents)
             except Exception as e:
-                logger.debug(f"Formatting failed: {e}")
+                logger.debug(f'Formatting failed: {e}')
                 raise PipelineError(
-                    f"Context formatting failed: {str(e)}",
+                    f'Context formatting failed: {str(e)}',
                     original_exception=e,
                 ) from e
 
-        def generate(self, query: str, context: str, history: str = "") -> str:
+        def generate(self, query: str, context: str, history: str = '') -> str:
             """Generate a response based on the query and context.
 
             Args:
@@ -163,18 +163,18 @@ if _MODULAR_IMPORT_SUCCESS:
 
                 # Return result
                 return {
-                    "query": query,
-                    "response": response,
-                    "documents": documents,
-                    "context": context,
+                    'query': query,
+                    'response': response,
+                    'documents': documents,
+                    'context': context,
                 }
             except Exception as e:
-                logger.error(f"RAG pipeline query failed: {e}")
+                logger.error(f'RAG pipeline query failed: {e}')
                 # Return error response
                 return {
-                    "query": query,
-                    "response": f"Error: {str(e)}",
-                    "error": str(e),
+                    'query': query,
+                    'response': f'Error: {str(e)}',
+                    'error': str(e),
                 }
 
     class ConversationalRAGPipeline(ModularConversationalRAGPipeline):
@@ -207,20 +207,20 @@ if _MODULAR_IMPORT_SUCCESS:
             )
 
             # For backward compatibility
-            self.max_history_length = kwargs.get("max_history_length", 5)
+            self.max_history_length = kwargs.get('max_history_length', 5)
             self.conversation_history = {}
 
         @property
         def _test_mode(self):
             """Get the test mode flag."""
-            return getattr(self, "__test_mode", False)
+            return getattr(self, '__test_mode', False)
 
         @_test_mode.setter
         def _test_mode(self, value):
             """Set the test mode flag."""
             self.__test_mode = value
             # Also set test mode on the formatter if it has that attribute
-            if hasattr(self._formatter, "test_mode"):
+            if hasattr(self._formatter, 'test_mode'):
                 self._formatter.test_mode = value
 
         def retrieve(self, query: str) -> List[Dict[str, Any]]:
@@ -236,9 +236,9 @@ if _MODULAR_IMPORT_SUCCESS:
             try:
                 return self._retriever.retrieve(query)
             except Exception as e:
-                logger.debug(f"Retrieval failed: {e}")
+                logger.debug(f'Retrieval failed: {e}')
                 raise PipelineError(
-                    f"Document retrieval failed: {str(e)}",
+                    f'Document retrieval failed: {str(e)}',
                     original_exception=e,
                 ) from e
 
@@ -255,13 +255,13 @@ if _MODULAR_IMPORT_SUCCESS:
             try:
                 return self._formatter.format_context(documents)
             except Exception as e:
-                logger.debug(f"Formatting failed: {e}")
+                logger.debug(f'Formatting failed: {e}')
                 raise PipelineError(
-                    f"Context formatting failed: {str(e)}",
+                    f'Context formatting failed: {str(e)}',
                     original_exception=e,
                 ) from e
 
-        def generate(self, query: str, context: str, history: str = "") -> str:
+        def generate(self, query: str, context: str, history: str = '') -> str:
             """Generate a response based on the query, context, and history.
 
             Args:
@@ -276,14 +276,14 @@ if _MODULAR_IMPORT_SUCCESS:
             # Try to use the legacy llm_chain for backward compatibility
             try:
                 # Check if we can use the legacy method with llm_chain
-                has_predict = hasattr(self.llm_chain, "predict")
-                has_format = hasattr(self.prompt_template, "format")
+                has_predict = hasattr(self.llm_chain, 'predict')
+                has_format = hasattr(self.prompt_template, 'format')
 
                 if has_predict and has_format:
                     prompt = self.prompt_template.format(context=context, query=query, history=history)
                     return self.llm_chain.predict(prompt)
             except Exception as e:
-                logger.debug(f"Failed with legacy method: {e}")
+                logger.debug(f'Failed with legacy method: {e}')
 
             # Fall back to the standard generate method
             return self._generator.generate(query=query, context=context, history=history)
@@ -313,7 +313,7 @@ if _MODULAR_IMPORT_SUCCESS:
                 # In the tests, this is actually (conversation_id, user_message, ai_message)
                 conversation_id = query_or_id
                 user_message = response  # This parameter order is how the tests use it
-                ai_message = "dummy"  # Not used in this case
+                ai_message = 'dummy'  # Not used in this case
 
             # Initialize history for this conversation if it doesn't exist
             if conversation_id not in self.conversation_history:
@@ -329,8 +329,8 @@ if _MODULAR_IMPORT_SUCCESS:
 
             # Also add to the new message history if available
             try:
-                self.add_message("user", user_message)
-                self.add_message("assistant", ai_message)
+                self.add_message('user', user_message)
+                self.add_message('assistant', ai_message)
             except AttributeError:
                 pass
 
@@ -347,21 +347,21 @@ if _MODULAR_IMPORT_SUCCESS:
 
             """
             # Default to "default" if no ID provided
-            conversation_id = conversation_id or "default"
+            conversation_id = conversation_id or 'default'
 
             # Return empty string if no history exists
             if conversation_id not in self.conversation_history:
-                return ""
+                return ''
 
             # Format the history as alternating Human/AI messages
             formatted_messages = []
             history = self.conversation_history[conversation_id]
 
             for user_msg, ai_msg in history:
-                formatted_messages.append(f"Human: {user_msg}")
-                formatted_messages.append(f"AI: {ai_msg}")
+                formatted_messages.append(f'Human: {user_msg}')
+                formatted_messages.append(f'AI: {ai_msg}')
 
-            return "\n".join(formatted_messages)
+            return '\n'.join(formatted_messages)
 
         def reset_history(self, conversation_id: Optional[str] = None) -> None:
             """Reset conversation history for a specific conversation.
@@ -373,7 +373,7 @@ if _MODULAR_IMPORT_SUCCESS:
 
             """
             # Default to "default" if no ID provided
-            conversation_id = conversation_id or "default"
+            conversation_id = conversation_id or 'default'
 
             # Clear the history for this conversation
             if conversation_id in self.conversation_history:
@@ -411,38 +411,38 @@ if _MODULAR_IMPORT_SUCCESS:
                 try:
                     history = self.format_history(conversation_id)
                 except Exception as e:
-                    logger.debug(f"Failed to format history: {e}")
-                    history = ""
+                    logger.debug(f'Failed to format history: {e}')
+                    history = ''
 
                 # Generate a response
                 try:
                     response = self.generate(query=query, context=context, history=history)
                 except Exception as e:
-                    logger.debug(f"Failed with error: {e}")
-                    response = ""
+                    logger.debug(f'Failed with error: {e}')
+                    response = ''
 
                 # Add the message to history
                 try:
                     self.add_to_history(conversation_id, response, query)
                 except Exception as e:
-                    logger.debug(f"Failed to add message to history: {e}")
+                    logger.debug(f'Failed to add message to history: {e}')
 
                 # Return result
                 return {
-                    "query": query,
-                    "response": response,
-                    "documents": documents,
-                    "context": context,
-                    "conversation_id": conversation_id,
+                    'query': query,
+                    'response': response,
+                    'documents': documents,
+                    'context': context,
+                    'conversation_id': conversation_id,
                 }
             except Exception as e:
-                logger.error(f"Conversational RAG pipeline query failed: {e}")
+                logger.error(f'Conversational RAG pipeline query failed: {e}')
                 # Return error response
                 return {
-                    "query": query,
-                    "response": f"Error: {str(e)}",
-                    "error": str(e),
-                    "conversation_id": conversation_id,
+                    'query': query,
+                    'response': f'Error: {str(e)}',
+                    'error': str(e),
+                    'conversation_id': conversation_id,
                 }
 else:
     # Import failed, use stub classes
@@ -478,4 +478,4 @@ else:
 
 
 # Suppress deprecation warnings for backward compatibility
-warnings.filterwarnings("ignore", category=DeprecationWarning, module="langchain.memory")
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='langchain.memory')

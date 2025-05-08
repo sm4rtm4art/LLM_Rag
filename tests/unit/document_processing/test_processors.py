@@ -14,18 +14,18 @@ class TestTextSplitter(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.text_splitter = TextSplitter(chunk_size=100, chunk_overlap=20, separators=["\n\n", "\n", " "])
+        self.text_splitter = TextSplitter(chunk_size=100, chunk_overlap=20, separators=['\n\n', '\n', ' '])
 
     def test_initialization(self):
         """Test that the TextSplitter initializes correctly."""
         # Access private attributes or use properties based on implementation
         self.assertEqual(self.text_splitter.splitter._chunk_size, 100)
         self.assertEqual(self.text_splitter.splitter._chunk_overlap, 20)
-        self.assertEqual(self.text_splitter.splitter._separators, ["\n\n", "\n", " "])
+        self.assertEqual(self.text_splitter.splitter._separators, ['\n\n', '\n', ' '])
 
     def test_split_text(self):
         """Test splitting text into chunks."""
-        text = "This is a test document. " * 10
+        text = 'This is a test document. ' * 10
         chunks = self.text_splitter.split_text(text)
 
         # Check that we got multiple chunks
@@ -37,7 +37,7 @@ class TestTextSplitter(unittest.TestCase):
 
     def test_split_documents(self):
         """Test splitting documents into chunks."""
-        documents = [{"content": "This is a test document. " * 10, "metadata": {"source": "test1.txt"}}]
+        documents = [{'content': 'This is a test document. ' * 10, 'metadata': {'source': 'test1.txt'}}]
 
         chunks = self.text_splitter.split_documents(documents)
 
@@ -46,10 +46,10 @@ class TestTextSplitter(unittest.TestCase):
 
         # Check that each chunk has the correct metadata
         for chunk in chunks:
-            self.assertEqual(chunk["metadata"]["source"], "test1.txt")
+            self.assertEqual(chunk['metadata']['source'], 'test1.txt')
 
             # Check that each chunk is no longer than the chunk size
-            self.assertLessEqual(len(chunk["content"]), 100)
+            self.assertLessEqual(len(chunk['content']), 100)
 
 
 class TestDocumentProcessor(unittest.TestCase):
@@ -67,9 +67,9 @@ class TestDocumentProcessor(unittest.TestCase):
     def test_process_empty_documents(self):
         """Test processing empty documents."""
         documents = [
-            {"content": "", "metadata": {"source": "empty.txt"}},
-            {"content": "   ", "metadata": {"source": "whitespace.txt"}},
-            {"content": None, "metadata": {"source": "none.txt"}},
+            {'content': '', 'metadata': {'source': 'empty.txt'}},
+            {'content': '   ', 'metadata': {'source': 'whitespace.txt'}},
+            {'content': None, 'metadata': {'source': 'none.txt'}},
         ]
 
         # Configure the mock to return an empty list
@@ -86,8 +86,8 @@ class TestDocumentProcessor(unittest.TestCase):
     def test_process_valid_documents(self):
         """Test processing valid documents."""
         documents = [
-            {"content": "Document 1", "metadata": {"source": "doc1.txt"}},
-            {"content": "Document 2", "metadata": {"source": "doc2.txt"}},
+            {'content': 'Document 1', 'metadata': {'source': 'doc1.txt'}},
+            {'content': 'Document 2', 'metadata': {'source': 'doc2.txt'}},
         ]
 
         # Configure the mock to return the same documents
@@ -104,14 +104,14 @@ class TestDocumentProcessor(unittest.TestCase):
     def test_process_mixed_documents(self):
         """Test processing a mix of valid and invalid documents."""
         documents = [
-            {"content": "Document 1", "metadata": {"source": "doc1.txt"}},
-            {"content": "", "metadata": {"source": "empty.txt"}},
-            {"content": "Document 2", "metadata": {"source": "doc2.txt"}},
+            {'content': 'Document 1', 'metadata': {'source': 'doc1.txt'}},
+            {'content': '', 'metadata': {'source': 'empty.txt'}},
+            {'content': 'Document 2', 'metadata': {'source': 'doc2.txt'}},
         ]
 
         valid_documents = [
-            {"content": "Document 1", "metadata": {"source": "doc1.txt"}},
-            {"content": "Document 2", "metadata": {"source": "doc2.txt"}},
+            {'content': 'Document 1', 'metadata': {'source': 'doc1.txt'}},
+            {'content': 'Document 2', 'metadata': {'source': 'doc2.txt'}},
         ]
 
         # Configure the mock to return the valid documents
@@ -126,5 +126,5 @@ class TestDocumentProcessor(unittest.TestCase):
         self.text_splitter.split_documents.assert_called_once_with(valid_documents)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

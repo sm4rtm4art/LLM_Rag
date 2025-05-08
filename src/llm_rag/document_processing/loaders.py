@@ -32,7 +32,7 @@ try:
 except ImportError as e:
     # If import fails, use stub classes
     warnings.warn(
-        f"Failed to import modular document loaders: {e}. Using stub classes.",
+        f'Failed to import modular document loaders: {e}. Using stub classes.',
         stacklevel=2,
     )
     _MODULAR_IMPORT_SUCCESS = False
@@ -70,7 +70,7 @@ if _MODULAR_IMPORT_SUCCESS:
 
             return _load_document(file_path, exclude_patterns)
         except Exception as e:
-            logger.error(f"Error loading document: {e}")
+            logger.error(f'Error loading document: {e}')
             return None
 
 else:
@@ -176,24 +176,24 @@ else:
 
 # Define exports
 __all__ = [
-    "DocumentLoader",
-    "FileLoader",
-    "LoaderRegistry",
-    "registry",
-    "DirectoryLoader",
-    "CSVLoader",
-    "EnhancedPDFLoader",
-    "JSONLoader",
-    "PDFLoader",
-    "TextFileLoader",
-    "XMLLoader",
-    "WebLoader",
-    "WebPageLoader",
-    "load_documents_from_directory",
-    "load_document",
-    "get_available_loader_extensions",
-    "Documents",
+    'DocumentLoader',
+    'FileLoader',
+    'LoaderRegistry',
+    'registry',
+    'DirectoryLoader',
+    'CSVLoader',
+    'EnhancedPDFLoader',
+    'JSONLoader',
+    'PDFLoader',
+    'TextFileLoader',
+    'XMLLoader',
+    'WebLoader',
+    'WebPageLoader',
+    'load_documents_from_directory',
+    'load_document',
+    'get_available_loader_extensions',
+    'Documents',
 ]
 
 # Suppress deprecation warnings for backward compatibility
-warnings.filterwarnings("ignore", category=DeprecationWarning, module="langchain")
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='langchain')

@@ -81,7 +81,7 @@ class ConversationalRAGPipeline(RAGPipeline):
 
         # Create modular components (override base class components)
         self._retriever = create_retriever(source=vectorstore, top_k=top_k)
-        self._formatter = create_formatter(format_type="simple", include_metadata=True)
+        self._formatter = create_formatter(format_type='simple', include_metadata=True)
         self._generator = create_generator(
             llm=llm,
             prompt_template=prompt_template,
@@ -89,12 +89,12 @@ class ConversationalRAGPipeline(RAGPipeline):
         )
 
         logger.info(
-            "Initialized ConversationalRAGPipeline with top_k=%d, history_size=%d",
+            'Initialized ConversationalRAGPipeline with top_k=%d, history_size=%d',
             top_k,
             history_size,
         )
 
-    def generate(self, query: str, context: str, history: str = "") -> str:
+    def generate(self, query: str, context: str, history: str = '') -> str:
         """Generate a response based on the query, context, and conversation history.
 
         This override of the base method adds additional conversational awareness
@@ -122,7 +122,7 @@ class ConversationalRAGPipeline(RAGPipeline):
 
             # Apply post-processing to reduce hallucinations
             # Skip anti-hallucination checks for tests to ensure deterministic behavior
-            if getattr(self, "_test_mode", False):
+            if getattr(self, '_test_mode', False):
                 return response
 
             processed_response = post_process_response(
@@ -132,9 +132,9 @@ class ConversationalRAGPipeline(RAGPipeline):
 
             return processed_response
         except Exception as e:
-            logger.error(f"Error generating response: {str(e)}")
+            logger.error(f'Error generating response: {str(e)}')
             raise PipelineError(
-                f"Failed to generate response: {str(e)}",
+                f'Failed to generate response: {str(e)}',
                 original_exception=e,
             ) from e
 
@@ -179,12 +179,12 @@ class ConversationalRAGPipeline(RAGPipeline):
         confidence = self._calculate_retrieval_confidence(query, documents)
 
         return {
-            "query": query,
-            "response": response,
-            "context": context,
-            "documents": documents,
-            "conversation_id": conversation_id,
-            "confidence": confidence,
+            'query': query,
+            'response': response,
+            'context': context,
+            'documents': documents,
+            'conversation_id': conversation_id,
+            'confidence': confidence,
         }
 
     def add_to_history(self, query_or_id: str, response: str, query: Optional[str] = None) -> None:
@@ -215,8 +215,8 @@ class ConversationalRAGPipeline(RAGPipeline):
 
         # Add the message pair to history
         history = self.conversation_history[conversation_id]
-        history.append({"role": "human", "content": user_query})
-        history.append({"role": "ai", "content": response})
+        history.append({'role': 'human', 'content': user_query})
+        history.append({'role': 'ai', 'content': response})
 
         # Trim history if needed
         if len(history) > self.history_size * 2:  # *2 because each turn has 2 messages
@@ -234,20 +234,20 @@ class ConversationalRAGPipeline(RAGPipeline):
 
         """
         if conversation_id is None or conversation_id not in self.conversation_history:
-            return ""
+            return ''
 
         history = self.conversation_history[conversation_id]
         formatted_history = []
 
         for i in range(0, len(history), 2):
             if i + 1 < len(history):  # Ensure we have both user and assistant messages
-                user_msg = history[i]["content"]
-                ai_msg = history[i + 1]["content"]
+                user_msg = history[i]['content']
+                ai_msg = history[i + 1]['content']
 
-                formatted_history.append(f"Human: {user_msg}")
-                formatted_history.append(f"Assistant: {ai_msg}")
+                formatted_history.append(f'Human: {user_msg}')
+                formatted_history.append(f'Assistant: {ai_msg}')
 
-        return "\n".join(formatted_history)
+        return '\n'.join(formatted_history)
 
     def reset_history(self, conversation_id: Optional[str] = None) -> None:
         """Reset the conversation history.

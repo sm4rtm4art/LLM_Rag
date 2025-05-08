@@ -30,7 +30,7 @@ def calculate_relevance(
         float: A relevance score between 0 and 1
 
     """
-    logger.info(f"Calculating relevance for query: {query[:50]}...")
+    logger.info(f'Calculating relevance for query: {query[:50]}...')
 
     # This is a placeholder implementation
     # In a real system, you would use a more sophisticated metric
@@ -48,7 +48,7 @@ def calculate_relevance(
     overlap = len(query_terms.intersection(answer_terms))
     score = min(1.0, overlap / len(query_terms))
 
-    logger.debug(f"Relevance score: {score}")
+    logger.debug(f'Relevance score: {score}')
     return score
 
 
@@ -73,7 +73,7 @@ def calculate_factuality(
         float: A factuality score between 0 and 1
 
     """
-    logger.info("Calculating factuality for answer...")
+    logger.info('Calculating factuality for answer...')
 
     # This is a placeholder implementation
     # In a real system, you would use a factuality checking model
@@ -106,5 +106,5 @@ def calculate_factuality(
         # No reference or context available
         score = 0.5  # Default score
 
-    logger.debug(f"Factuality score: {score}")
+    logger.debug(f'Factuality score: {score}')
     return score

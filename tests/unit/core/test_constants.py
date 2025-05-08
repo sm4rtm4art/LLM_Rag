@@ -31,27 +31,27 @@ class TestConstants(unittest.TestCase):
     def test_model_configs(self):
         """Test that model configurations are correctly defined."""
         # Check that required models are present
-        self.assertIn("llama", MODEL_CONFIGS)
-        self.assertIn("phi", MODEL_CONFIGS)
-        self.assertIn("mistral", MODEL_CONFIGS)
+        self.assertIn('llama', MODEL_CONFIGS)
+        self.assertIn('phi', MODEL_CONFIGS)
+        self.assertIn('mistral', MODEL_CONFIGS)
 
         # Check llama config
-        llama_config = MODEL_CONFIGS["llama"]
-        self.assertTrue(llama_config["use_fast_tokenizer"])
-        self.assertTrue(llama_config["trust_remote_code"])
-        self.assertEqual(llama_config["prompt_template"], "<|begin_of_text|><|prompt|>{prompt}<|answer|>")
+        llama_config = MODEL_CONFIGS['llama']
+        self.assertTrue(llama_config['use_fast_tokenizer'])
+        self.assertTrue(llama_config['trust_remote_code'])
+        self.assertEqual(llama_config['prompt_template'], '<|begin_of_text|><|prompt|>{prompt}<|answer|>')
 
         # Check phi config
-        phi_config = MODEL_CONFIGS["phi"]
-        self.assertTrue(phi_config["use_fast_tokenizer"])
-        self.assertFalse(phi_config["trust_remote_code"])
-        self.assertEqual(phi_config["prompt_template"], "<|user|>\n{prompt}\n<|assistant|>\n")
+        phi_config = MODEL_CONFIGS['phi']
+        self.assertTrue(phi_config['use_fast_tokenizer'])
+        self.assertFalse(phi_config['trust_remote_code'])
+        self.assertEqual(phi_config['prompt_template'], '<|user|>\n{prompt}\n<|assistant|>\n')
 
         # Check mistral config
-        mistral_config = MODEL_CONFIGS["mistral"]
-        self.assertTrue(mistral_config["use_fast_tokenizer"])
-        self.assertFalse(mistral_config["trust_remote_code"])
-        self.assertEqual(mistral_config["prompt_template"], "<s>[INST] {prompt} [/INST]")
+        mistral_config = MODEL_CONFIGS['mistral']
+        self.assertTrue(mistral_config['use_fast_tokenizer'])
+        self.assertFalse(mistral_config['trust_remote_code'])
+        self.assertEqual(mistral_config['prompt_template'], '<s>[INST] {prompt} [/INST]')
 
     def test_vector_store_parameters(self):
         """Test that vector store parameters are correctly defined."""
@@ -61,19 +61,19 @@ class TestConstants(unittest.TestCase):
 
     def test_rag_parameters(self):
         """Test that RAG parameters are correctly defined."""
-        self.assertEqual(DEFAULT_MEMORY_KEY, "chat_history")
-        self.assertIn("context", DEFAULT_PROMPT_TEMPLATE)
-        self.assertIn("question", DEFAULT_PROMPT_TEMPLATE)
+        self.assertEqual(DEFAULT_MEMORY_KEY, 'chat_history')
+        self.assertIn('context', DEFAULT_PROMPT_TEMPLATE)
+        self.assertIn('question', DEFAULT_PROMPT_TEMPLATE)
 
     def test_system_parameters(self):
         """Test that system parameters are correctly defined."""
-        self.assertEqual(DEFAULT_LOG_LEVEL, "INFO")
-        self.assertEqual(LOG_LEVELS["DEBUG"], 10)
-        self.assertEqual(LOG_LEVELS["INFO"], 20)
-        self.assertEqual(LOG_LEVELS["WARNING"], 30)
-        self.assertEqual(LOG_LEVELS["ERROR"], 40)
-        self.assertEqual(LOG_LEVELS["CRITICAL"], 50)
+        self.assertEqual(DEFAULT_LOG_LEVEL, 'INFO')
+        self.assertEqual(LOG_LEVELS['DEBUG'], 10)
+        self.assertEqual(LOG_LEVELS['INFO'], 20)
+        self.assertEqual(LOG_LEVELS['WARNING'], 30)
+        self.assertEqual(LOG_LEVELS['ERROR'], 40)
+        self.assertEqual(LOG_LEVELS['CRITICAL'], 50)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

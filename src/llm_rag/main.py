@@ -59,13 +59,13 @@ class CustomLlamaCpp(LLM):
         if os.path.exists(model_path):
             self.model = Llama(model_path=model_path, **kwargs)
         else:
-            print(f"Warning: Model file {model_path} does not exist. Running in test mode.")
+            print(f'Warning: Model file {model_path} does not exist. Running in test mode.')
             self.model = None
 
     @property
     def _llm_type(self) -> str:
         """Return the type of LLM."""
-        return "custom_llama_cpp"
+        return 'custom_llama_cpp'
 
     def _call(
         self,
@@ -90,11 +90,11 @@ class CustomLlamaCpp(LLM):
         """
         if self.model is None:
             # Return a dummy response for testing
-            return "Test response from CustomLlamaCpp"
+            return 'Test response from CustomLlamaCpp'
 
         # Call the model with the prompt
         response = self.model(prompt=prompt, **kwargs)
-        return str(response["choices"][0]["text"])
+        return str(response['choices'][0]['text'])
 
 
 def setup_arg_parser() -> argparse.ArgumentParser:
@@ -106,57 +106,57 @@ def setup_arg_parser() -> argparse.ArgumentParser:
         The configured argument parser.
 
     """
-    parser = argparse.ArgumentParser(description="RAG system for document retrieval and question answering.")
+    parser = argparse.ArgumentParser(description='RAG system for document retrieval and question answering.')
 
     parser.add_argument(
-        "--data-dir",
+        '--data-dir',
         type=str,
-        help="Directory containing documents to ingest",
+        help='Directory containing documents to ingest',
     )
     parser.add_argument(
-        "--query",
+        '--query',
         type=str,
-        help="Query to run against the RAG system. If not provided, interactive mode is used.",
+        help='Query to run against the RAG system. If not provided, interactive mode is used.',
     )
     parser.add_argument(
-        "--db-dir",
+        '--db-dir',
         type=str,
-        default="./chroma_db",
-        help="Directory for the vector database (default: ./chroma_db)",
+        default='./chroma_db',
+        help='Directory for the vector database (default: ./chroma_db)',
     )
     parser.add_argument(
-        "--model-path",
+        '--model-path',
         type=str,
-        default="./models/llama-2-7b-chat.gguf",
-        help="Path to the LLM model (default: ./models/llama-2-7b-chat.gguf)",
+        default='./models/llama-2-7b-chat.gguf',
+        help='Path to the LLM model (default: ./models/llama-2-7b-chat.gguf)',
     )
     parser.add_argument(
-        "--embedding-model",
+        '--embedding-model',
         type=str,
-        default="all-MiniLM-L6-v2",
-        help="Name of the embedding model (default: all-MiniLM-L6-v2)",
+        default='all-MiniLM-L6-v2',
+        help='Name of the embedding model (default: all-MiniLM-L6-v2)',
     )
     parser.add_argument(
-        "--top-k",
+        '--top-k',
         type=int,
         default=4,
-        help="Number of documents to retrieve (default: 4)",
+        help='Number of documents to retrieve (default: 4)',
     )
     parser.add_argument(
-        "--n-gpu-layers",
+        '--n-gpu-layers',
         type=int,
         default=0,
-        help="Number of GPU layers to use (default: 0, CPU only)",
+        help='Number of GPU layers to use (default: 0, CPU only)',
     )
     parser.add_argument(
-        "--n-ctx",
+        '--n-ctx',
         type=int,
         default=4096,
-        help="Context size for the LLM (default: 4096)",
+        help='Context size for the LLM (default: 4096)',
     )
     parser.add_argument(
-        "--create-empty",
-        action="store_true",
+        '--create-empty',
+        action='store_true',
         help="Create an empty collection if one doesn't exist",
     )
 
@@ -181,28 +181,28 @@ def ingest_documents(
         ChromaVectorStore: The vector store with ingested documents.
 
     """
-    print(f"Ingesting documents from {data_dir}...")
+    print(f'Ingesting documents from {data_dir}...')
 
     # Create vector store directory if it doesn't exist
     os.makedirs(db_dir, exist_ok=True)
 
     # Initialize embedding model
     model_name = embedding_model_name
-    if not model_name.startswith("sentence-transformers/") and "/" not in model_name:
-        model_name = f"sentence-transformers/{model_name}"
+    if not model_name.startswith('sentence-transformers/') and '/' not in model_name:
+        model_name = f'sentence-transformers/{model_name}'
 
     embedding_model = EmbeddingModel(model_name=model_name)
 
     # Create a Chroma client
     chroma_client = chromadb.PersistentClient(path=db_dir)
-    collection_name = "rag_documents"
+    collection_name = 'rag_documents'
 
     # Create or get the collection
     try:
         chroma_client.get_collection(collection_name)
-        print(f"Using existing collection: {collection_name}")
+        print(f'Using existing collection: {collection_name}')
     except ValueError:
-        print(f"Creating new collection: {collection_name}")
+        print(f'Creating new collection: {collection_name}')
 
     # Initialize vector store
     vector_store = ChromaVectorStore(
@@ -217,12 +217,12 @@ def ingest_documents(
         recursive=True,
     )
     documents = loader.load()
-    print(f"Loaded {len(documents)} documents")
+    print(f'Loaded {len(documents)} documents')
 
     # Chunk documents
     chunker = RecursiveTextChunker(chunk_size=1000, chunk_overlap=200)
     chunked_documents = chunker.split_documents(documents)
-    print(f"Created {len(chunked_documents)} chunks")
+    print(f'Created {len(chunked_documents)} chunks')
 
     # Process documents to ensure correct format
     doc_contents: List[str] = []
@@ -231,23 +231,23 @@ def ingest_documents(
     # Process each document to extract content and metadata
     for i, doc in enumerate(chunked_documents):
         try:
-            content: str = ""
+            content: str = ''
             metadata: Dict[str, Any] = {}
 
             if isinstance(doc, dict):
-                content = cast(str, doc.get("content", ""))
-                metadata = cast(Dict[str, Any], doc.get("metadata", {}))
-            elif hasattr(doc, "page_content") and hasattr(doc, "metadata"):  # type: ignore[unreachable]
+                content = cast(str, doc.get('content', ''))
+                metadata = cast(Dict[str, Any], doc.get('metadata', {}))
+            elif hasattr(doc, 'page_content') and hasattr(doc, 'metadata'):  # type: ignore[unreachable]
                 # Handle Document objects
-                content = cast(str, getattr(doc, "page_content", ""))
-                metadata = cast(Dict[str, Any], getattr(doc, "metadata", {}))
+                content = cast(str, getattr(doc, 'page_content', ''))
+                metadata = cast(Dict[str, Any], getattr(doc, 'metadata', {}))
 
             # Only add non-empty content
             if content:
                 doc_contents.append(content)
                 doc_metadatas.append(metadata)
         except Exception as e:
-            print(f"Error processing document {i}: {e}")
+            print(f'Error processing document {i}: {e}')
             continue
 
     # Add documents to vector store - ensure all contents are strings
@@ -268,7 +268,7 @@ def ingest_documents(
 
     # Add documents to vector store
     vector_store.add_documents(documents=str_contents, metadatas=formatted_metadatas)
-    print(f"Added {len(str_contents)} chunks to vector store")
+    print(f'Added {len(str_contents)} chunks to vector store')
 
     return vector_store
 
@@ -284,9 +284,9 @@ def run_interactive_mode(rag_pipeline: RAGPipeline) -> None:
     print("\nEntering interactive mode. Type 'exit' to quit.")
 
     while True:
-        query = input("\nEnter your query: ")
+        query = input('\nEnter your query: ')
 
-        if query.lower() in ["exit", "quit", "q"]:
+        if query.lower() in ['exit', 'quit', 'q']:
             break
 
         if not query.strip():
@@ -294,19 +294,19 @@ def run_interactive_mode(rag_pipeline: RAGPipeline) -> None:
 
         result = rag_pipeline.query(query)
 
-        print("\n" + "=" * 40)
-        print("QUERY:", result["query"])
-        print("=" * 40)
-        print("ANSWER:", result["response"])
-        print("=" * 40)
-        print(f"Retrieved {len(result['documents'])} documents:")
+        print('\n' + '=' * 40)
+        print('QUERY:', result['query'])
+        print('=' * 40)
+        print('ANSWER:', result['response'])
+        print('=' * 40)
+        print(f'Retrieved {len(result["documents"])} documents:')
 
-        for i, doc in enumerate(result["documents"]):
-            print(f"\nDocument {i + 1}:")
-            print(f"  Source: {doc.get('metadata', {}).get('source', 'Unknown')}")
-            print(f"  Content: {doc.get('content', '')[:100]}...")
+        for i, doc in enumerate(result['documents']):
+            print(f'\nDocument {i + 1}:')
+            print(f'  Source: {doc.get("metadata", {}).get("source", "Unknown")}')
+            print(f'  Content: {doc.get("content", "")[:100]}...')
 
-        print("=" * 40)
+        print('=' * 40)
 
 
 def main() -> None:
@@ -335,32 +335,32 @@ def main() -> None:
     else:
         # Load existing vector store
         if not os.path.exists(args.db_dir):
-            print(f"Error: Vector database directory {args.db_dir} does not exist")
-            print("Please provide a data directory to ingest documents first")
+            print(f'Error: Vector database directory {args.db_dir} does not exist')
+            print('Please provide a data directory to ingest documents first')
             sys.exit(1)
 
         # Initialize embedding model
         model_name = args.embedding_model
-        if not model_name.startswith("sentence-transformers/") and "/" not in model_name:
-            model_name = f"sentence-transformers/{model_name}"
+        if not model_name.startswith('sentence-transformers/') and '/' not in model_name:
+            model_name = f'sentence-transformers/{model_name}'
 
         embedding_model = EmbeddingModel(model_name=model_name)
 
         # Create a Chroma client
         chroma_client = chromadb.PersistentClient(path=args.db_dir)
-        collection_name = "rag_documents"
+        collection_name = 'rag_documents'
 
         try:
             chroma_client.get_collection(collection_name)
         except (ValueError, chromadb.errors.InvalidCollectionException):
             if args.create_empty:
-                print(f"Creating empty collection: {collection_name}")
+                print(f'Creating empty collection: {collection_name}')
                 chroma_client.create_collection(collection_name)
             else:
-                print(f"Error: Collection {collection_name} does not exist in {args.db_dir}")
-                print("Please provide a data directory to ingest documents using --data-dir")
-                print("Or use --create-empty to create an empty collection")
-                print("Example: python -m src.llm_rag.main --data-dir ./data/documents")
+                print(f'Error: Collection {collection_name} does not exist in {args.db_dir}')
+                print('Please provide a data directory to ingest documents using --data-dir')
+                print('Or use --create-empty to create an empty collection')
+                print('Example: python -m src.llm_rag.main --data-dir ./data/documents')
                 sys.exit(1)
 
         # Initialize vector store
@@ -399,22 +399,22 @@ def main() -> None:
     if args.query:
         result = rag_pipeline.query(args.query)
 
-        print("\n" + "=" * 40)
-        print("QUERY:", result["query"])
-        print("=" * 40)
-        print("ANSWER:", result["response"])
-        print("=" * 40)
-        print(f"Retrieved {len(result['documents'])} documents:")
+        print('\n' + '=' * 40)
+        print('QUERY:', result['query'])
+        print('=' * 40)
+        print('ANSWER:', result['response'])
+        print('=' * 40)
+        print(f'Retrieved {len(result["documents"])} documents:')
 
-        for i, doc in enumerate(result["documents"]):
-            print(f"\nDocument {i + 1}:")
-            print(f"  Source: {doc.get('metadata', {}).get('source', 'Unknown')}")
-            print(f"  Content: {doc.get('content', '')[:100]}...")
+        for i, doc in enumerate(result['documents']):
+            print(f'\nDocument {i + 1}:')
+            print(f'  Source: {doc.get("metadata", {}).get("source", "Unknown")}')
+            print(f'  Content: {doc.get("content", "")[:100]}...')
 
-        print("=" * 40)
+        print('=' * 40)
     else:
         run_interactive_mode(rag_pipeline)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

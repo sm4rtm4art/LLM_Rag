@@ -33,89 +33,89 @@ from llm_rag.rag.pipeline import ConversationalRAGPipeline
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Command Line Interface for the RAG System")
+    parser = argparse.ArgumentParser(description='Command Line Interface for the RAG System')
     parser.add_argument(
-        "--model",
+        '--model',
         type=str,
-        default="google/flan-t5-base",
-        help="HuggingFace model to use for generation",
+        default='google/flan-t5-base',
+        help='HuggingFace model to use for generation',
     )
     parser.add_argument(
-        "--vector-db",
+        '--vector-db',
         type=str,
-        default="data/vector_db",
-        help="Path to the vector database",
+        default='data/vector_db',
+        help='Path to the vector database',
     )
     parser.add_argument(
-        "--embedding-model",
+        '--embedding-model',
         type=str,
-        default="sentence-transformers/all-MiniLM-L6-v2",
-        help="HuggingFace embedding model to use",
+        default='sentence-transformers/all-MiniLM-L6-v2',
+        help='HuggingFace embedding model to use',
     )
     parser.add_argument(
-        "--collection-name",
+        '--collection-name',
         type=str,
-        default="documents",
-        help="Name of the vector database collection",
+        default='documents',
+        help='Name of the vector database collection',
     )
     parser.add_argument(
-        "--top-k",
+        '--top-k',
         type=int,
         default=3,
-        help="Number of documents to retrieve",
+        help='Number of documents to retrieve',
     )
     parser.add_argument(
-        "--max-tokens",
+        '--max-tokens',
         type=int,
         default=512,
-        help="Maximum number of tokens to generate",
+        help='Maximum number of tokens to generate',
     )
     parser.add_argument(
-        "--temperature",
+        '--temperature',
         type=float,
         default=0.7,
-        help="Temperature for generation",
+        help='Temperature for generation',
     )
     parser.add_argument(
-        "--use-llama",
-        action="store_true",
-        help="Use LLaMA model instead of HuggingFace model",
+        '--use-llama',
+        action='store_true',
+        help='Use LLaMA model instead of HuggingFace model',
     )
     parser.add_argument(
-        "--llama-model-path",
+        '--llama-model-path',
         type=str,
         default=None,
-        help="Path to LLaMA model file (.gguf format)",
+        help='Path to LLaMA model file (.gguf format)',
     )
     parser.add_argument(
-        "--llama-n-ctx",
+        '--llama-n-ctx',
         type=int,
         default=2048,
-        help="Context size for LLaMA model",
+        help='Context size for LLaMA model',
     )
     parser.add_argument(
-        "--llama-n-gpu-layers",
+        '--llama-n-gpu-layers',
         type=int,
         default=0,
-        help="Number of layers to offload to GPU for LLaMA model",
+        help='Number of layers to offload to GPU for LLaMA model',
     )
     parser.add_argument(
-        "--no-device-map",
-        action="store_true",
-        help="Disable device_map for model loading (no accelerate needed)",
+        '--no-device-map',
+        action='store_true',
+        help='Disable device_map for model loading (no accelerate needed)',
     )
     return parser.parse_args()
 
 
 def setup_llm(
-    model_name="google/flan-t5-base",
+    model_name='google/flan-t5-base',
     max_tokens=256,
     temperature=0.1,
     use_llama=False,
@@ -142,16 +142,16 @@ def setup_llm(
         Language model for the RAG pipeline
 
     """
-    logger.info(f"Loading model: {model_name}")
+    logger.info(f'Loading model: {model_name}')
 
     # Set device
-    device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
-    print(f"Device set to use {device}")
+    device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
+    print(f'Device set to use {device}')
 
     # Handle Llama models
     if use_llama:
         if not llama_model_path:
-            raise ValueError("llama_model_path must be provided when use_llama is True")
+            raise ValueError('llama_model_path must be provided when use_llama is True')
 
         try:
             return LlamaCpp(
@@ -161,12 +161,12 @@ def setup_llm(
                 verbose=False,
             )
         except ImportError as err:
-            msg = "llama-cpp-python not installed. Install with: pip install llama-cpp-python"
+            msg = 'llama-cpp-python not installed. Install with: pip install llama-cpp-python'
             logger.error(msg)
             raise ImportError(msg) from err
 
     # Handle Phi models
-    if "phi" in model_name.lower():
+    if 'phi' in model_name.lower():
         try:
             from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
@@ -175,14 +175,14 @@ def setup_llm(
 
             # Load model with or without device_map based on user preference
             if use_device_map:
-                model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
+                model = AutoModelForCausalLM.from_pretrained(model_name, device_map='auto')
             else:
                 model = AutoModelForCausalLM.from_pretrained(model_name)
                 model = model.to(device)
 
             # Create text generation pipeline
             text_generation = pipeline(
-                "text-generation",
+                'text-generation',
                 model=model,
                 tokenizer=tokenizer,
                 max_length=max_tokens,
@@ -194,7 +194,7 @@ def setup_llm(
             # Create HuggingFacePipeline
             return HuggingFacePipeline(pipeline=text_generation)
         except Exception as e:
-            logger.error(f"Failed to load Phi model {model_name}: {str(e)}")
+            logger.error(f'Failed to load Phi model {model_name}: {str(e)}')
             raise
 
     # Handle other HuggingFace models (default to seq2seq models like T5)
@@ -204,14 +204,14 @@ def setup_llm(
 
         # Load model with or without device_map based on user preference
         if use_device_map:
-            model = AutoModelForSeq2SeqLM.from_pretrained(model_name, device_map="auto")
+            model = AutoModelForSeq2SeqLM.from_pretrained(model_name, device_map='auto')
         else:
             model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
             model = model.to(device)
 
         # Create text generation pipeline
         text_generation = pipeline(
-            "text2text-generation",
+            'text2text-generation',
             model=model,
             tokenizer=tokenizer,
             max_length=max_tokens,
@@ -224,21 +224,21 @@ def setup_llm(
 
     except Exception as e:
         # If loading fails, try a smaller model
-        logger.warning(f"Failed to load {model_name}: {str(e)}. Falling back to google/flan-t5-small.")
+        logger.warning(f'Failed to load {model_name}: {str(e)}. Falling back to google/flan-t5-small.')
 
         try:
             # Fallback to a smaller model
-            tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small")
+            tokenizer = AutoTokenizer.from_pretrained('google/flan-t5-small')
 
             # Load model with or without device_map based on user preference
             if use_device_map:
-                model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-small", device_map="auto")
+                model = AutoModelForSeq2SeqLM.from_pretrained('google/flan-t5-small', device_map='auto')
             else:
-                model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-small")
+                model = AutoModelForSeq2SeqLM.from_pretrained('google/flan-t5-small')
                 model = model.to(device)
 
             text_generation = pipeline(
-                "text2text-generation",
+                'text2text-generation',
                 model=model,
                 tokenizer=tokenizer,
                 max_length=max_tokens,
@@ -248,19 +248,19 @@ def setup_llm(
 
             return HuggingFacePipeline(pipeline=text_generation)
         except Exception as fallback_error:
-            logger.error(f"Failed to load fallback model: {str(fallback_error)}")
+            logger.error(f'Failed to load fallback model: {str(fallback_error)}')
             raise
 
 
 def load_vectorstore(vector_db_path, embedding_model, collection_name):
     """Load the vector store from disk."""
-    logger.info(f"Loading vector store from: {vector_db_path}")
+    logger.info(f'Loading vector store from: {vector_db_path}')
 
     try:
         # Check if vector store exists
         if not os.path.exists(vector_db_path):
-            logger.error(f"Vector store not found at: {vector_db_path}")
-            logger.info("Please load documents first using the load_documents.py script.")
+            logger.error(f'Vector store not found at: {vector_db_path}')
+            logger.info('Please load documents first using the load_documents.py script.')
             sys.exit(1)
 
         # Load embeddings
@@ -276,7 +276,7 @@ def load_vectorstore(vector_db_path, embedding_model, collection_name):
         return vectorstore
 
     except Exception as e:
-        logger.error(f"Error loading vector store: {str(e)}")
+        logger.error(f'Error loading vector store: {str(e)}')
         sys.exit(1)
 
 
@@ -310,10 +310,10 @@ def main():
     )
 
     # Welcome message
-    print("\n" + "=" * 80)
-    print("Welcome to the RAG CLI!")
+    print('\n' + '=' * 80)
+    print('Welcome to the RAG CLI!')
     print("Ask questions about your documents or type 'exit' to quit.")
-    print("=" * 80 + "\n")
+    print('=' * 80 + '\n')
 
     # Check if input is from a pipe or interactive terminal
     is_pipe = not sys.stdin.isatty()
@@ -327,11 +327,11 @@ def main():
             if not query:
                 continue
 
-            print(f"\nYou: {query}")
+            print(f'\nYou: {query}')
 
             # Check for exit command
-            if query.lower() in ["exit", "quit", "q"]:
-                print("\nThank you for using the RAG CLI. Goodbye!")
+            if query.lower() in ['exit', 'quit', 'q']:
+                print('\nThank you for using the RAG CLI. Goodbye!')
                 break
 
             try:
@@ -339,17 +339,17 @@ def main():
                 result = rag_pipeline.query(query)
 
                 # Print response
-                print(f"\nAssistant: {result['response']}")
+                print(f'\nAssistant: {result["response"]}')
 
                 # Print sources
-                if "retrieved_documents" in result and result["retrieved_documents"]:
-                    print("\nSources:")
-                    for i, doc in enumerate(result["retrieved_documents"], 1):
-                        source = doc.get("metadata", {}).get("source", "Unknown")
-                        print(f"  {i}. {source}")
+                if 'retrieved_documents' in result and result['retrieved_documents']:
+                    print('\nSources:')
+                    for i, doc in enumerate(result['retrieved_documents'], 1):
+                        source = doc.get('metadata', {}).get('source', 'Unknown')
+                        print(f'  {i}. {source}')
             except Exception as e:
-                print(f"\nError: {str(e)}")
-                logger.error(f"Error processing query: {str(e)}")
+                print(f'\nError: {str(e)}')
+                logger.error(f'Error processing query: {str(e)}')
 
         return
 
@@ -357,38 +357,38 @@ def main():
     while True:
         try:
             # Get user input
-            query = input("\nYou: ")
+            query = input('\nYou: ')
 
             # Check for exit command
-            if query.lower() in ["exit", "quit", "q"]:
-                print("\nThank you for using the RAG CLI. Goodbye!")
+            if query.lower() in ['exit', 'quit', 'q']:
+                print('\nThank you for using the RAG CLI. Goodbye!')
                 break
 
             # Process query
             result = rag_pipeline.query(query)
 
             # Print response
-            print(f"\nAssistant: {result['response']}")
+            print(f'\nAssistant: {result["response"]}')
 
             # Print sources (optional)
-            if "retrieved_documents" in result and result["retrieved_documents"]:
-                print("\nSources:")
-                for i, doc in enumerate(result["retrieved_documents"], 1):
-                    source = doc.get("metadata", {}).get("source", "Unknown")
-                    print(f"  {i}. {source}")
+            if 'retrieved_documents' in result and result['retrieved_documents']:
+                print('\nSources:')
+                for i, doc in enumerate(result['retrieved_documents'], 1):
+                    source = doc.get('metadata', {}).get('source', 'Unknown')
+                    print(f'  {i}. {source}')
 
         except EOFError:
-            print("\nInput stream ended. Exiting.")
+            print('\nInput stream ended. Exiting.')
             break
 
         except KeyboardInterrupt:
-            print("\n\nInterrupted by user. Exiting...")
+            print('\n\nInterrupted by user. Exiting...')
             break
 
         except Exception as e:
-            print(f"\nError: {str(e)}")
-            logger.error(f"Error processing query: {str(e)}")
+            print(f'\nError: {str(e)}')
+            logger.error(f'Error processing query: {str(e)}')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

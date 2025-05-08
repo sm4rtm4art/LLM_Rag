@@ -23,9 +23,9 @@ class TestBackwardCompatibility(unittest.TestCase):
     def setUp(self):
         """Set up a temporary file for testing."""
         self.temp_dir = tempfile.TemporaryDirectory()
-        self.test_file = Path(self.temp_dir.name) / "test.txt"
-        with open(self.test_file, "w") as f:
-            f.write("This is a test file for compatibility testing.\n")
+        self.test_file = Path(self.temp_dir.name) / 'test.txt'
+        with open(self.test_file, 'w') as f:
+            f.write('This is a test file for compatibility testing.\n')
 
     def tearDown(self):
         """Clean up temporary files."""
@@ -41,14 +41,14 @@ class TestBackwardCompatibility(unittest.TestCase):
         loader = NewTextFileLoader(self.test_file)
         docs = loader.load()
         self.assertEqual(len(docs), 1)
-        self.assertIn("compatibility testing", docs[0]["content"])
+        self.assertIn('compatibility testing', docs[0]['content'])
 
     def test_top_level_loader(self):
         """Test that the top-level loader works (backward compatibility)."""
         loader = TopLevelTextFileLoader(self.test_file)
         docs = loader.load()
         self.assertEqual(len(docs), 1)
-        self.assertIn("compatibility testing", docs[0]["content"])
+        self.assertIn('compatibility testing', docs[0]['content'])
 
 
 class TestPipelineIntegration(unittest.TestCase):
@@ -57,7 +57,7 @@ class TestPipelineIntegration(unittest.TestCase):
     def setUp(self):
         """Set up test files and data."""
         self.temp_dir = tempfile.TemporaryDirectory()
-        self.data_dir = Path(self.temp_dir.name) / "data"
+        self.data_dir = Path(self.temp_dir.name) / 'data'
         os.makedirs(self.data_dir, exist_ok=True)
 
         # Create sample files
@@ -70,24 +70,24 @@ class TestPipelineIntegration(unittest.TestCase):
     def create_sample_files(self):
         """Create sample files for testing."""
         # Text file
-        with open(self.data_dir / "doc1.txt", "w") as f:
-            f.write("This is document 1. It contains information about topic A.")
+        with open(self.data_dir / 'doc1.txt', 'w') as f:
+            f.write('This is document 1. It contains information about topic A.')
 
         # JSON file
-        with open(self.data_dir / "doc2.json", "w") as f:
+        with open(self.data_dir / 'doc2.json', 'w') as f:
             json.dump(
                 {
-                    "title": "Document 2",
-                    "content": "This document contains information about topic B.",
-                    "metadata": {"author": "Test Author"},
+                    'title': 'Document 2',
+                    'content': 'This document contains information about topic B.',
+                    'metadata': {'author': 'Test Author'},
                 },
                 f,
             )
 
         # CSV file
-        with open(self.data_dir / "doc3.csv", "w") as f:
-            f.write("id,title,content\n")
-            f.write("1,Document 3,This document contains information about topic C.\n")
+        with open(self.data_dir / 'doc3.csv', 'w') as f:
+            f.write('id,title,content\n')
+            f.write('1,Document 3,This document contains information about topic C.\n')
 
     def test_directory_loader(self):
         """Test loading multiple document types with DirectoryLoader."""
@@ -98,12 +98,12 @@ class TestPipelineIntegration(unittest.TestCase):
         self.assertGreaterEqual(len(docs), 3)
 
         # Check that content from each file type is present
-        contents = [doc["content"] for doc in docs]
-        all_content = "\n".join(contents)
+        contents = [doc['content'] for doc in docs]
+        all_content = '\n'.join(contents)
 
-        self.assertIn("topic A", all_content)
-        self.assertIn("topic B", all_content)
-        self.assertIn("topic C", all_content)
+        self.assertIn('topic A', all_content)
+        self.assertIn('topic B', all_content)
+        self.assertIn('topic C', all_content)
 
     def test_document_chain(self):
         """Test a chain of document processing operations."""
@@ -112,20 +112,20 @@ class TestPipelineIntegration(unittest.TestCase):
         docs = loader.load()
 
         # 2. Filter documents (simulating a pipeline operation)
-        filtered_docs = [doc for doc in docs if "topic B" in doc["content"]]
+        filtered_docs = [doc for doc in docs if 'topic B' in doc['content']]
 
         # 3. Transform documents (simulating another pipeline operation)
         transformed_docs = []
         for doc in filtered_docs:
             new_doc = doc.copy()
-            new_doc["content"] = doc["content"].upper()
+            new_doc['content'] = doc['content'].upper()
             transformed_docs.append(new_doc)
 
         # Verify results
         self.assertGreaterEqual(len(filtered_docs), 1)
         for doc in transformed_docs:
-            self.assertIn("TOPIC B", doc["content"])
+            self.assertIn('TOPIC B', doc['content'])
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

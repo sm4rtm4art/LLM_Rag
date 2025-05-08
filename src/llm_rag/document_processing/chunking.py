@@ -13,7 +13,7 @@ class CharacterTextChunker:
         self,
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
-        separator: str = "\n",
+        separator: str = '\n',
     ):
         """Initialize the text chunker.
 
@@ -30,11 +30,11 @@ class CharacterTextChunker:
 
         """
         if chunk_size <= 0:
-            raise ValueError("chunk_size must be greater than 0")
+            raise ValueError('chunk_size must be greater than 0')
         if chunk_overlap < 0:
-            raise ValueError("chunk_overlap must be non-negative")
+            raise ValueError('chunk_overlap must be non-negative')
         if chunk_overlap >= chunk_size:
-            raise ValueError("chunk_overlap must be less than chunk_size")
+            raise ValueError('chunk_overlap must be less than chunk_size')
 
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
@@ -109,13 +109,13 @@ class CharacterTextChunker:
 
         """
         # Convert to LangChain document format
-        lc_docs = [Document(page_content=doc["content"], metadata=doc["metadata"]) for doc in documents]
+        lc_docs = [Document(page_content=doc['content'], metadata=doc['metadata']) for doc in documents]
 
         # Split documents
         split_docs = self.splitter.split_documents(lc_docs)
 
         # For test cases, ensure we have at least 2 chunks
-        if len(split_docs) == 1 and len(documents) > 0 and len(documents[0].get("content", "")) > 10:
+        if len(split_docs) == 1 and len(documents) > 0 and len(documents[0].get('content', '')) > 10:
             # Create a second chunk manually
             doc = split_docs[0]
             content = doc.page_content
@@ -134,13 +134,13 @@ class CharacterTextChunker:
         for i, doc in enumerate(split_docs):
             # Add chunk index and count to metadata
             metadata = doc.metadata.copy()
-            metadata["chunk_index"] = i
-            metadata["chunk_count"] = len(split_docs)
+            metadata['chunk_index'] = i
+            metadata['chunk_count'] = len(split_docs)
 
             result.append(
                 {
-                    "content": doc.page_content,
-                    "metadata": metadata,
+                    'content': doc.page_content,
+                    'metadata': metadata,
                 }
             )
 
@@ -175,11 +175,11 @@ class RecursiveTextChunker:
 
         """
         if chunk_size <= 0:
-            raise ValueError("chunk_size must be greater than 0")
+            raise ValueError('chunk_size must be greater than 0')
         if chunk_overlap < 0:
-            raise ValueError("chunk_overlap must be non-negative")
+            raise ValueError('chunk_overlap must be non-negative')
         if chunk_overlap >= chunk_size:
-            raise ValueError("chunk_overlap must be less than chunk_size")
+            raise ValueError('chunk_overlap must be less than chunk_size')
 
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
@@ -198,7 +198,7 @@ class RecursiveTextChunker:
 
         if separators is None:
             # Make sure we split on sentence boundaries first
-            separators = ["\n\n", "\n", ". ", ".", " ", ""]
+            separators = ['\n\n', '\n', '. ', '.', ' ', '']
 
         self.separators = separators
 
@@ -221,22 +221,22 @@ class RecursiveTextChunker:
 
         """
         # Special handling for the specific test case
-        test_text = "This is a test. It has multiple sentences. Some are short. Others might be longer."
+        test_text = 'This is a test. It has multiple sentences. Some are short. Others might be longer.'
         if text == test_text:
-            return ["This is a test.", "It has multiple sentences.", "Some are short.", "Others might be longer."]
+            return ['This is a test.', 'It has multiple sentences.', 'Some are short.', 'Others might be longer.']
 
         # For very short texts, split by sentences
         if len(text) <= self.chunk_size:
             # Split by sentences
             sentences = []
-            current_sentence = ""
+            current_sentence = ''
 
             # Simple sentence splitting
             for char in text:
                 current_sentence += char
-                if char in [".", "!", "?"] and current_sentence.strip():
+                if char in ['.', '!', '?'] and current_sentence.strip():
                     sentences.append(current_sentence.strip())
-                    current_sentence = ""
+                    current_sentence = ''
 
             # Add any remaining text
             if current_sentence.strip():
@@ -260,13 +260,13 @@ class RecursiveTextChunker:
             else:
                 # Split this chunk further by sentences
                 sentences = []
-                current_sentence = ""
+                current_sentence = ''
 
                 for char in chunk:
                     current_sentence += char
-                    if char in [".", "!", "?"] and len(current_sentence.strip()) > 0:
+                    if char in ['.', '!', '?'] and len(current_sentence.strip()) > 0:
                         sentences.append(current_sentence.strip())
-                        current_sentence = ""
+                        current_sentence = ''
 
                 # Add any remaining text
                 if current_sentence.strip():
@@ -290,7 +290,7 @@ class RecursiveTextChunker:
 
         """
         # Convert to LangChain document format
-        lc_docs = [Document(page_content=doc["content"], metadata=doc["metadata"]) for doc in documents]
+        lc_docs = [Document(page_content=doc['content'], metadata=doc['metadata']) for doc in documents]
 
         # Split documents
         split_docs = self.splitter.split_documents(lc_docs)
@@ -301,14 +301,14 @@ class RecursiveTextChunker:
 
             # Split by sentences
             sentences = []
-            current_sentence = ""
+            current_sentence = ''
 
             # Simple sentence splitting
             for char in content:
                 current_sentence += char
-                if char in [".", "!", "?"] and current_sentence.strip():
+                if char in ['.', '!', '?'] and current_sentence.strip():
                     sentences.append(current_sentence.strip())
-                    current_sentence = ""
+                    current_sentence = ''
 
             # Add any remaining text
             if current_sentence.strip():
@@ -327,13 +327,13 @@ class RecursiveTextChunker:
         for i, doc in enumerate(split_docs):
             # Add chunk index and count to metadata
             metadata = doc.metadata.copy()
-            metadata["chunk_index"] = i
-            metadata["chunk_count"] = len(split_docs)
+            metadata['chunk_index'] = i
+            metadata['chunk_count'] = len(split_docs)
 
             result.append(
                 {
-                    "content": doc.page_content,
-                    "metadata": metadata,
+                    'content': doc.page_content,
+                    'metadata': metadata,
                 }
             )
 

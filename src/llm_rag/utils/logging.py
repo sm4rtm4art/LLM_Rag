@@ -15,16 +15,16 @@ from logging.handlers import RotatingFileHandler
 from typing import Any, Dict, Optional, Union
 
 # Default log format with timestamps, level, module, and message
-DEFAULT_LOG_FORMAT = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
-JSON_LOG_FORMAT = "json"  # Special identifier for JSON formatting
+DEFAULT_LOG_FORMAT = '%(asctime)s - %(levelname)s - %(name)s - %(message)s'
+JSON_LOG_FORMAT = 'json'  # Special identifier for JSON formatting
 
 # Log levels dictionary for easier configuration
 LOG_LEVELS = {
-    "debug": logging.DEBUG,
-    "info": logging.INFO,
-    "warning": logging.WARNING,
-    "error": logging.ERROR,
-    "critical": logging.CRITICAL,
+    'debug': logging.DEBUG,
+    'info': logging.INFO,
+    'warning': logging.WARNING,
+    'error': logging.ERROR,
+    'critical': logging.CRITICAL,
 }
 
 
@@ -34,31 +34,31 @@ class JSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format the log record as a JSON string."""
         log_data = {
-            "timestamp": datetime.fromtimestamp(record.created).isoformat(),
-            "level": record.levelname,
-            "name": record.name,
-            "message": record.getMessage(),
-            "module": record.module,
-            "function": record.funcName,
-            "line": record.lineno,
+            'timestamp': datetime.fromtimestamp(record.created).isoformat(),
+            'level': record.levelname,
+            'name': record.name,
+            'message': record.getMessage(),
+            'module': record.module,
+            'function': record.funcName,
+            'line': record.lineno,
         }
 
         # Add exception info if present
         if record.exc_info:
-            log_data["exception"] = {
-                "type": record.exc_info[0].__name__,
-                "message": str(record.exc_info[1]),
+            log_data['exception'] = {
+                'type': record.exc_info[0].__name__,
+                'message': str(record.exc_info[1]),
             }
 
         # Add extra attributes if any
-        if hasattr(record, "extra") and record.extra:
-            log_data["extra"] = record.extra
+        if hasattr(record, 'extra') and record.extra:
+            log_data['extra'] = record.extra
 
         return json.dumps(log_data)
 
 
 def setup_logging(
-    level: Union[str, int] = "info",
+    level: Union[str, int] = 'info',
     log_format: str = DEFAULT_LOG_FORMAT,
     log_file: Optional[str] = None,
     max_file_size: int = 10 * 1024 * 1024,  # 10 MB
@@ -124,9 +124,9 @@ def setup_logging(
             module_logger.setLevel(module_level)
 
     # Log the configuration
-    logging.info(f"Logging configured with level: {logging.getLevelName(level)}")
+    logging.info(f'Logging configured with level: {logging.getLevelName(level)}')
     if log_file:
-        logging.info(f"Log file: {log_file}")
+        logging.info(f'Log file: {log_file}')
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -159,7 +159,7 @@ class LoggerAdapter(logging.LoggerAdapter):
 
     def process(self, msg, kwargs):
         """Process the log message by adding the extra context."""
-        kwargs.setdefault("extra", {}).update(self.extra)
+        kwargs.setdefault('extra', {}).update(self.extra)
         return msg, kwargs
 
 

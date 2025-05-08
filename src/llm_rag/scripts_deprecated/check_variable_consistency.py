@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class VariableConsistencyChecker:
     """Analyzes Python files for variable naming consistency."""
 
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = 'all-MiniLM-L6-v2'):
         """Initialize the checker with a sentence transformer model.
 
         Args:
@@ -40,7 +40,7 @@ class VariableConsistencyChecker:
 
         """
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
             tree = ast.parse(content)
@@ -49,11 +49,11 @@ class VariableConsistencyChecker:
                     # Get context from surrounding code
                     start = max(0, node.lineno - 2)
                     end = min(len(content.splitlines()), node.lineno + 2)
-                    context = "\n".join(content.splitlines()[start:end])
+                    context = '\n'.join(content.splitlines()[start:end])
 
                     self.variable_groups[node.id].append((str(file_path), str(node.lineno), context))
         except Exception as e:
-            logger.warning(f"Error analyzing {file_path}: {e}")
+            logger.warning(f'Error analyzing {file_path}: {e}')
 
     def find_similar_variables(self, similarity_threshold: float = 0.7) -> List[Tuple[str, str, float]]:
         """Find variables with similar meanings but different names.
@@ -97,47 +97,47 @@ class VariableConsistencyChecker:
 
         """
         if not similar_vars:
-            return "No significant variable naming inconsistencies found."
+            return 'No significant variable naming inconsistencies found.'
 
-        report = ["Variable Naming Consistency Report", "=" * 30, ""]
+        report = ['Variable Naming Consistency Report', '=' * 30, '']
 
         for var1, var2, similarity in similar_vars:
-            report.append(f"Similar Variables (similarity: {similarity:.2f}):")
-            report.append(f"  - {var1}")
-            report.append(f"  - {var2}")
+            report.append(f'Similar Variables (similarity: {similarity:.2f}):')
+            report.append(f'  - {var1}')
+            report.append(f'  - {var2}')
 
             # Show usage locations
-            report.append("\n  Usage locations:")
+            report.append('\n  Usage locations:')
             for file_path, line_no, context in self.variable_groups[var1]:
-                report.append(f"    {file_path}:{line_no}")
-                report.append(f"    Context:\n{context}")
+                report.append(f'    {file_path}:{line_no}')
+                report.append(f'    Context:\n{context}')
             for file_path, line_no, context in self.variable_groups[var2]:
-                report.append(f"    {file_path}:{line_no}")
-                report.append(f"    Context:\n{context}")
-            report.append("")
+                report.append(f'    {file_path}:{line_no}')
+                report.append(f'    Context:\n{context}')
+            report.append('')
 
-        return "\n".join(report)
+        return '\n'.join(report)
 
 
 def main():
     """Check variable naming consistency across the codebase."""
-    parser = argparse.ArgumentParser(description="Check variable naming consistency")
+    parser = argparse.ArgumentParser(description='Check variable naming consistency')
     parser.add_argument(
-        "--path",
+        '--path',
         type=str,
-        default="src/llm_rag",
-        help="Path to the codebase to analyze",
+        default='src/llm_rag',
+        help='Path to the codebase to analyze',
     )
     parser.add_argument(
-        "--threshold",
+        '--threshold',
         type=float,
         default=0.7,
-        help="Similarity threshold for variable comparison (0.0-1.0)",
+        help='Similarity threshold for variable comparison (0.0-1.0)',
     )
     parser.add_argument(
-        "--output",
+        '--output',
         type=str,
-        help="Output file for the report (default: stdout)",
+        help='Output file for the report (default: stdout)',
     )
     args = parser.parse_args()
 
@@ -145,12 +145,12 @@ def main():
     code_path = Path(args.path)
 
     if not code_path.exists():
-        logger.error(f"Path {code_path} does not exist")
+        logger.error(f'Path {code_path} does not exist')
         return 1
 
     # Analyze all Python files
-    for file_path in code_path.rglob("*.py"):
-        logger.info(f"Analyzing {file_path}")
+    for file_path in code_path.rglob('*.py'):
+        logger.info(f'Analyzing {file_path}')
         checker.analyze_file(file_path)
 
     # Find similar variables
@@ -160,14 +160,14 @@ def main():
     report = checker.generate_report(similar_vars)
 
     if args.output:
-        with open(args.output, "w", encoding="utf-8") as f:
+        with open(args.output, 'w', encoding='utf-8') as f:
             f.write(report)
-        logger.info(f"Report written to {args.output}")
+        logger.info(f'Report written to {args.output}')
     else:
         print(report)
 
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     exit(main())

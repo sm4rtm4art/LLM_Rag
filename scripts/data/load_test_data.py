@@ -16,18 +16,18 @@ try:
     from langchain_core.documents import Document
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 except ImportError:
-    print("Error: Required dependencies not found. Try installing langchain packages.")
+    print('Error: Required dependencies not found. Try installing langchain packages.')
     sys.exit(1)
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Sample documents about RAG, anti-hallucination, and related topics
 SAMPLE_TEXTS = [
     {
-        "title": "Introduction to RAG",
-        "content": """
+        'title': 'Introduction to RAG',
+        'content': """
         Retrieval-Augmented Generation (RAG) is a technique that enhances large language models by retrieving
         relevant information from external knowledge sources before generating responses. RAG combines the strengths
         of retrieval-based and generation-based approaches to AI.
@@ -43,8 +43,8 @@ SAMPLE_TEXTS = [
         """,
     },
     {
-        "title": "Anti-Hallucination Techniques",
-        "content": """
+        'title': 'Anti-Hallucination Techniques',
+        'content': """
         Hallucination in language models refers to the generation of content that is factually incorrect or
         not supported by the provided context. Anti-hallucination techniques aim to reduce these issues.
 
@@ -58,8 +58,8 @@ SAMPLE_TEXTS = [
         """,
     },
     {
-        "title": "Vector Databases",
-        "content": """
+        'title': 'Vector Databases',
+        'content': """
         Vector databases are specialized storage systems designed to efficiently store, index, and query
         high-dimensional vector embeddings. They are a critical component of modern RAG systems.
 
@@ -74,8 +74,8 @@ SAMPLE_TEXTS = [
         """,
     },
     {
-        "title": "Embedding Models",
-        "content": """
+        'title': 'Embedding Models',
+        'content': """
         Embedding models convert text into numerical vector representations that capture semantic meaning.
         These vectors allow machines to understand relationships between different pieces of text.
 
@@ -90,8 +90,8 @@ SAMPLE_TEXTS = [
         """,
     },
     {
-        "title": "DIN Standards",
-        "content": """
+        'title': 'DIN Standards',
+        'content': """
         DIN standards are technical standards established by the German Institute for Standardization
         (Deutsches Institut für Normung). These standards cover various fields including engineering,
         manufacturing, and information technology.
@@ -121,7 +121,7 @@ def create_documents(texts: List[Dict[str, str]]) -> List[Document]:
     """
     documents = []
     for item in texts:
-        doc = Document(page_content=item["content"], metadata={"title": item["title"]})
+        doc = Document(page_content=item['content'], metadata={'title': item['title']})
         documents.append(doc)
 
     return documents
@@ -138,17 +138,17 @@ def split_documents(documents: List[Document]) -> List[Document]:
 
     """
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500, chunk_overlap=50, separators=["\n\n", "\n", ". ", " ", ""]
+        chunk_size=500, chunk_overlap=50, separators=['\n\n', '\n', '. ', ' ', '']
     )
 
     split_docs = text_splitter.split_documents(documents)
-    logger.info(f"Split {len(documents)} documents into {len(split_docs)} chunks")
+    logger.info(f'Split {len(documents)} documents into {len(split_docs)} chunks')
 
     return split_docs
 
 
 def load_documents_to_chroma(
-    documents: List[Document], persist_directory: str, embedding_model_name: str = "all-MiniLM-L6-v2"
+    documents: List[Document], persist_directory: str, embedding_model_name: str = 'all-MiniLM-L6-v2'
 ) -> Chroma:
     """Load documents into a Chroma vector database.
 
@@ -171,7 +171,7 @@ def load_documents_to_chroma(
     vectorstore = Chroma.from_documents(documents=documents, embedding=embeddings, persist_directory=persist_directory)
 
     vectorstore.persist()
-    logger.info(f"Loaded {len(documents)} documents into Chroma at {persist_directory}")
+    logger.info(f'Loaded {len(documents)} documents into Chroma at {persist_directory}')
 
     return vectorstore
 
@@ -180,9 +180,9 @@ def main():
     """Load test data into ChromaDB."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Load test data into Chroma database")
-    parser.add_argument("--output-dir", type=str, default="./chroma_db", help="Directory to store the Chroma database")
-    parser.add_argument("--embedding-model", type=str, default="all-MiniLM-L6-v2", help="Embedding model to use")
+    parser = argparse.ArgumentParser(description='Load test data into Chroma database')
+    parser.add_argument('--output-dir', type=str, default='./chroma_db', help='Directory to store the Chroma database')
+    parser.add_argument('--embedding-model', type=str, default='all-MiniLM-L6-v2', help='Embedding model to use')
 
     args = parser.parse_args()
 
@@ -199,21 +199,21 @@ def main():
         )
 
         # Test search
-        results = vectorstore.similarity_search("What is RAG?", k=2)
-        logger.info(f"Test search returned {len(results)} results")
+        results = vectorstore.similarity_search('What is RAG?', k=2)
+        logger.info(f'Test search returned {len(results)} results')
         for i, doc in enumerate(results):
-            logger.info(f"Result {i + 1}: {doc.metadata.get('title', 'Unknown')}")
+            logger.info(f'Result {i + 1}: {doc.metadata.get("title", "Unknown")}')
 
-        print(f"\nSuccessfully loaded {len(split_docs)} document chunks into {args.output_dir}")
-        print("You can now run the test_rag_cli.py script to test the RAG system")
+        print(f'\nSuccessfully loaded {len(split_docs)} document chunks into {args.output_dir}')
+        print('You can now run the test_rag_cli.py script to test the RAG system')
 
     except Exception as e:
-        logger.error(f"Error loading test data: {e}", exc_info=True)
-        print(f"Error: {e}")
+        logger.error(f'Error loading test data: {e}', exc_info=True)
+        print(f'Error: {e}')
         return 1
 
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

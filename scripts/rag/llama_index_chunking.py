@@ -24,18 +24,18 @@ from llama_index_vector_stores_chroma import ChromaVectorStore
 
 # Add the src directory to the path so we can import the llm_rag module
 project_root = os.path.abspath(os.path.dirname(__file__))
-src_path = os.path.join(project_root, "src")
+src_path = os.path.join(project_root, 'src')
 sys.path.insert(0, src_path)
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Try to import from llm_rag
 try:
     from llm_rag.document_processing.loaders import DirectoryLoader
 except ImportError as e:
-    logger.error(f"Could not import from llm_rag: {e}")
+    logger.error(f'Could not import from llm_rag: {e}')
     sys.exit(1)
 
 
@@ -49,10 +49,10 @@ def load_documents_from_directory(docs_dir: str) -> List[Dict[str, Any]]:
         List of document dictionaries.
 
     """
-    logger.info(f"Loading documents from {docs_dir}")
+    logger.info(f'Loading documents from {docs_dir}')
     loader = DirectoryLoader(docs_dir)
     documents = loader.load()
-    logger.info(f"Loaded {len(documents)} documents")
+    logger.info(f'Loaded {len(documents)} documents')
     return documents
 
 
@@ -68,10 +68,10 @@ def convert_to_llama_documents(documents: List[Dict[str, Any]]) -> List[LlamaDoc
     """
     llama_docs = []
     for doc in documents:
-        llama_doc = LlamaDocument(text=doc["content"], metadata=doc["metadata"])
+        llama_doc = LlamaDocument(text=doc['content'], metadata=doc['metadata'])
         llama_docs.append(llama_doc)
 
-    logger.info(f"Converted {len(llama_docs)} documents to LlamaIndex format")
+    logger.info(f'Converted {len(llama_docs)} documents to LlamaIndex format')
     return llama_docs
 
 
@@ -99,16 +99,16 @@ def create_chunking_pipeline(
     if use_semantic_chunking:
         # Semantic chunking splits documents based on semantic meaning
         # For German text, using a multilingual model works better
-        model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+        model_name = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
         embedding_model = HuggingFaceEmbedding(model_name=model_name)
         node_parser = SemanticSplitterNodeParser(
             buffer_size=1, breakpoint_percentile_threshold=95, embed_model=embedding_model
         )
-        logger.info("Using semantic chunking with multilingual model")
+        logger.info('Using semantic chunking with multilingual model')
     else:
         # Token-based chunking splits documents based on token count
         node_parser = TokenTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-        msg = f"Using token-based chunking: size={chunk_size}, overlap={chunk_overlap}"
+        msg = f'Using token-based chunking: size={chunk_size}, overlap={chunk_overlap}'
         logger.info(msg)
 
     # Create the ingestion pipeline
@@ -125,7 +125,7 @@ def create_chunking_pipeline(
 def process_documents_with_llama_index(
     llama_docs: List[LlamaDocument],
     output_dir: str,
-    collection_name: str = "llama_index_chunks",
+    collection_name: str = 'llama_index_chunks',
     use_semantic_chunking: bool = True,
 ):
     """Process documents with LlamaIndex chunking and store in ChromaDB.
@@ -145,19 +145,19 @@ def process_documents_with_llama_index(
 
     # Process documents through the pipeline
     nodes = pipeline.run(documents=llama_docs)
-    logger.info(f"Created {len(nodes)} chunks from {len(llama_docs)} documents")
+    logger.info(f'Created {len(nodes)} chunks from {len(llama_docs)} documents')
 
     # Print some sample chunks to show the difference
     for i, node in enumerate(nodes[:3]):
-        logger.info(f"Sample chunk {i + 1}:")
-        logger.info(f"  Text: {node.text[:100]}...")
-        logger.info(f"  Metadata: {node.metadata}")
+        logger.info(f'Sample chunk {i + 1}:')
+        logger.info(f'  Text: {node.text[:100]}...')
+        logger.info(f'  Metadata: {node.metadata}')
 
     # Set up ChromaDB for storage
     os.makedirs(output_dir, exist_ok=True)
 
     # Use a multilingual embedding model for German text
-    model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    model_name = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
     embed_model = HuggingFaceEmbedding(model_name=model_name)
 
     # Create ChromaDB vector store
@@ -171,7 +171,7 @@ def process_documents_with_llama_index(
     # Create index from nodes
     index = VectorStoreIndex(nodes=nodes, storage_context=storage_context, embed_model=embed_model)
 
-    logger.info(f"Successfully indexed {len(nodes)} chunks in ChromaDB: {output_dir}")
+    logger.info(f'Successfully indexed {len(nodes)} chunks in ChromaDB: {output_dir}')
 
     # Return the index for querying
     return index
@@ -196,9 +196,9 @@ def integrate_with_existing_rag(index, query: str, similarity_top_k: int = 5):
 
     # Print retrieved nodes
     for i, node in enumerate(retrieved_nodes):
-        logger.info(f"Node {i + 1} (Score: {node.score}):")
-        logger.info(f"  Text: {node.node.text[:150]}...")
-        logger.info(f"  Metadata: {node.node.metadata}")
+        logger.info(f'Node {i + 1} (Score: {node.score}):')
+        logger.info(f'  Text: {node.node.text[:150]}...')
+        logger.info(f'  Metadata: {node.node.metadata}')
 
     # Here you would integrate with your existing RAG pipeline
     # For example:
@@ -209,22 +209,22 @@ def integrate_with_existing_rag(index, query: str, similarity_top_k: int = 5):
 
 def main():
     """Run LlamaIndex chunking demonstration."""
-    parser = argparse.ArgumentParser(description="Demonstrate LlamaIndex chunking for RAG system")
+    parser = argparse.ArgumentParser(description='Demonstrate LlamaIndex chunking for RAG system')
     parser.add_argument(
-        "--docs-dir", type=str, default="data/documents/test_subset", help="Directory containing documents to process"
+        '--docs-dir', type=str, default='data/documents/test_subset', help='Directory containing documents to process'
     )
-    parser.add_argument("--output-dir", type=str, default="llama_index_db", help="Directory to store the ChromaDB")
+    parser.add_argument('--output-dir', type=str, default='llama_index_db', help='Directory to store the ChromaDB')
     parser.add_argument(
-        "--collection-name", type=str, default="llama_index_chunks", help="Name of the ChromaDB collection"
-    )
-    parser.add_argument(
-        "--semantic-chunking", action="store_true", help="Use semantic chunking instead of token-based chunking"
+        '--collection-name', type=str, default='llama_index_chunks', help='Name of the ChromaDB collection'
     )
     parser.add_argument(
-        "--query",
+        '--semantic-chunking', action='store_true', help='Use semantic chunking instead of token-based chunking'
+    )
+    parser.add_argument(
+        '--query',
         type=str,
-        default="Welche technischen Anforderungen gelten für DIN Standards?",
-        help="Query to test retrieval (default is in German)",
+        default='Welche technischen Anforderungen gelten für DIN Standards?',
+        help='Query to test retrieval (default is in German)',
     )
 
     args = parser.parse_args()
@@ -246,13 +246,13 @@ def main():
 
     except ImportError as e:
         error_msg = (
-            f"Error: {e}. Make sure all required packages are installed.\n"
-            "Try: pip install chromadb llama-index-vector-stores-chroma "
-            "llama-index-embeddings-huggingface"
+            f'Error: {e}. Make sure all required packages are installed.\n'
+            'Try: pip install chromadb llama-index-vector-stores-chroma '
+            'llama-index-embeddings-huggingface'
         )
         logger.error(error_msg)
         sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

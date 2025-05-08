@@ -29,14 +29,14 @@ class OCRPipelineConfig:
     preprocessing_enabled: bool = False
     deskew_enabled: bool = False
     threshold_enabled: bool = False
-    threshold_method: str = "adaptive"
+    threshold_method: str = 'adaptive'
     contrast_adjust: float = 1.0
     sharpen_enabled: bool = False
     denoise_enabled: bool = False
 
     # OCR Engine Settings
     tesseract_path: Optional[str] = None
-    languages: Union[str, List[str]] = "eng"
+    languages: Union[str, List[str]] = 'eng'
     psm: int = 3  # Page Segmentation Mode
     oem: int = 3  # OCR Engine Mode
     config_params: Optional[Dict[str, str]] = None
@@ -46,15 +46,15 @@ class OCRPipelineConfig:
     parallelize: bool = False  # Future enhancement for parallel processing
 
     # Output Formatting Settings
-    output_format: str = "markdown"  # "markdown", "json", or "raw"
+    output_format: str = 'markdown'  # "markdown", "json", or "raw"
     detect_headings: bool = True
     detect_lists: bool = True
     detect_tables: bool = False
 
     # LLM Cleaning Settings
     llm_cleaning_enabled: bool = False
-    llm_model_name: str = "gemma-2b"
-    llm_model_backend: str = "ollama"  # "ollama", "huggingface", or "llama_cpp"
+    llm_model_name: str = 'gemma-2b'
+    llm_model_backend: str = 'ollama'  # "ollama", "huggingface", or "llama_cpp"
     llm_confidence_threshold: float = 0.8
     llm_min_error_rate: float = 0.05
     llm_preserve_layout: bool = True
@@ -84,7 +84,7 @@ class OCRPipeline:
 
         """
         self.config = config or OCRPipelineConfig()
-        logger.info("Initializing OCR pipeline")
+        logger.info('Initializing OCR pipeline')
 
         # Create PDF converter config from pipeline config
         pdf_config = PDFImageConverterConfig(
@@ -125,8 +125,8 @@ class OCRPipeline:
             )
             self.llm_cleaner = LLMCleaner(config=llm_config)
             logger.info(
-                f"LLM cleaner initialized with model: {self.config.llm_model_name} "
-                f"(backend: {self.config.llm_model_backend})"
+                f'LLM cleaner initialized with model: {self.config.llm_model_name} '
+                f'(backend: {self.config.llm_model_backend})'
             )
 
         # Initialize formatters
@@ -137,7 +137,7 @@ class OCRPipeline:
         )
         self.json_formatter = JSONFormatter()
 
-        logger.info("OCR pipeline initialized successfully")
+        logger.info('OCR pipeline initialized successfully')
 
     def process_pdf(self, pdf_path: Union[str, Path]) -> str:
         """Process an entire PDF document and return the OCR text.
@@ -155,7 +155,7 @@ class OCRPipeline:
         """
         try:
             pdf_path = Path(pdf_path)
-            logger.info(f"Processing PDF: {pdf_path}")
+            logger.info(f'Processing PDF: {pdf_path}')
 
             # Convert PDF pages to images
             if self.config.process_pages is not None:
@@ -170,56 +170,56 @@ class OCRPipeline:
                 images = list(self.pdf_converter.pdf_to_images(pdf_path))
 
             if not images:
-                error_msg = f"No valid images extracted from PDF: {pdf_path}"
+                error_msg = f'No valid images extracted from PDF: {pdf_path}'
                 logger.error(error_msg)
                 raise DocumentProcessingError(error_msg)
 
-            logger.info(f"Extracted {len(images)} images from PDF")
+            logger.info(f'Extracted {len(images)} images from PDF')
 
             # Process images with OCR
             text_pages = self.ocr_engine.process_multiple_images(images)
 
             # Apply LLM cleaning if enabled
             if self.llm_cleaner:
-                logger.info("Applying LLM cleaning to OCR text")
+                logger.info('Applying LLM cleaning to OCR text')
                 cleaned_pages = []
                 for i, page_text in enumerate(text_pages):
                     # Get confidence score if available
-                    confidence_score = getattr(page_text, "confidence", None)
+                    confidence_score = getattr(page_text, 'confidence', None)
 
                     # Get metadata for context
                     metadata = {
-                        "language": self.config.languages,
-                        "document_type": "PDF",
-                        "page_number": i + 1,
+                        'language': self.config.languages,
+                        'document_type': 'PDF',
+                        'page_number': i + 1,
                     }
 
                     # Update language metadata if it's a list
                     if isinstance(self.config.languages, list):
-                        metadata["language"] = ",".join(self.config.languages)
+                        metadata['language'] = ','.join(self.config.languages)
 
                     # Clean the text
                     cleaned_text = self.llm_cleaner.clean_text(page_text, confidence_score, metadata)
                     cleaned_pages.append(cleaned_text)
 
                 text_pages = cleaned_pages
-                logger.info("LLM cleaning completed")
+                logger.info('LLM cleaning completed')
 
             # Format output based on configuration
-            if self.config.output_format.lower() == "markdown":
+            if self.config.output_format.lower() == 'markdown':
                 result = self.markdown_formatter.format_document(text_pages)
-            elif self.config.output_format.lower() == "json":
+            elif self.config.output_format.lower() == 'json':
                 result = self.json_formatter.format_document(text_pages)
             else:  # raw text
                 # Simple joining of pages with double newlines for raw text output
-                result = "\n\n".join(text_pages)
+                result = '\n\n'.join(text_pages)
 
-            logger.info(f"OCR completed for {pdf_path}, extracted {len(result)} characters")
+            logger.info(f'OCR completed for {pdf_path}, extracted {len(result)} characters')
 
             return result
 
         except Exception as e:
-            error_msg = f"OCR pipeline failed for PDF {pdf_path}: {str(e)}"
+            error_msg = f'OCR pipeline failed for PDF {pdf_path}: {str(e)}'
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
@@ -239,11 +239,11 @@ class OCRPipeline:
         """
         try:
             pdf_path = Path(pdf_path)
-            logger.info(f"Processing specific pages from PDF: {pdf_path}")
+            logger.info(f'Processing specific pages from PDF: {pdf_path}')
 
             results = {}
             for page_num in page_numbers:
-                logger.info(f"Processing page {page_num}")
+                logger.info(f'Processing page {page_num}')
 
                 # Convert PDF page to image
                 image = self.pdf_converter.get_page_image(pdf_path, page_num)
@@ -255,37 +255,37 @@ class OCRPipeline:
                     # Apply LLM cleaning if enabled
                     if self.llm_cleaner:
                         # Get confidence score if available
-                        confidence_score = getattr(text, "confidence", None)
+                        confidence_score = getattr(text, 'confidence', None)
 
                         # Get metadata for context
                         metadata = {
-                            "language": self.config.languages,
-                            "document_type": "PDF",
-                            "page_number": page_num,
+                            'language': self.config.languages,
+                            'document_type': 'PDF',
+                            'page_number': page_num,
                         }
 
                         # Update language metadata if it's a list
                         if isinstance(self.config.languages, list):
-                            metadata["language"] = ",".join(self.config.languages)
+                            metadata['language'] = ','.join(self.config.languages)
 
                         # Clean the text
                         text = self.llm_cleaner.clean_text(text, confidence_score, metadata)
 
                     results[page_num] = text
-                    logger.debug(f"Completed OCR for page {page_num}")
+                    logger.debug(f'Completed OCR for page {page_num}')
                 else:
-                    logger.warning(f"Could not extract image for page {page_num}")
+                    logger.warning(f'Could not extract image for page {page_num}')
 
             if not results:
-                error_msg = f"No text extracted from specified pages in PDF: {pdf_path}"
+                error_msg = f'No text extracted from specified pages in PDF: {pdf_path}'
                 logger.error(error_msg)
                 raise DocumentProcessingError(error_msg)
 
-            logger.info(f"OCR completed for {len(results)} pages from {pdf_path}")
+            logger.info(f'OCR completed for {len(results)} pages from {pdf_path}')
             return results
 
         except Exception as e:
-            error_msg = f"OCR pipeline failed for PDF {pdf_path}: {str(e)}"
+            error_msg = f'OCR pipeline failed for PDF {pdf_path}: {str(e)}'
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
@@ -311,7 +311,7 @@ class OCRPipeline:
 
         try:
             # Force markdown format for this operation
-            self.config.output_format = "markdown"
+            self.config.output_format = 'markdown'
 
             # Process the PDF
             markdown_content = self.process_pdf(pdf_path)
@@ -323,18 +323,18 @@ class OCRPipeline:
                 output_dir = Path(output_dir)
                 output_dir.mkdir(exist_ok=True, parents=True)
 
-            output_file = output_dir / f"{pdf_path.stem}.md"
+            output_file = output_dir / f'{pdf_path.stem}.md'
 
             # Write to file
-            with open(output_file, "w", encoding="utf-8") as f:
+            with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(markdown_content)
 
-            logger.info(f"Saved OCR output to {output_file}")
+            logger.info(f'Saved OCR output to {output_file}')
 
             return output_file
 
         except Exception as e:
-            error_msg = f"Failed to save OCR results to Markdown: {str(e)}"
+            error_msg = f'Failed to save OCR results to Markdown: {str(e)}'
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 
@@ -343,7 +343,7 @@ class OCRPipeline:
             self.config.output_format = original_format
 
     def process_and_save(
-        self, pdf_path: Union[str, Path], output_dir: Union[str, Path, None] = None, format: str = "markdown"
+        self, pdf_path: Union[str, Path], output_dir: Union[str, Path, None] = None, format: str = 'markdown'
     ) -> Path:
         """Process a PDF document and save the results to a file.
 
@@ -369,10 +369,10 @@ class OCRPipeline:
         try:
             # Set output format
             format = format.lower()
-            if format not in ["markdown", "json", "txt"]:
-                raise ValueError(f"Unsupported output format: {format}")
+            if format not in ['markdown', 'json', 'txt']:
+                raise ValueError(f'Unsupported output format: {format}')
 
-            self.config.output_format = format if format != "txt" else "raw"
+            self.config.output_format = format if format != 'txt' else 'raw'
 
             # Process the PDF
             content = self.process_pdf(pdf_path)
@@ -385,25 +385,25 @@ class OCRPipeline:
                 output_dir.mkdir(exist_ok=True, parents=True)
 
             # Set file extension based on format
-            if format == "markdown":
-                extension = ".md"
-            elif format == "json":
-                extension = ".json"
+            if format == 'markdown':
+                extension = '.md'
+            elif format == 'json':
+                extension = '.json'
             else:  # txt
-                extension = ".txt"
+                extension = '.txt'
 
-            output_file = output_dir / f"{pdf_path.stem}{extension}"
+            output_file = output_dir / f'{pdf_path.stem}{extension}'
 
             # Write to file
-            with open(output_file, "w", encoding="utf-8") as f:
+            with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(content)
 
-            logger.info(f"Saved OCR output to {output_file}")
+            logger.info(f'Saved OCR output to {output_file}')
 
             return output_file
 
         except Exception as e:
-            error_msg = f"Failed to save OCR results: {str(e)}"
+            error_msg = f'Failed to save OCR results: {str(e)}'
             logger.error(error_msg)
             raise DocumentProcessingError(error_msg) from e
 

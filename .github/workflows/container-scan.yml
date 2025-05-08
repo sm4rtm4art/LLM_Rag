@@ -37,6 +37,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Aggressive cleanup before Docker build
+        run: |
+          echo "Disk before:"
+          df -h
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache /usr/local/lib/android || true
+          docker system prune -af || true
+          docker builder prune -af || true
+          docker volume prune -f || true
+          echo "Disk after:"
+          df -h
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 

@@ -20,7 +20,7 @@ from src.llm_rag.rag.pipeline import RAGPipeline
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
 
@@ -37,21 +37,21 @@ def translate_query(query: str) -> str:
     """
     # Simple dictionary of common terms
     translations = {
-        "purpose": "Zweck",
-        "goal": "Ziel",
-        "application": "Anwendung",
-        "scope": "Anwendungsbereich",
-        "safety": "Sicherheit",
-        "requirements": "Anforderungen",
-        "standard": "Norm",
-        "toy": "Spielzeug",
+        'purpose': 'Zweck',
+        'goal': 'Ziel',
+        'application': 'Anwendung',
+        'scope': 'Anwendungsbereich',
+        'safety': 'Sicherheit',
+        'requirements': 'Anforderungen',
+        'standard': 'Norm',
+        'toy': 'Spielzeug',
     }
 
     # Create a new query with translations
     new_query = query
     for eng, ger in translations.items():
         if eng.lower() in query.lower():
-            new_query = new_query.replace(eng, f"{eng} {ger}")
+            new_query = new_query.replace(eng, f'{eng} {ger}')
 
     return new_query
 
@@ -67,7 +67,7 @@ def extract_purpose_statement(document_content: str) -> Optional[str]:
 
     """
     # Look for the purpose statement in the document
-    purpose_start = "Der Zweck dieses Technischen-Berichtes ist"
+    purpose_start = 'Der Zweck dieses Technischen-Berichtes ist'
 
     if purpose_start in document_content:
         # Find the start of the purpose statement
@@ -79,17 +79,17 @@ def extract_purpose_statement(document_content: str) -> Optional[str]:
         # Find the first period followed by a space or newline
         # This helps ensure we're finding the end of the sentence
         for i in range(len(text)):
-            if i > 0 and text[i] == "." and (i + 1 >= len(text) or text[i + 1].isspace()):
+            if i > 0 and text[i] == '.' and (i + 1 >= len(text) or text[i + 1].isspace()):
                 # We found the end of the sentence
                 return text[: i + 1]
 
         # If we couldn't find a proper sentence end, look for "bereitzustellen."
-        if "bereitzustellen." in text:
-            end_idx = text.find("bereitzustellen.") + len("bereitzustellen.")
+        if 'bereitzustellen.' in text:
+            end_idx = text.find('bereitzustellen.') + len('bereitzustellen.')
             return text[:end_idx]
 
         # Fallback: just find the first period
-        end_idx = text.find(".")
+        end_idx = text.find('.')
         if end_idx != -1:
             return text[: end_idx + 1]  # Include the period
 
@@ -107,21 +107,21 @@ def is_purpose_query(query: str) -> bool:
 
     """
     purpose_keywords = [
-        "zweck",
-        "purpose",
-        "ziel",
-        "goal",
-        "anwendungsbereich",
-        "scope",
-        "application area",
-        "zitiere",
-        "quote",
-        "vollständig",
-        "complete",
-        "satz",
-        "sentence",
-        "beginnt",
-        "starts",
+        'zweck',
+        'purpose',
+        'ziel',
+        'goal',
+        'anwendungsbereich',
+        'scope',
+        'application area',
+        'zitiere',
+        'quote',
+        'vollständig',
+        'complete',
+        'satz',
+        'sentence',
+        'beginnt',
+        'starts',
     ]
 
     query_lower = query.lower()
@@ -155,23 +155,23 @@ def run_enhanced_rag(
 
     """
     # Load the LLM model
-    logger.info(f"Loading model: {model_name}")
+    logger.info(f'Loading model: {model_name}')
     llm = ModelFactory.create_model(
         model_path_or_name=model_name,
         backend=ModelBackend.HUGGINGFACE,
-        device="cpu",
+        device='cpu',
         max_tokens=512,
         temperature=0.1,  # Lower temperature for more deterministic output
     )
 
     # Load the vector store
-    logger.info(f"Loading vector store from {db_path}")
+    logger.info(f'Loading vector store from {db_path}')
 
     # Initialize the embedding function
     embedding_function = HuggingFaceEmbeddings(
-        model_name="all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"},
-        encode_kwargs={"normalize_embeddings": True},
+        model_name='all-MiniLM-L6-v2',
+        model_kwargs={'device': 'cpu'},
+        encode_kwargs={'normalize_embeddings': True},
     )
 
     # Initialize the vector store with the embedding function
@@ -183,23 +183,23 @@ def run_enhanced_rag(
 
     # If a specific document ID is provided, use it directly
     if doc_id:
-        logger.info(f"Using specific document with ID: {doc_id}")
+        logger.info(f'Using specific document with ID: {doc_id}')
         results = db.get(ids=[doc_id])
 
-        if not results["documents"]:
-            logger.error(f"Document with ID {doc_id} not found")
+        if not results['documents']:
+            logger.error(f'Document with ID {doc_id} not found')
             return {
-                "response": f"Document with ID {doc_id} not found",
-                "documents": [],
-                "confidence": 0.0,
+                'response': f'Document with ID {doc_id} not found',
+                'documents': [],
+                'confidence': 0.0,
             }
 
         # Extract document content and metadata
-        document_content = results["documents"][0]
-        document_metadata = results["metadatas"][0]
+        document_content = results['documents'][0]
+        document_metadata = results['metadatas'][0]
 
-        logger.info(f"Found document: {document_metadata}")
-        logger.info(f"Document content preview: {document_content[:200]}...")
+        logger.info(f'Found document: {document_metadata}')
+        logger.info(f'Document content preview: {document_content[:200]}...')
 
         # Check if the query is asking for the purpose statement
         if is_purpose_query(query):
@@ -207,29 +207,29 @@ def run_enhanced_rag(
             purpose_statement = extract_purpose_statement(document_content)
 
             if purpose_statement:
-                logger.info(f"Found purpose statement: {purpose_statement}")
+                logger.info(f'Found purpose statement: {purpose_statement}')
 
                 # Create a direct response with the purpose statement
                 response = f'Der vollständige Zweck-Satz aus dem Dokument lautet:\n\n"{purpose_statement}"'
 
                 return {
-                    "response": response,
-                    "documents": [
+                    'response': response,
+                    'documents': [
                         {
-                            "content": document_content,
-                            "metadata": document_metadata,
-                            "relevance": 1.0,
+                            'content': document_content,
+                            'metadata': document_metadata,
+                            'relevance': 1.0,
                         }
                     ],
-                    "confidence": 1.0,
+                    'confidence': 1.0,
                 }
 
         # Create a document in the format expected by the RAG pipeline
         documents = [
             {
-                "content": document_content,
-                "metadata": document_metadata,
-                "relevance": 1.0,  # We're manually providing the document, so relevance is high
+                'content': document_content,
+                'metadata': document_metadata,
+                'relevance': 1.0,  # We're manually providing the document, so relevance is high
             }
         ]
 
@@ -238,20 +238,20 @@ def run_enhanced_rag(
         # Translate the query if needed
         if translate:
             translated_query = translate_query(query)
-            logger.info(f"Translated query: {translated_query}")
+            logger.info(f'Translated query: {translated_query}')
         else:
             translated_query = query
 
         # Search for documents
-        logger.info(f"Searching for documents with query: {translated_query}")
+        logger.info(f'Searching for documents with query: {translated_query}')
         results = db.similarity_search_with_relevance_scores(translated_query, k=top_k)
 
         if not results:
-            logger.warning("No relevant documents found")
+            logger.warning('No relevant documents found')
             return {
-                "response": "I couldn't find any relevant information to answer your question.",
-                "documents": [],
-                "confidence": 0.0,
+                'response': "I couldn't find any relevant information to answer your question.",
+                'documents': [],
+                'confidence': 0.0,
             }
 
         # Filter results by relevance score
@@ -262,19 +262,19 @@ def run_enhanced_rag(
             # If no documents pass the threshold, take the top 2
             relevant_docs = results[: min(2, len(results))]
 
-        logger.info(f"Found {len(relevant_docs)} relevant documents")
+        logger.info(f'Found {len(relevant_docs)} relevant documents')
 
         # Format documents for the RAG pipeline
         documents = []
         for doc, score in relevant_docs:
             documents.append(
                 {
-                    "content": doc.page_content,
-                    "metadata": doc.metadata,
-                    "relevance": score,
+                    'content': doc.page_content,
+                    'metadata': doc.metadata,
+                    'relevance': score,
                 }
             )
-            logger.info(f"Document: {doc.metadata.get('filename', 'Unknown')} (Score: {score:.4f})")
+            logger.info(f'Document: {doc.metadata.get("filename", "Unknown")} (Score: {score:.4f})')
 
         # Calculate confidence based on document relevance scores
         if relevant_docs:
@@ -286,21 +286,21 @@ def run_enhanced_rag(
         if is_purpose_query(query) and documents:
             # Try to extract the purpose statement from each document
             for doc in documents:
-                purpose_statement = extract_purpose_statement(doc["content"])
+                purpose_statement = extract_purpose_statement(doc['content'])
                 if purpose_statement:
-                    logger.info(f"Found purpose statement: {purpose_statement}")
+                    logger.info(f'Found purpose statement: {purpose_statement}')
 
                     # Create a direct response with the purpose statement
                     response = f'Der vollständige Zweck-Satz aus dem Dokument lautet:\n\n"{purpose_statement}"'
 
                     return {
-                        "response": response,
-                        "documents": [doc],
-                        "confidence": doc["relevance"],
+                        'response': response,
+                        'documents': [doc],
+                        'confidence': doc['relevance'],
                     }
 
     # Create the RAG pipeline with a custom prompt template
-    logger.info("Creating RAG pipeline")
+    logger.info('Creating RAG pipeline')
     custom_prompt = """
 You are a precise assistant that answers questions based ONLY on the provided context.
 
@@ -332,58 +332,58 @@ Answer:
     context = pipeline.format_context(documents)
 
     # Generate response
-    logger.info(f"Generating response for query: {query}")
+    logger.info(f'Generating response for query: {query}')
     response = pipeline.generate(query=query, context=context)
 
     return {
-        "response": response,
-        "documents": documents,
-        "confidence": confidence,
+        'response': response,
+        'documents': documents,
+        'confidence': confidence,
     }
 
 
 def main():
     """Run the enhanced RAG system with improved retrieval and prompting."""
-    parser = argparse.ArgumentParser(description="Enhanced RAG with improved retrieval and prompting")
+    parser = argparse.ArgumentParser(description='Enhanced RAG with improved retrieval and prompting')
     parser.add_argument(
-        "--query",
+        '--query',
         type=str,
         required=True,
-        help="Query to ask the RAG system",
+        help='Query to ask the RAG system',
     )
     parser.add_argument(
-        "--model_name",
+        '--model_name',
         type=str,
-        default="microsoft/phi-2",
-        help="Model name to use",
+        default='microsoft/phi-2',
+        help='Model name to use',
     )
     parser.add_argument(
-        "--collection",
+        '--collection',
         type=str,
-        default="test_subset",
-        help="Collection name",
+        default='test_subset',
+        help='Collection name',
     )
     parser.add_argument(
-        "--db_path",
+        '--db_path',
         type=str,
-        default="chroma_db",
-        help="Path to ChromaDB database",
+        default='chroma_db',
+        help='Path to ChromaDB database',
     )
     parser.add_argument(
-        "--top_k",
+        '--top_k',
         type=int,
         default=5,
-        help="Number of documents to retrieve",
+        help='Number of documents to retrieve',
     )
     parser.add_argument(
-        "--no_translate",
-        action="store_true",
-        help="Disable query translation",
+        '--no_translate',
+        action='store_true',
+        help='Disable query translation',
     )
     parser.add_argument(
-        "--doc_id",
+        '--doc_id',
         type=str,
-        help="Specific document ID to use",
+        help='Specific document ID to use',
     )
 
     args = parser.parse_args()
@@ -400,29 +400,29 @@ def main():
     )
 
     # Print the response
-    print("\nRAG System Response:")
-    print("-------------------")
-    print(result["response"])
-    print("-------------------")
+    print('\nRAG System Response:')
+    print('-------------------')
+    print(result['response'])
+    print('-------------------')
 
     # Print confidence
-    print(f"\nConfidence: {result['confidence']:.4f}")
+    print(f'\nConfidence: {result["confidence"]:.4f}')
 
     # Print document information
-    if result["documents"]:
-        print("\nDocuments Used:")
-        for i, doc in enumerate(result["documents"]):
-            print(f"\nDocument {i + 1}:")
-            metadata = doc["metadata"]
-            print(f"Filename: {metadata.get('filename', 'Unknown')}")
-            print(f"Source: {metadata.get('source', 'Unknown')}")
-            print(f"Relevance: {doc.get('relevance', 0.0):.4f}")
+    if result['documents']:
+        print('\nDocuments Used:')
+        for i, doc in enumerate(result['documents']):
+            print(f'\nDocument {i + 1}:')
+            metadata = doc['metadata']
+            print(f'Filename: {metadata.get("filename", "Unknown")}')
+            print(f'Source: {metadata.get("source", "Unknown")}')
+            print(f'Relevance: {doc.get("relevance", 0.0):.4f}')
 
             # Print content preview
-            content = doc["content"]
-            preview = content[:200] + "..." if len(content) > 200 else content
-            print(f"Content Preview: {preview}")
+            content = doc['content']
+            preview = content[:200] + '...' if len(content) > 200 else content
+            print(f'Content Preview: {preview}')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

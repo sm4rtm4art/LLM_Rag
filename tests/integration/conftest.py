@@ -23,12 +23,12 @@ class MockLLM(LLM):
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None, **kwargs: Any) -> str:
         """Return a mock response."""
-        return "This is a mock response from the LLM."
+        return 'This is a mock response from the LLM.'
 
     @property
     def _llm_type(self) -> str:
         """Return the type of LLM."""
-        return "mock"
+        return 'mock'
 
 
 @pytest.fixture
@@ -38,18 +38,18 @@ def vectorstore():
     temp_dir = tempfile.mkdtemp()
 
     # Create a test embedding model
-    embeddings = EmbeddingFunctionWrapper(model_name="all-MiniLM-L6-v2")
+    embeddings = EmbeddingFunctionWrapper(model_name='all-MiniLM-L6-v2')
 
     # Create a test vector store
     vector_store = ChromaVectorStore(
-        persist_directory=temp_dir, collection_name="test_collection", embedding_function=embeddings
+        persist_directory=temp_dir, collection_name='test_collection', embedding_function=embeddings
     )
 
     # Create test documents
     documents = [
-        Document(page_content="This is a test document about AI.", metadata={"source": "test1.txt", "page": 1}),
-        Document(page_content="This document discusses machine learning.", metadata={"source": "test2.txt", "page": 1}),
-        Document(page_content="Python is a programming language.", metadata={"source": "test3.txt", "page": 1}),
+        Document(page_content='This is a test document about AI.', metadata={'source': 'test1.txt', 'page': 1}),
+        Document(page_content='This document discusses machine learning.', metadata={'source': 'test2.txt', 'page': 1}),
+        Document(page_content='Python is a programming language.', metadata={'source': 'test3.txt', 'page': 1}),
     ]
 
     # Add documents to the vector store
@@ -87,9 +87,9 @@ def rag_pipeline(vectorstore):
         # Convert Document objects to dictionaries if needed
         processed_docs = []
         for doc in documents:
-            if hasattr(doc, "page_content"):
+            if hasattr(doc, 'page_content'):
                 # This is a langchain Document object
-                processed_docs.append({"content": doc.page_content, "metadata": doc.metadata})
+                processed_docs.append({'content': doc.page_content, 'metadata': doc.metadata})
             else:
                 # This is already a dictionary
                 processed_docs.append(doc)
@@ -99,14 +99,14 @@ def rag_pipeline(vectorstore):
         # context = pipeline._formatter.format_context(processed_docs)
 
         # Generate a response directly using the MockLLM
-        response = "This is a mock response from the LLM."
+        response = 'This is a mock response from the LLM.'
 
         # Return results
         return {
-            "query": query_text,
-            "response": response,
-            "documents": documents,  # Return original documents
-            "conversation_id": conversation_id or "test-id",
+            'query': query_text,
+            'response': response,
+            'documents': documents,  # Return original documents
+            'conversation_id': conversation_id or 'test-id',
         }
 
     # Add the query method to the pipeline

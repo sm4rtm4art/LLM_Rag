@@ -25,7 +25,7 @@ try:
     EMBEDDINGS_AVAILABLE = True
 except ImportError:
     EMBEDDINGS_AVAILABLE = False
-    print("Warning: sentence-transformers not available. Install with: pip install sentence-transformers")
+    print('Warning: sentence-transformers not available. Install with: pip install sentence-transformers')
 
 from llm_rag.document_processing.loaders import XMLLoader
 
@@ -52,47 +52,47 @@ class SimpleRAGSystem:
 
         # Check if embeddings are available
         if not EMBEDDINGS_AVAILABLE:
-            print("Warning: Vector embeddings not available. Running in text-only mode.")
+            print('Warning: Vector embeddings not available. Running in text-only mode.')
 
     def load_documents(self):
         """Load documents from the XML file."""
-        print(f"Loading documents from {self.xml_file_path}...")
+        print(f'Loading documents from {self.xml_file_path}...')
 
         if self.use_sections:
             # Load each section as a separate document
-            loader = XMLLoader(self.xml_file_path, split_by_tag="din:section", metadata_tags=["din:title"])
+            loader = XMLLoader(self.xml_file_path, split_by_tag='din:section', metadata_tags=['din:title'])
         else:
             # Load the whole document
             loader = XMLLoader(self.xml_file_path)
 
         self.documents = loader.load()
-        print(f"Loaded {len(self.documents)} documents")
+        print(f'Loaded {len(self.documents)} documents')
 
     def create_embeddings(self):
         """Create vector embeddings for all documents."""
         if not EMBEDDINGS_AVAILABLE:
-            print("Skipping embeddings creation (dependencies not available)")
+            print('Skipping embeddings creation (dependencies not available)')
             return
 
-        print("Creating embeddings...")
+        print('Creating embeddings...')
 
         # Initialize the embedding model
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')
 
         # Create embeddings for each document
         self.embeddings = []
         for doc in self.documents:
             # Use both the title (if available) and content for better embedding
-            text = ""
-            if "din:title" in doc["metadata"]:
-                text += doc["metadata"]["din:title"] + ": "
-            text += doc["content"]
+            text = ''
+            if 'din:title' in doc['metadata']:
+                text += doc['metadata']['din:title'] + ': '
+            text += doc['content']
 
             # Create and store the embedding
             embedding = self.model.encode(text)
             self.embeddings.append(embedding)
 
-        print(f"Created embeddings for {len(self.embeddings)} documents")
+        print(f'Created embeddings for {len(self.embeddings)} documents')
 
     def search(self, query: str, top_k: int = 3) -> List[Tuple[Dict, float]]:
         """Search for relevant documents based on the query.
@@ -173,14 +173,14 @@ class SimpleRAGSystem:
         # Calculate scores based on keyword occurrence
         scores = []
         for doc in self.documents:
-            content = doc["content"].lower()
+            content = doc['content'].lower()
 
             # Count occurrence of each keyword
             score = sum(content.count(keyword) for keyword in keywords)
 
             # Boost score if keywords appear in title
-            if "din:title" in doc["metadata"]:
-                title = doc["metadata"]["din:title"].lower()
+            if 'din:title' in doc['metadata']:
+                title = doc['metadata']['din:title'].lower()
                 score += sum(5 * title.count(keyword) for keyword in keywords)
 
             scores.append(score)
@@ -205,8 +205,8 @@ class SimpleRAGSystem:
             Generated answer with citations
 
         """
-        print(f"\n\nQuestion: {question}")
-        print("=" * 80)
+        print(f'\n\nQuestion: {question}')
+        print('=' * 80)
 
         # Search for relevant documents
         relevant_docs = self.search(question, top_k=3)
@@ -216,29 +216,29 @@ class SimpleRAGSystem:
 
         # In a real implementation, you would use an LLM here
         # For this demo, we'll just return the relevant documents
-        answer = "Based on the DIN standard, I found these relevant sections:\n\n"
+        answer = 'Based on the DIN standard, I found these relevant sections:\n\n'
 
         for i, (doc, score) in enumerate(relevant_docs, 1):
-            title = doc["metadata"].get("din:title", f"Section {i}")
-            answer += f"[{i}] {title} (relevance: {score:.2f})\n"
+            title = doc['metadata'].get('din:title', f'Section {i}')
+            answer += f'[{i}] {title} (relevance: {score:.2f})\n'
 
             # Add a snippet from the content
-            snippet = doc["content"].strip()
+            snippet = doc['content'].strip()
             if len(snippet) > 300:
-                snippet = snippet[:300] + "..."
-            answer += f"{snippet}\n\n"
+                snippet = snippet[:300] + '...'
+            answer += f'{snippet}\n\n'
 
         return answer
 
 
 def run_demo():
     """Run the demonstration."""
-    xml_file_path = "examples/din_document.xml"
+    xml_file_path = 'examples/din_document.xml'
 
     # Make sure the file exists
     if not os.path.exists(xml_file_path):
-        print(f"Error: File not found: {xml_file_path}")
-        print("Please run this script from the project root directory")
+        print(f'Error: File not found: {xml_file_path}')
+        print('Please run this script from the project root directory')
         return
 
     # Initialize and prepare the RAG system
@@ -248,19 +248,19 @@ def run_demo():
 
     # Example questions to demonstrate the system
     questions = [
-        "What is RAG and how does it work?",
-        "What are the recommended chunking strategies for documents?",
-        "How should embedding models be selected for a RAG system?",
-        "What metrics should be used to evaluate a RAG system?",
-        "What tools and libraries implement the DIN standard for RAG systems?",
+        'What is RAG and how does it work?',
+        'What are the recommended chunking strategies for documents?',
+        'How should embedding models be selected for a RAG system?',
+        'What metrics should be used to evaluate a RAG system?',
+        'What tools and libraries implement the DIN standard for RAG systems?',
     ]
 
     # Answer each question
     for question in questions:
         answer = rag_system.answer_question(question)
         print(answer)
-        print("=" * 80)
+        print('=' * 80)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     run_demo()

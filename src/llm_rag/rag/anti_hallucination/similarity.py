@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def embedding_based_verification(
-    response: str, context: str, threshold: float = 0.75, model_name: str = "paraphrase-MiniLM-L6-v2"
+    response: str, context: str, threshold: float = 0.75, model_name: str = 'paraphrase-MiniLM-L6-v2'
 ) -> Tuple[bool, float]:
     """Verify response using embedding similarity with context.
 
@@ -40,7 +40,7 @@ def embedding_based_verification(
     """
     # Feature checks
     if not np or not cosine_similarity:
-        logger.warning("Embedding-based verification requires numpy and scikit-learn. Skipping verification.")
+        logger.warning('Embedding-based verification requires numpy and scikit-learn. Skipping verification.')
         return True, 1.0
 
     # Get or load the model
@@ -61,5 +61,5 @@ def embedding_based_verification(
 
         return verified, similarity_score
     except Exception as e:
-        logger.error(f"Error in embedding verification: {e}")
+        logger.error(f'Error in embedding verification: {e}')
         return True, 1.0  # Skip verification on error

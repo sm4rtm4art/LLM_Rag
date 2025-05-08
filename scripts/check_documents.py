@@ -8,24 +8,24 @@ import chromadb
 
 def main():
     """Check document metadata in the Chroma DB."""
-    parser = argparse.ArgumentParser(description="Check document metadata in Chroma DB")
+    parser = argparse.ArgumentParser(description='Check document metadata in Chroma DB')
     parser.add_argument(
-        "--collection",
+        '--collection',
         type=str,
-        default="documents",
-        help="Collection name to check",
+        default='documents',
+        help='Collection name to check',
     )
     parser.add_argument(
-        "--limit",
+        '--limit',
         type=int,
         default=5,
-        help="Number of documents to check",
+        help='Number of documents to check',
     )
     parser.add_argument(
-        "--db_path",
+        '--db_path',
         type=str,
-        default="./chroma_db",
-        help="Path to Chroma DB",
+        default='./chroma_db',
+        help='Path to Chroma DB',
     )
     args = parser.parse_args()
 
@@ -43,14 +43,14 @@ def main():
     sample = collection.get(limit=args.limit)
 
     # Print document metadata
-    print("\nSample document metadata:")
+    print('\nSample document metadata:')
     for i, (doc_id, metadata, document) in enumerate(
-        zip(sample["ids"], sample["metadatas"], sample["documents"], strict=False)
+        zip(sample['ids'], sample['metadatas'], sample['documents'], strict=False)
     ):
-        print(f"\nDocument {i} (ID: {doc_id}):")
-        print(f"Metadata: {metadata}")
-        print(f"Content preview: {document[:100]}...")
+        print(f'\nDocument {i} (ID: {doc_id}):')
+        print(f'Metadata: {metadata}')
+        print(f'Content preview: {document[:100]}...')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

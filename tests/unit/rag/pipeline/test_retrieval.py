@@ -19,8 +19,8 @@ class MockVectorStore:
 
     def __init__(self, docs=None):
         self.docs = docs or [
-            {"content": "Document 1", "metadata": {"source": "test1.txt"}},
-            {"content": "Document 2", "metadata": {"source": "test2.txt"}},
+            {'content': 'Document 1', 'metadata': {'source': 'test1.txt'}},
+            {'content': 'Document 2', 'metadata': {'source': 'test2.txt'}},
         ]
         self.similarity_search_called = False
         self.last_query = None
@@ -47,7 +47,7 @@ class TestBaseRetriever(unittest.TestCase):
 
         retriever = TestRetriever()
         # This should not raise an exception
-        retriever._validate_query("test query")
+        retriever._validate_query('test query')
 
     def test_validate_query_invalid(self):
         """Test query validation with invalid input."""
@@ -60,18 +60,18 @@ class TestBaseRetriever(unittest.TestCase):
 
         # Test with empty query
         with self.assertRaises(PipelineError) as context:
-            retriever._validate_query("")
-        self.assertIn("Query must be a non-empty string", str(context.exception))
+            retriever._validate_query('')
+        self.assertIn('Query must be a non-empty string', str(context.exception))
 
         # Test with non-string query
         with self.assertRaises(PipelineError) as context:
             retriever._validate_query(123)  # type: ignore
-        self.assertIn("Query must be a non-empty string", str(context.exception))
+        self.assertIn('Query must be a non-empty string', str(context.exception))
 
         # Test with whitespace-only query
         with self.assertRaises(PipelineError) as context:
-            retriever._validate_query("   ")
-        self.assertIn("Query cannot be empty or only whitespace", str(context.exception))
+            retriever._validate_query('   ')
+        self.assertIn('Query cannot be empty or only whitespace', str(context.exception))
 
 
 class TestVectorStoreRetriever(unittest.TestCase):
@@ -91,20 +91,20 @@ class TestVectorStoreRetriever(unittest.TestCase):
 
     def test_retrieve(self):
         """Test basic document retrieval."""
-        documents = self.retriever.retrieve("test query")
+        documents = self.retriever.retrieve('test query')
 
         # Check that the vector store was called with correct parameters
         self.assertTrue(self.mock_vectorstore.similarity_search_called)
-        self.assertEqual(self.mock_vectorstore.last_query, "test query")
+        self.assertEqual(self.mock_vectorstore.last_query, 'test query')
         self.assertEqual(self.mock_vectorstore.last_k, 3)
 
         # Check returned documents
         self.assertEqual(len(documents), 2)  # Should return all docs since we only have 2
-        self.assertEqual(documents[0]["content"], "Document 1")
+        self.assertEqual(documents[0]['content'], 'Document 1')
 
     def test_retrieve_with_custom_top_k(self):
         """Test retrieval with custom top_k parameter."""
-        documents = self.retriever.retrieve("test query", top_k=1)
+        documents = self.retriever.retrieve('test query', top_k=1)
 
         # Check that the vector store was called with the custom top_k
         self.assertEqual(self.mock_vectorstore.last_k, 1)
@@ -113,35 +113,35 @@ class TestVectorStoreRetriever(unittest.TestCase):
     def test_retrieve_with_invalid_query(self):
         """Test retrieval with invalid query."""
         with self.assertRaises(PipelineError):
-            self.retriever.retrieve("")
+            self.retriever.retrieve('')
 
     def test_retrieve_with_vectorstore_error(self):
         """Test handling of vector store errors."""
         # Create a mock vector store that raises an exception
         error_vectorstore = MagicMock()
-        error_vectorstore.similarity_search.side_effect = Exception("Vector store error")
+        error_vectorstore.similarity_search.side_effect = Exception('Vector store error')
         # Set the module attribute to simulate a langchain error
-        error_vectorstore.similarity_search.side_effect.__module__ = "langchain.vectorstores"
+        error_vectorstore.similarity_search.side_effect.__module__ = 'langchain.vectorstores'
 
         retriever = VectorStoreRetriever(vectorstore=error_vectorstore)
 
         with self.assertRaises(VectorstoreError) as context:
-            retriever.retrieve("test query")
+            retriever.retrieve('test query')
 
-        self.assertIn("Failed to retrieve documents from vector store", str(context.exception))
+        self.assertIn('Failed to retrieve documents from vector store', str(context.exception))
 
     def test_retrieve_with_other_error(self):
         """Test handling of other errors."""
         # Create a mock vector store that raises a general exception
         error_vectorstore = MagicMock()
-        error_vectorstore.similarity_search.side_effect = Exception("General error")
+        error_vectorstore.similarity_search.side_effect = Exception('General error')
 
         retriever = VectorStoreRetriever(vectorstore=error_vectorstore)
 
         with self.assertRaises(PipelineError) as context:
-            retriever.retrieve("test query")
+            retriever.retrieve('test query')
 
-        self.assertIn("Document retrieval failed", str(context.exception))
+        self.assertIn('Document retrieval failed', str(context.exception))
 
 
 class TestHybridRetriever(unittest.TestCase):
@@ -152,14 +152,14 @@ class TestHybridRetriever(unittest.TestCase):
         # Create mock retrievers
         self.mock_retriever1 = MagicMock()
         self.mock_retriever1.retrieve.return_value = [
-            {"content": "Doc A", "metadata": {"source": "source1"}},
-            {"content": "Doc B", "metadata": {"source": "source1"}},
+            {'content': 'Doc A', 'metadata': {'source': 'source1'}},
+            {'content': 'Doc B', 'metadata': {'source': 'source1'}},
         ]
 
         self.mock_retriever2 = MagicMock()
         self.mock_retriever2.retrieve.return_value = [
-            {"content": "Doc C", "metadata": {"source": "source2"}},
-            {"content": "Doc D", "metadata": {"source": "source2"}},
+            {'content': 'Doc C', 'metadata': {'source': 'source2'}},
+            {'content': 'Doc D', 'metadata': {'source': 'source2'}},
         ]
 
         # Create hybrid retriever
@@ -189,7 +189,7 @@ class TestHybridRetriever(unittest.TestCase):
 
     def test_retrieve(self):
         """Test basic hybrid retrieval."""
-        documents = self.hybrid_retriever.retrieve("test query")
+        documents = self.hybrid_retriever.retrieve('test query')
 
         # Both retrievers should be called
         self.mock_retriever1.retrieve.assert_called_once()
@@ -200,7 +200,7 @@ class TestHybridRetriever(unittest.TestCase):
 
     def test_retrieve_with_top_k(self):
         """Test hybrid retrieval with top_k parameter."""
-        documents = self.hybrid_retriever.retrieve("test query", top_k=2)
+        documents = self.hybrid_retriever.retrieve('test query', top_k=2)
 
         # Should limit results to top_k
         self.assertEqual(len(documents), 2)
@@ -210,26 +210,26 @@ class TestHybridRetriever(unittest.TestCase):
         # Create retrievers with overlapping results
         mock_retriever1 = MagicMock()
         mock_retriever1.retrieve.return_value = [
-            {"content": "Doc A", "metadata": {"source": "source1"}},
-            {"content": "Doc B", "metadata": {"source": "source1"}},
+            {'content': 'Doc A', 'metadata': {'source': 'source1'}},
+            {'content': 'Doc B', 'metadata': {'source': 'source1'}},
         ]
 
         mock_retriever2 = MagicMock()
         mock_retriever2.retrieve.return_value = [
-            {"content": "Doc A", "metadata": {"source": "source2"}},  # Duplicate content
-            {"content": "Doc C", "metadata": {"source": "source2"}},
+            {'content': 'Doc A', 'metadata': {'source': 'source2'}},  # Duplicate content
+            {'content': 'Doc C', 'metadata': {'source': 'source2'}},
         ]
 
         # Mock the deduplication method
-        with patch("llm_rag.rag.pipeline.retrieval.HybridRetriever._deduplicate_documents") as mock_deduplicate:
+        with patch('llm_rag.rag.pipeline.retrieval.HybridRetriever._deduplicate_documents') as mock_deduplicate:
             mock_deduplicate.return_value = [
-                {"content": "Doc A", "metadata": {"source": "source1"}},
-                {"content": "Doc B", "metadata": {"source": "source1"}},
-                {"content": "Doc C", "metadata": {"source": "source2"}},
+                {'content': 'Doc A', 'metadata': {'source': 'source1'}},
+                {'content': 'Doc B', 'metadata': {'source': 'source1'}},
+                {'content': 'Doc C', 'metadata': {'source': 'source2'}},
             ]
 
             retriever = HybridRetriever(retrievers=[mock_retriever1, mock_retriever2])
-            documents = retriever.retrieve("test query", deduplicate=True)
+            documents = retriever.retrieve('test query', deduplicate=True)
 
             # Deduplication should be called
             mock_deduplicate.assert_called_once()
@@ -237,7 +237,7 @@ class TestHybridRetriever(unittest.TestCase):
 
     def test_retrieve_without_deduplication(self):
         """Test retrieval without deduplication."""
-        documents = self.hybrid_retriever.retrieve("test query", deduplicate=False)
+        documents = self.hybrid_retriever.retrieve('test query', deduplicate=False)
 
         # Should return all documents without deduplication
         self.assertEqual(len(documents), 4)
@@ -245,21 +245,21 @@ class TestHybridRetriever(unittest.TestCase):
     def test_retrieve_with_retriever_failure(self):
         """Test handling of individual retriever failures."""
         # Make one retriever fail
-        self.mock_retriever1.retrieve.side_effect = Exception("Retriever error")
+        self.mock_retriever1.retrieve.side_effect = Exception('Retriever error')
 
         # Should still return results from the working retriever
-        documents = self.hybrid_retriever.retrieve("test query")
+        documents = self.hybrid_retriever.retrieve('test query')
         self.assertEqual(len(documents), 2)
-        self.assertEqual(documents[0]["content"], "Doc C")
+        self.assertEqual(documents[0]['content'], 'Doc C')
 
 
 @pytest.mark.parametrize(
-    "query,expected_error",
+    'query,expected_error',
     [
-        (None, "Query must be a non-empty string"),
-        ("", "Query must be a non-empty string"),
-        (123, "Query must be a non-empty string"),
-        ("   ", "Query cannot be empty or only whitespace"),
+        (None, 'Query must be a non-empty string'),
+        ('', 'Query must be a non-empty string'),
+        (123, 'Query must be a non-empty string'),
+        ('   ', 'Query cannot be empty or only whitespace'),
     ],
 )
 def test_retriever_validation_errors(query, expected_error):
@@ -273,5 +273,5 @@ def test_retriever_validation_errors(query, expected_error):
     assert expected_error in str(excinfo.value)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

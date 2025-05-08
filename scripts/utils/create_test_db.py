@@ -16,62 +16,62 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
 # Add the project root to the path so we can import the llm_rag module
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 
 # Sample public domain texts (from Project Gutenberg or similar sources)
 SAMPLE_TEXTS = [
-    "Artificial intelligence (AI) is intelligence demonstrated by machines, "
-    "unlike the natural intelligence displayed by humans and animals.",
-    "Machine learning is the study of computer algorithms that improve automatically through experience.",
-    "Natural Language Processing (NLP) is a field of AI that gives machines "
-    "the ability to read, understand, and derive meaning from human languages.",
-    "Computer vision is a field of AI that enables computers to derive "
-    "meaningful information from digital images, videos, and other visual "
-    "inputs.",
-    "Reinforcement learning is an area of machine learning concerned with how "
-    "software agents ought to take actions in an environment to maximize some "
-    "notion of cumulative reward.",
-    "Deep learning is a subset of machine learning that uses neural networks "
-    "with multiple layers to analyze various factors of data.",
-    "Supervised learning is the machine learning task of learning a function "
-    "that maps an input to an output based on example input-output pairs.",
-    "Unsupervised learning is a type of machine learning algorithm used to draw "
-    "inferences from datasets consisting of input data without labeled "
-    "responses.",
-    "Transfer learning is a research problem in machine learning that focuses "
-    "on storing knowledge gained while solving one problem and applying it to "
-    "a different but related problem.",
-    "Generative AI refers to artificial intelligence systems that can generate "
-    "new content, such as text, images, audio, or video, based on patterns "
-    "learned from existing data.",
-    "Large Language Models (LLMs) are deep learning models trained on vast "
-    "amounts of text data that can generate human-like text and perform a "
-    "variety of language tasks.",
-    "Retrieval-Augmented Generation (RAG) combines retrieval systems with "
-    "generative models to generate more accurate and contextual responses.",
-    "Vector databases store embeddings, which are numerical representations of "
-    "data that capture semantic meaning, allowing for similarity search and "
-    "efficient retrieval of related information.",
-    "Embeddings are dense vector representations of data (text, images, etc.) "
-    "that capture semantic meaning and enable machines to understand "
-    "relationships between different pieces of content.",
+    'Artificial intelligence (AI) is intelligence demonstrated by machines, '
+    'unlike the natural intelligence displayed by humans and animals.',
+    'Machine learning is the study of computer algorithms that improve automatically through experience.',
+    'Natural Language Processing (NLP) is a field of AI that gives machines '
+    'the ability to read, understand, and derive meaning from human languages.',
+    'Computer vision is a field of AI that enables computers to derive '
+    'meaningful information from digital images, videos, and other visual '
+    'inputs.',
+    'Reinforcement learning is an area of machine learning concerned with how '
+    'software agents ought to take actions in an environment to maximize some '
+    'notion of cumulative reward.',
+    'Deep learning is a subset of machine learning that uses neural networks '
+    'with multiple layers to analyze various factors of data.',
+    'Supervised learning is the machine learning task of learning a function '
+    'that maps an input to an output based on example input-output pairs.',
+    'Unsupervised learning is a type of machine learning algorithm used to draw '
+    'inferences from datasets consisting of input data without labeled '
+    'responses.',
+    'Transfer learning is a research problem in machine learning that focuses '
+    'on storing knowledge gained while solving one problem and applying it to '
+    'a different but related problem.',
+    'Generative AI refers to artificial intelligence systems that can generate '
+    'new content, such as text, images, audio, or video, based on patterns '
+    'learned from existing data.',
+    'Large Language Models (LLMs) are deep learning models trained on vast '
+    'amounts of text data that can generate human-like text and perform a '
+    'variety of language tasks.',
+    'Retrieval-Augmented Generation (RAG) combines retrieval systems with '
+    'generative models to generate more accurate and contextual responses.',
+    'Vector databases store embeddings, which are numerical representations of '
+    'data that capture semantic meaning, allowing for similarity search and '
+    'efficient retrieval of related information.',
+    'Embeddings are dense vector representations of data (text, images, etc.) '
+    'that capture semantic meaning and enable machines to understand '
+    'relationships between different pieces of content.',
 ]
 
 # Categories for metadata
 CATEGORIES = [
-    "AI Basics",
-    "Machine Learning",
-    "Natural Language Processing",
-    "Computer Vision",
-    "Deep Learning",
-    "Generative AI",
-    "Vector Databases",
+    'AI Basics',
+    'Machine Learning',
+    'Natural Language Processing',
+    'Computer Vision',
+    'Deep Learning',
+    'Generative AI',
+    'Vector Databases',
 ]
 
 
@@ -86,14 +86,14 @@ def generate_metadata(index: int) -> Dict[str, Any]:
 
     """
     return {
-        "id": str(index),
-        "category": CATEGORIES[index % len(CATEGORIES)],
-        "importance": (index % 5) + 1,  # 1-5 scale
-        "source": "test_data",
+        'id': str(index),
+        'category': CATEGORIES[index % len(CATEGORIES)],
+        'importance': (index % 5) + 1,  # 1-5 scale
+        'source': 'test_data',
     }
 
 
-def create_synthetic_db(persist_directory: str = "test_chroma_db", collection_name: str = "test_collection") -> None:
+def create_synthetic_db(persist_directory: str = 'test_chroma_db', collection_name: str = 'test_collection') -> None:
     """Create a synthetic vector database for testing.
 
     Args:
@@ -108,9 +108,9 @@ def create_synthetic_db(persist_directory: str = "test_chroma_db", collection_na
 
     # Initialize the embedding function
     embedding_function = HuggingFaceEmbeddings(
-        model_name="all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"},
-        encode_kwargs={"normalize_embeddings": True},
+        model_name='all-MiniLM-L6-v2',
+        model_kwargs={'device': 'cpu'},
+        encode_kwargs={'normalize_embeddings': True},
     )
 
     # Create the Chroma database
@@ -127,12 +127,12 @@ def create_synthetic_db(persist_directory: str = "test_chroma_db", collection_na
     # Persist the database
     db.persist()
 
-    logging.info(f"Created synthetic database with {len(SAMPLE_TEXTS)} documents")
-    logging.info(f"Database persisted to {persist_directory}")
+    logging.info(f'Created synthetic database with {len(SAMPLE_TEXTS)} documents')
+    logging.info(f'Database persisted to {persist_directory}')
 
     # Create a README file explaining the database
-    readme_path = os.path.join(persist_directory, "README.md")
-    with open(readme_path, "w") as f:
+    readme_path = os.path.join(persist_directory, 'README.md')
+    with open(readme_path, 'w') as f:
         f.write("""# Test Database
 
 This directory contains a test database for the LLM RAG system. It is created using
@@ -164,6 +164,6 @@ repository.
 """)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     create_synthetic_db()
-    logging.info("Test database created successfully")
+    logging.info('Test database created successfully')

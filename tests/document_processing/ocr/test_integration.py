@@ -13,11 +13,11 @@ class TestOCRIntegration(unittest.TestCase):
     def setUpClass(cls):
         """Set up test fixtures once for all tests."""
         # Use an existing test PDF that's small in size
-        cls.test_pdf_path = Path("data/documents/test_subset/VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf")
+        cls.test_pdf_path = Path('data/documents/test_subset/VDE_0636-3_A2_E__DIN_VDE_0636-3_A2__2010-04.pdf')
 
         # Skip test if the file doesn't exist
         if not cls.test_pdf_path.exists():
-            raise unittest.SkipTest(f"Test PDF not found at {cls.test_pdf_path}")
+            raise unittest.SkipTest(f'Test PDF not found at {cls.test_pdf_path}')
 
     def test_basic_ocr_pipeline(self):
         """Test the complete OCR pipeline with a real PDF."""
@@ -27,7 +27,7 @@ class TestOCRIntegration(unittest.TestCase):
 
             pytesseract.get_tesseract_version()
         except (ImportError, pytesseract.TesseractNotFoundError):
-            self.skipTest("Tesseract not properly installed or configured")
+            self.skipTest('Tesseract not properly installed or configured')
 
         # Initialize the OCR pipeline
         pipeline = OCRPipeline()
@@ -44,10 +44,10 @@ class TestOCRIntegration(unittest.TestCase):
             self.assertGreater(len(result), 0)
 
             # Print first 200 chars of result for debugging
-            print(f"OCR Result (first 200 chars): {result[:200]}")
+            print(f'OCR Result (first 200 chars): {result[:200]}')
 
         except Exception as e:
-            self.fail(f"OCR pipeline failed with error: {str(e)}")
+            self.fail(f'OCR pipeline failed with error: {str(e)}')
 
     def test_page_specific_processing(self):
         """Test processing specific pages from a PDF."""
@@ -57,7 +57,7 @@ class TestOCRIntegration(unittest.TestCase):
 
             pytesseract.get_tesseract_version()
         except (ImportError, pytesseract.TesseractNotFoundError):
-            self.skipTest("Tesseract not properly installed or configured")
+            self.skipTest('Tesseract not properly installed or configured')
 
         # Initialize the OCR pipeline
         pipeline = OCRPipeline()
@@ -74,11 +74,11 @@ class TestOCRIntegration(unittest.TestCase):
 
             # Print first 200 chars of result for debugging
             if result and 1 in result:
-                print(f"Page 1 OCR Result (first 200 chars): {result[1][:200]}")
+                print(f'Page 1 OCR Result (first 200 chars): {result[1][:200]}')
 
         except Exception as e:
-            self.fail(f"OCR pipeline failed with error: {str(e)}")
+            self.fail(f'OCR pipeline failed with error: {str(e)}')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

@@ -32,7 +32,7 @@ class MarkdownFormatter:
         self.detect_headings = detect_headings
         self.detect_lists = detect_lists
         self.detect_tables = detect_tables
-        logger.info("Initialized Markdown formatter")
+        logger.info('Initialized Markdown formatter')
 
     def format_document(self, pages: Union[List[str], Dict[int, str]]) -> str:
         """Format multiple pages of OCR text into a single Markdown document.
@@ -60,11 +60,11 @@ class MarkdownFormatter:
 
             # Add page header except for the first page
             if i > 0:
-                formatted_pages.append(f"\n\n## Page {i + 1}\n\n{formatted_page}")
+                formatted_pages.append(f'\n\n## Page {i + 1}\n\n{formatted_page}')
             else:
                 formatted_pages.append(formatted_page)
 
-        return "\n\n".join(formatted_pages)
+        return '\n\n'.join(formatted_pages)
 
     def format_page(self, text: str) -> str:
         """Format a single page of OCR text into Markdown.
@@ -77,7 +77,7 @@ class MarkdownFormatter:
 
         """
         if not text or not text.strip():
-            return ""
+            return ''
 
         # Strip excessive whitespace
         text = text.strip()
@@ -104,7 +104,7 @@ class MarkdownFormatter:
 
             formatted_paragraphs.append(formatted_para)
 
-        return "\n\n".join(formatted_paragraphs)
+        return '\n\n'.join(formatted_paragraphs)
 
     def _detect_paragraphs(self, text: str) -> List[str]:
         """Split text into paragraphs based on blank lines.
@@ -117,10 +117,10 @@ class MarkdownFormatter:
 
         """
         # Replace multiple spaces with a single space
-        text = re.sub(r" +", " ", text)
+        text = re.sub(r' +', ' ', text)
 
         # Split by double newlines or more
-        paragraphs = re.split(r"\n\s*\n", text)
+        paragraphs = re.split(r'\n\s*\n', text)
 
         # Remove leading/trailing whitespace from each paragraph
         paragraphs = [p.strip() for p in paragraphs]
@@ -149,15 +149,15 @@ class MarkdownFormatter:
             return False
 
         # Does it end with sentence-ending punctuation?
-        if text.endswith((".", ",", ";", ":", "!")):
+        if text.endswith(('.', ',', ';', ':', '!')):
             return False
 
         # Is it all caps or starts with a number followed by dot?
-        if text.isupper() or re.match(r"^\d+\.", text):
+        if text.isupper() or re.match(r'^\d+\.', text):
             return True
 
         # Does it match common heading patterns? (e.g., "1.1 Introduction")
-        if re.match(r"^(\d+\.)+\d*\s+\w", text):
+        if re.match(r'^(\d+\.)+\d*\s+\w', text):
             return True
 
         # Check for title case (most words capitalized)
@@ -181,13 +181,13 @@ class MarkdownFormatter:
         # Determine heading level based on characteristics
 
         # Check if it starts with numbering like "1.", "1.1.", etc.
-        if re.match(r"^\d+\.", text):
+        if re.match(r'^\d+\.', text):
             # Single number = h2
             level = 2
-        elif re.match(r"^\d+\.\d+", text):
+        elif re.match(r'^\d+\.\d+', text):
             # Two numbers (e.g., "1.1") = h3
             level = 3
-        elif re.match(r"^\d+\.\d+\.\d+", text):
+        elif re.match(r'^\d+\.\d+\.\d+', text):
             # Three numbers (e.g., "1.1.1") = h4
             level = 4
         elif text.isupper():
@@ -198,8 +198,8 @@ class MarkdownFormatter:
             level = 3
 
         # Create Markdown heading
-        heading_chars = "#" * level
-        return f"{heading_chars} {text}"
+        heading_chars = '#' * level
+        return f'{heading_chars} {text}'
 
     def _is_list_item(self, text: str) -> bool:
         """Detect if a text line appears to be a list item.
@@ -212,14 +212,14 @@ class MarkdownFormatter:
 
         """
         # Check for common list markers
-        lines = text.split("\n")
-        first_line = lines[0].strip() if lines else ""
+        lines = text.split('\n')
+        first_line = lines[0].strip() if lines else ''
 
         # Check for bullet points or numbered lists
         return bool(
-            re.match(r"^[\*\-•◦▪▫○●]", first_line)
-            or re.match(r"^\d+[\.\)]", first_line)
-            or re.match(r"^[a-z][\.\)]", first_line)
+            re.match(r'^[\*\-•◦▪▫○●]', first_line)
+            or re.match(r'^\d+[\.\)]', first_line)
+            or re.match(r'^[a-z][\.\)]', first_line)
         )
 
     def _format_list_item(self, text: str) -> str:
@@ -232,28 +232,28 @@ class MarkdownFormatter:
             Markdown-formatted list item.
 
         """
-        lines = text.split("\n")
+        lines = text.split('\n')
         formatted_lines = []
 
         for i, line in enumerate(lines):
             if i == 0:
                 # For the first line, preserve the list marker or convert to Markdown
-                if re.match(r"^[\*\-•◦▪▫○●]", line):
+                if re.match(r'^[\*\-•◦▪▫○●]', line):
                     # Convert various bullet styles to Markdown bullet
-                    line = re.sub(r"^[\*\-•◦▪▫○●]\s*", "* ", line)
-                elif re.match(r"^\d+[\.\)]", line):
+                    line = re.sub(r'^[\*\-•◦▪▫○●]\s*', '* ', line)
+                elif re.match(r'^\d+[\.\)]', line):
                     # Convert numbered list to Markdown numbered list
-                    line = re.sub(r"^\d+[\.\)]\s*", "1. ", line)
-                elif re.match(r"^[a-z][\.\)]", line):
+                    line = re.sub(r'^\d+[\.\)]\s*', '1. ', line)
+                elif re.match(r'^[a-z][\.\)]', line):
                     # Convert lettered list to bullet list
-                    line = re.sub(r"^[a-z][\.\)]\s*", "* ", line)
+                    line = re.sub(r'^[a-z][\.\)]\s*', '* ', line)
             else:
                 # For continuation lines, add proper indentation
-                line = "  " + line
+                line = '  ' + line
 
             formatted_lines.append(line)
 
-        return "\n".join(formatted_lines)
+        return '\n'.join(formatted_lines)
 
 
 class JSONFormatter:
@@ -265,7 +265,7 @@ class JSONFormatter:
 
     def __init__(self):
         """Initialize the JSON formatter."""
-        logger.info("Initialized JSON formatter (placeholder)")
+        logger.info('Initialized JSON formatter (placeholder)')
 
     def format_document(self, pages: Union[List[str], Dict[int, str]]) -> Dict:
         """Format OCR text into a structured JSON document.
@@ -280,12 +280,12 @@ class JSONFormatter:
         """
         # Basic implementation for now
         if isinstance(pages, dict):
-            result = {"pages": {}}
+            result = {'pages': {}}
             for page_num, text in pages.items():
-                result["pages"][str(page_num)] = {"text": text}
+                result['pages'][str(page_num)] = {'text': text}
         else:
-            result = {"pages": {}}
+            result = {'pages': {}}
             for i, text in enumerate(pages):
-                result["pages"][str(i)] = {"text": text}
+                result['pages'][str(i)] = {'text': text}
 
         return result

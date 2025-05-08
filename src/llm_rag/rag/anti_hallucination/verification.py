@@ -67,8 +67,8 @@ def advanced_verify_response(
 
     # Log detailed verification results
     logger.debug(
-        "Verification results: entity_coverage=%.2f, embedding_sim=%.2f, "
-        "entities_verified=%s, embeddings_verified=%s, overall=%s",
+        'Verification results: entity_coverage=%.2f, embedding_sim=%.2f, '
+        'entities_verified=%s, embeddings_verified=%s, overall=%s',
         entity_cov,
         embeddings_sim,
         is_verified_entity,

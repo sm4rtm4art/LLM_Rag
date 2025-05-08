@@ -12,9 +12,9 @@ from ..processors import Documents
 from .base import registry
 
 warnings.warn(
-    "This monolithic loaders.py module is deprecated. "
-    "Please use the modular loaders from llm_rag.document_processing.loaders "
-    "instead.",
+    'This monolithic loaders.py module is deprecated. '
+    'Please use the modular loaders from llm_rag.document_processing.loaders '
+    'instead.',
     DeprecationWarning,
     stacklevel=2,
 )
@@ -45,30 +45,30 @@ def load_document(file_path: Union[str, Path], **kwargs) -> Optional[Documents]:
     file_path = Path(file_path)
 
     if not file_path.exists():
-        logger.error(f"File not found: {file_path}")
+        logger.error(f'File not found: {file_path}')
         return None
 
     loader = registry.create_loader_for_file(file_path, **kwargs)
 
     if loader is None:
-        logger.warning(f"No loader found for file type: {file_path.suffix}")
+        logger.warning(f'No loader found for file type: {file_path.suffix}')
         return None
 
     try:
         # Check if the loader supports load_from_file
-        if hasattr(loader, "load_from_file"):
+        if hasattr(loader, 'load_from_file'):
             return loader.load_from_file(file_path)
 
         # Fall back to regular load method
         return loader.load()
     except Exception as e:
-        logger.error(f"Error loading file {file_path}: {e}")
+        logger.error(f'Error loading file {file_path}: {e}')
         return None
 
 
 def load_documents_from_directory(
     directory_path: Union[str, Path],
-    glob_pattern: str = "*.*",
+    glob_pattern: str = '*.*',
     recursive: bool = True,
     exclude_patterns: Optional[List[str]] = None,
     **kwargs,
@@ -97,12 +97,12 @@ def load_documents_from_directory(
     directory_path = Path(directory_path)
 
     if not directory_path.exists() or not directory_path.is_dir():
-        logger.error(f"Directory not found: {directory_path}")
+        logger.error(f'Directory not found: {directory_path}')
         return []
 
     # Get all files matching the pattern
     if recursive:
-        files = list(directory_path.glob(f"**/{glob_pattern}"))
+        files = list(directory_path.glob(f'**/{glob_pattern}'))
     else:
         files = list(directory_path.glob(glob_pattern))
 
@@ -111,7 +111,7 @@ def load_documents_from_directory(
         for pattern in exclude_patterns:
             exclude_files = set()
             if recursive:
-                exclude_files.update(directory_path.glob(f"**/{pattern}"))
+                exclude_files.update(directory_path.glob(f'**/{pattern}'))
             else:
                 exclude_files.update(directory_path.glob(pattern))
 
@@ -125,7 +125,7 @@ def load_documents_from_directory(
             if documents:
                 all_documents.extend(documents)
         except Exception as e:
-            logger.error(f"Error loading file {file_path}: {e}")
+            logger.error(f'Error loading file {file_path}: {e}')
             # Continue with other files
 
     return all_documents

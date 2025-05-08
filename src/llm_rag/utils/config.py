@@ -20,7 +20,7 @@ from llm_rag.utils.logging import get_logger
 logger = get_logger(__name__)
 
 # Type variable for configuration model types
-T = TypeVar("T", bound=BaseModel)
+T = TypeVar('T', bound=BaseModel)
 
 
 def load_yaml_config(file_path: Union[str, Path]) -> Dict[str, Any]:
@@ -40,25 +40,25 @@ def load_yaml_config(file_path: Union[str, Path]) -> Dict[str, Any]:
         file_path = Path(file_path)
         if not file_path.exists():
             raise ConfigurationError(
-                f"Configuration file not found: {file_path}",
+                f'Configuration file not found: {file_path}',
                 error_code=ErrorCode.FILE_NOT_FOUND,
             )
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             config_dict = yaml.safe_load(f)
 
         if not isinstance(config_dict, dict):
             raise ConfigurationError(
-                f"Invalid YAML configuration format in {file_path}",
+                f'Invalid YAML configuration format in {file_path}',
                 error_code=ErrorCode.INVALID_FILE_FORMAT,
             )
 
-        logger.debug(f"Loaded configuration from {file_path}")
+        logger.debug(f'Loaded configuration from {file_path}')
         return config_dict
 
     except yaml.YAMLError as e:
         raise ConfigurationError(
-            f"Error parsing YAML configuration: {str(e)}",
+            f'Error parsing YAML configuration: {str(e)}',
             error_code=ErrorCode.INVALID_FILE_FORMAT,
             original_exception=e,
         ) from e
@@ -66,7 +66,7 @@ def load_yaml_config(file_path: Union[str, Path]) -> Dict[str, Any]:
         if isinstance(e, ConfigurationError):
             raise
         raise ConfigurationError(
-            f"Error loading configuration from {file_path}",
+            f'Error loading configuration from {file_path}',
             original_exception=e,
         ) from e
 
@@ -88,19 +88,19 @@ def load_json_config(file_path: Union[str, Path]) -> Dict[str, Any]:
         file_path = Path(file_path)
         if not file_path.exists():
             raise ConfigurationError(
-                f"Configuration file not found: {file_path}",
+                f'Configuration file not found: {file_path}',
                 error_code=ErrorCode.FILE_NOT_FOUND,
             )
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             config_dict = json.load(f)
 
-        logger.debug(f"Loaded configuration from {file_path}")
+        logger.debug(f'Loaded configuration from {file_path}')
         return config_dict
 
     except json.JSONDecodeError as e:
         raise ConfigurationError(
-            f"Error parsing JSON configuration: {str(e)}",
+            f'Error parsing JSON configuration: {str(e)}',
             error_code=ErrorCode.INVALID_FILE_FORMAT,
             original_exception=e,
         ) from e
@@ -108,7 +108,7 @@ def load_json_config(file_path: Union[str, Path]) -> Dict[str, Any]:
         if isinstance(e, ConfigurationError):
             raise
         raise ConfigurationError(
-            f"Error loading configuration from {file_path}",
+            f'Error loading configuration from {file_path}',
             original_exception=e,
         ) from e
 
@@ -131,15 +131,15 @@ def load_env_config(prefix: str, lowercase_keys: bool = True) -> Dict[str, str]:
         if key.startswith(prefix_upper):
             # Remove prefix and separator
             config_key = (
-                key[len(prefix_upper) + 1 :] if key.startswith(f"{prefix_upper}_") else key[len(prefix_upper) :]
+                key[len(prefix_upper) + 1 :] if key.startswith(f'{prefix_upper}_') else key[len(prefix_upper) :]
             )
 
             if lowercase_keys:
                 config_key = config_key.lower()
 
             # Convert keys with double underscore to nested dictionaries
-            if "__" in config_key:
-                parts = config_key.split("__")
+            if '__' in config_key:
+                parts = config_key.split('__')
                 current = config_dict
 
                 for part in parts[:-1]:
@@ -151,7 +151,7 @@ def load_env_config(prefix: str, lowercase_keys: bool = True) -> Dict[str, str]:
             else:
                 config_dict[config_key] = value
 
-    logger.debug(f"Loaded {len(config_dict)} environment variables with prefix {prefix}")
+    logger.debug(f'Loaded {len(config_dict)} environment variables with prefix {prefix}')
     return config_dict
 
 
@@ -173,10 +173,10 @@ def validate_config(config: Dict[str, Any], model_cls: type[T]) -> T:
         return model_cls(**config)
     except ValidationError as e:
         raise ConfigurationError(
-            f"Configuration validation failed: {str(e)}",
+            f'Configuration validation failed: {str(e)}',
             error_code=ErrorCode.INVALID_CONFIG,
             original_exception=e,
-            details={"errors": e.errors()},
+            details={'errors': e.errors()},
         ) from e
 
 
@@ -247,13 +247,13 @@ def load_config(
 
         for path in config_paths:
             path_str = str(path)
-            if path_str.endswith((".yml", ".yaml")):
+            if path_str.endswith(('.yml', '.yaml')):
                 configs.append(load_yaml_config(path))
-            elif path_str.endswith(".json"):
+            elif path_str.endswith('.json'):
                 configs.append(load_json_config(path))
             else:
                 raise ConfigurationError(
-                    f"Unsupported configuration file format: {path}",
+                    f'Unsupported configuration file format: {path}',
                     error_code=ErrorCode.INVALID_FILE_FORMAT,
                 )
 
@@ -290,7 +290,7 @@ def get_env(key: str, default: Optional[str] = None, required: bool = False) -> 
 
     if required and value is None:
         raise ConfigurationError(
-            f"Required environment variable not set: {key}",
+            f'Required environment variable not set: {key}',
             error_code=ErrorCode.ENV_VAR_NOT_SET,
         )
 

@@ -32,7 +32,7 @@ class HallucinationConfig:
 
     # Embedding verification settings
     embedding_threshold: float = 0.75
-    model_name: str = "paraphrase-MiniLM-L6-v2"
+    model_name: str = 'paraphrase-MiniLM-L6-v2'
 
     # Combined scoring settings
     entity_weight: float = 0.6
@@ -49,8 +49,8 @@ class HallucinationConfig:
     def __post_init__(self):
         """Validate configuration values."""
         if not 0 <= self.entity_threshold <= 1:
-            raise ValueError("entity_threshold must be between 0 and 1")
+            raise ValueError('entity_threshold must be between 0 and 1')
         if not 0 <= self.embedding_threshold <= 1:
-            raise ValueError("embedding_threshold must be between 0 and 1")
+            raise ValueError('embedding_threshold must be between 0 and 1')
         if not 0 <= self.entity_weight <= 1:
-            raise ValueError("entity_weight must be between 0 and 1")
+            raise ValueError('entity_weight must be between 0 and 1')

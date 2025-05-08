@@ -6,8 +6,8 @@ for enhancing LLM responses with external knowledge.
 
 from .version import __version__
 
-__author__ = "Martin"
-__email__ = "your.email@example.com"
+__author__ = 'Martin'
+__email__ = 'your.email@example.com'
 
 # Define public API
-__all__ = ["main", "__version__"]
+__all__ = ['main', '__version__']

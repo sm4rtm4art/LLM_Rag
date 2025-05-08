@@ -19,11 +19,11 @@ class TestLoaderAPIIntegration:
         self.test_dir = Path(self.temp_dir.name)
 
         # Create a text file
-        self.txt_file = self.test_dir / "test.txt"
-        self.txt_file.write_text("This is a test document.")
+        self.txt_file = self.test_dir / 'test.txt'
+        self.txt_file.write_text('This is a test document.')
 
         # Create a JSON file
-        self.json_file = self.test_dir / "test.json"
+        self.json_file = self.test_dir / 'test.json'
         self.json_file.write_text('{"title": "Test", "content": "JSON test content"}')
 
     def teardown_method(self):
@@ -53,10 +53,10 @@ class TestLoaderAPIIntegration:
         # Verify results
         assert result is not None
         assert len(result) == 1
-        assert result[0]["content"] == "This is a test document."
-        assert result[0]["metadata"]["source"] == str(self.txt_file)
+        assert result[0]['content'] == 'This is a test document.'
+        assert result[0]['metadata']['source'] == str(self.txt_file)
         # The filename may be in 'source' or another field depending on implementation
-        assert os.path.basename(result[0]["metadata"]["source"]) == "test.txt"
+        assert os.path.basename(result[0]['metadata']['source']) == 'test.txt'
 
     def test_directory_loading(self):
         """Test loading from a directory through the loader_api entry point."""
@@ -78,15 +78,15 @@ class TestLoaderAPIIntegration:
         assert len(results) == len(results2)
 
         # Verify the content of the files - extract base filenames from the source paths
-        file_sources = [doc["metadata"]["source"] for doc in results]
+        file_sources = [doc['metadata']['source'] for doc in results]
         file_basenames = [os.path.basename(source) for source in file_sources]
-        assert "test.txt" in file_basenames
-        assert "test.json" in file_basenames
+        assert 'test.txt' in file_basenames
+        assert 'test.json' in file_basenames
 
         # Verify the content of at least one file
-        txt_docs = [doc for doc in results if os.path.basename(doc["metadata"]["source"]) == "test.txt"]
+        txt_docs = [doc for doc in results if os.path.basename(doc['metadata']['source']) == 'test.txt']
         assert len(txt_docs) == 1
-        assert txt_docs[0]["content"] == "This is a test document."
+        assert txt_docs[0]['content'] == 'This is a test document.'
 
     def test_backward_compatibility_with_document_processing(self):
         """Test backward compatibility with imports from document_processing."""
@@ -107,7 +107,7 @@ class TestLoaderAPIIntegration:
         assert len(old_result) == len(new_result)
 
         # Get the basenames of files from sources
-        old_filenames = sorted([os.path.basename(doc["metadata"]["source"]) for doc in old_result])
-        new_filenames = sorted([os.path.basename(doc["metadata"]["source"]) for doc in new_result])
+        old_filenames = sorted([os.path.basename(doc['metadata']['source']) for doc in old_result])
+        new_filenames = sorted([os.path.basename(doc['metadata']['source']) for doc in new_result])
 
         assert old_filenames == new_filenames

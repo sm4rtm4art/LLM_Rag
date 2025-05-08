@@ -46,13 +46,13 @@ class TestLoadersModule:
 
     def test_load_document_success(self):
         """Test the load_document function when it succeeds."""
-        with tempfile.NamedTemporaryFile(suffix=".txt", mode="w+") as temp_file:
-            temp_file.write("Test content")
+        with tempfile.NamedTemporaryFile(suffix='.txt', mode='w+') as temp_file:
+            temp_file.write('Test content')
             temp_file.flush()
 
             # When load_document succeeds
-            with patch("llm_rag.document_processing.loaders.load_document") as mock_load:
-                expected_docs = [{"content": "Test content", "metadata": {"source": temp_file.name}}]
+            with patch('llm_rag.document_processing.loaders.load_document') as mock_load:
+                expected_docs = [{'content': 'Test content', 'metadata': {'source': temp_file.name}}]
                 mock_load.return_value = expected_docs
 
                 # Call the function directly (not through the module)
@@ -69,16 +69,16 @@ class TestLoadersModule:
         """Test error handling in load_document."""
         # Instead of patching the function itself, we'll test
         # the actual implementation with an invalid file
-        non_existent_file = "/path/to/nonexistent/file.xyz"
+        non_existent_file = '/path/to/nonexistent/file.xyz'
         result = llm_rag.document_processing.loaders.load_document(non_existent_file)
 
         # Should return None for non-existent files
         assert result is None
 
-    @pytest.mark.parametrize("import_success", [True, False])
+    @pytest.mark.parametrize('import_success', [True, False])
     def test_all_loader_classes_exist(self, import_success):
         """Test that all loader classes exist regardless of import success."""
-        with patch("llm_rag.document_processing.loaders._MODULAR_IMPORT_SUCCESS", import_success):
+        with patch('llm_rag.document_processing.loaders._MODULAR_IMPORT_SUCCESS', import_success):
             # Import the module dynamically to refresh state
             import importlib
 
@@ -86,17 +86,17 @@ class TestLoadersModule:
 
             # Check that all loader classes are available
             loaders = [
-                "DocumentLoader",
-                "FileLoader",
-                "DirectoryLoader",
-                "CSVLoader",
-                "PDFLoader",
-                "EnhancedPDFLoader",
-                "JSONLoader",
-                "TextFileLoader",
-                "XMLLoader",
-                "WebLoader",
-                "WebPageLoader",
+                'DocumentLoader',
+                'FileLoader',
+                'DirectoryLoader',
+                'CSVLoader',
+                'PDFLoader',
+                'EnhancedPDFLoader',
+                'JSONLoader',
+                'TextFileLoader',
+                'XMLLoader',
+                'WebLoader',
+                'WebPageLoader',
             ]
 
             for loader_name in loaders:
@@ -120,10 +120,10 @@ class TestLoadersModule:
         # Verify result
         assert isinstance(extensions, dict)
         # At minimum, these extensions should be supported
-        assert ".txt" in extensions
-        assert ".pdf" in extensions
-        assert ".json" in extensions
-        assert ".csv" in extensions
+        assert '.txt' in extensions
+        assert '.pdf' in extensions
+        assert '.json' in extensions
+        assert '.csv' in extensions
 
 
 class TestBackwardCompatibility:
@@ -146,16 +146,16 @@ class TestBackwardCompatibility:
 
         # Test load_document compatibility
         # The functionality should be equivalent even if they're not the same function
-        with tempfile.NamedTemporaryFile(suffix=".txt", mode="w+") as temp_file:
-            temp_file.write("Test compatibility")
+        with tempfile.NamedTemporaryFile(suffix='.txt', mode='w+') as temp_file:
+            temp_file.write('Test compatibility')
             temp_file.flush()
 
             # Mock both implementations to return predictable values
             with patch(
-                "llm_rag.document_processing.loaders.load_document", return_value=[{"content": "mocked content"}]
+                'llm_rag.document_processing.loaders.load_document', return_value=[{'content': 'mocked content'}]
             ):
                 with patch(
-                    "llm_rag.document_processing.loader_api.load_document", return_value=[{"content": "mocked content"}]
+                    'llm_rag.document_processing.loader_api.load_document', return_value=[{'content': 'mocked content'}]
                 ):
                     # Both should work with the same arguments
                     api_result = api_load(temp_file.name)

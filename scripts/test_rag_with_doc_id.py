@@ -10,7 +10,7 @@ from typing import Any, Dict
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
 
@@ -32,43 +32,43 @@ def run_rag_with_doc_id(
 ) -> Dict[str, Any]:
     """Run RAG with a specific document ID."""
     # Load the LLM model
-    logger.info(f"Loading model: {model_name}")
+    logger.info(f'Loading model: {model_name}')
     llm = ModelFactory.create_model(
         model_path_or_name=model_name,
         backend=ModelBackend.HUGGINGFACE,
-        device="cpu",
+        device='cpu',
         max_tokens=512,
         temperature=0.1,  # Lower temperature for more deterministic output
     )
 
     # Load the document directly from ChromaDB
-    logger.info(f"Loading document with ID: {doc_id} from {db_path}")
+    logger.info(f'Loading document with ID: {doc_id} from {db_path}')
     db = Chroma(collection_name=collection_name, persist_directory=db_path)
     results = db.get(ids=[doc_id])
 
-    if not results["documents"]:
-        logger.error(f"Document with ID {doc_id} not found")
+    if not results['documents']:
+        logger.error(f'Document with ID {doc_id} not found')
         return {
-            "response": f"Document with ID {doc_id} not found",
-            "documents": [],
-            "confidence": 0.0,
+            'response': f'Document with ID {doc_id} not found',
+            'documents': [],
+            'confidence': 0.0,
         }
 
     # Extract document content and metadata
-    document_content = results["documents"][0]
-    document_metadata = results["metadatas"][0]
+    document_content = results['documents'][0]
+    document_metadata = results['metadatas'][0]
 
-    logger.info(f"Found document: {document_metadata}")
-    logger.info(f"Document content preview: {document_content[:200]}...")
+    logger.info(f'Found document: {document_metadata}')
+    logger.info(f'Document content preview: {document_content[:200]}...')
 
     # Create a document in the format expected by the RAG pipeline
     document = {
-        "content": document_content,
-        "metadata": document_metadata,
+        'content': document_content,
+        'metadata': document_metadata,
     }
 
     # Create the RAG pipeline with a custom prompt template
-    logger.info("Creating RAG pipeline")
+    logger.info('Creating RAG pipeline')
     custom_prompt = """
 You are a precise assistant that answers questions based ONLY on the provided context.
 
@@ -100,48 +100,48 @@ Answer:
     context = pipeline.format_context([document])
 
     # Generate response
-    logger.info(f"Generating response for query: {query}")
+    logger.info(f'Generating response for query: {query}')
     response = pipeline.generate(query=query, context=context)
 
     return {
-        "response": response,
-        "documents": [document],
-        "confidence": 1.0,  # We're manually providing the document, so confidence is high
+        'response': response,
+        'documents': [document],
+        'confidence': 1.0,  # We're manually providing the document, so confidence is high
     }
 
 
 def main():
     """Execute the RAG test with specific document IDs."""
-    parser = argparse.ArgumentParser(description="Test RAG with specific document ID")
+    parser = argparse.ArgumentParser(description='Test RAG with specific document ID')
     parser.add_argument(
-        "--query",
+        '--query',
         type=str,
         required=True,
-        help="Query to ask the RAG system",
+        help='Query to ask the RAG system',
     )
     parser.add_argument(
-        "--doc_id",
+        '--doc_id',
         type=str,
         required=True,
-        help="Document ID to use",
+        help='Document ID to use',
     )
     parser.add_argument(
-        "--model_name",
+        '--model_name',
         type=str,
-        default="microsoft/phi-2",
-        help="Model name to use",
+        default='microsoft/phi-2',
+        help='Model name to use',
     )
     parser.add_argument(
-        "--collection",
+        '--collection',
         type=str,
-        default="test_subset",
-        help="Collection name",
+        default='test_subset',
+        help='Collection name',
     )
     parser.add_argument(
-        "--db_path",
+        '--db_path',
         type=str,
-        default="chroma_db",
-        help="Path to ChromaDB database",
+        default='chroma_db',
+        help='Path to ChromaDB database',
     )
 
     args = parser.parse_args()
@@ -156,24 +156,24 @@ def main():
     )
 
     # Print the response
-    print("\nRAG System Response:")
-    print("-------------------")
-    print(result["response"])
-    print("-------------------")
+    print('\nRAG System Response:')
+    print('-------------------')
+    print(result['response'])
+    print('-------------------')
 
     # Print document information
-    if result["documents"]:
-        print("\nDocument Used:")
-        print(f"ID: {args.doc_id}")
-        metadata = result["documents"][0]["metadata"]
-        print(f"Filename: {metadata.get('filename', 'Unknown')}")
-        print(f"Source: {metadata.get('source', 'Unknown')}")
+    if result['documents']:
+        print('\nDocument Used:')
+        print(f'ID: {args.doc_id}')
+        metadata = result['documents'][0]['metadata']
+        print(f'Filename: {metadata.get("filename", "Unknown")}')
+        print(f'Source: {metadata.get("source", "Unknown")}')
 
         # Print content preview
-        content = result["documents"][0]["content"]
-        print("\nContent Preview:")
-        print(content[:500] + "..." if len(content) > 500 else content)
+        content = result['documents'][0]['content']
+        print('\nContent Preview:')
+        print(content[:500] + '...' if len(content) > 500 else content)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

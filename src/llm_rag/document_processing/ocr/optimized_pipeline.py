@@ -41,7 +41,7 @@ class OptimizedOCRConfig(OCRPipelineConfig):
     parallel_processing: bool = True
     max_workers: int = 4
     use_cache: bool = True
-    cache_dir: str = ".ocr_cache"
+    cache_dir: str = '.ocr_cache'
     cache_ttl: int = 7 * 24 * 60 * 60  # 1 week in seconds
     force_reprocess: bool = False
     batched_processing: bool = False
@@ -73,7 +73,7 @@ class OptimizedOCRPipeline(OCRPipeline):
         # Initialize cache directory if needed
         if self.config.use_cache:
             os.makedirs(self.config.cache_dir, exist_ok=True)
-            logger.info(f"Using OCR cache directory: {self.config.cache_dir}")
+            logger.info(f'Using OCR cache directory: {self.config.cache_dir}')
 
     def _generate_cache_key(self, file_path: str, page_num: Optional[int] = None) -> str:
         """Generate a unique cache key for a file or page.
@@ -88,15 +88,15 @@ class OptimizedOCRPipeline(OCRPipeline):
         """
         file_stat = os.stat(file_path)
         file_info = {
-            "path": str(file_path),
-            "size": file_stat.st_size,
-            "mtime": file_stat.st_mtime,
-            "page": page_num,
-            "config": {
-                "dpi": self.config.pdf_dpi,
-                "ocr_lang": self.config.languages,
-                "output_format": self.config.output_format,
-                "use_llm_cleaner": self.config.llm_cleaning_enabled,
+            'path': str(file_path),
+            'size': file_stat.st_size,
+            'mtime': file_stat.st_mtime,
+            'page': page_num,
+            'config': {
+                'dpi': self.config.pdf_dpi,
+                'ocr_lang': self.config.languages,
+                'output_format': self.config.output_format,
+                'use_llm_cleaner': self.config.llm_cleaning_enabled,
             },
         }
 
@@ -113,7 +113,7 @@ class OptimizedOCRPipeline(OCRPipeline):
             Path to the cache file
 
         """
-        return Path(self.config.cache_dir) / f"{cache_key}.json"
+        return Path(self.config.cache_dir) / f'{cache_key}.json'
 
     def _check_cache(self, cache_key: str) -> Optional[Dict[str, Any]]:
         """Check if a valid cache entry exists.
@@ -134,20 +134,20 @@ class OptimizedOCRPipeline(OCRPipeline):
 
         try:
             # Read cache file
-            with open(cache_path, "r", encoding="utf-8") as f:
+            with open(cache_path, 'r', encoding='utf-8') as f:
                 cache_data = json.load(f)
 
             # Check if cache is expired
-            timestamp = cache_data.get("timestamp", 0)
+            timestamp = cache_data.get('timestamp', 0)
             current_time = time.time()
             if current_time - timestamp > self.config.cache_ttl:
-                logger.info(f"Cache expired for key {cache_key}")
+                logger.info(f'Cache expired for key {cache_key}')
                 return None
 
-            logger.info(f"Using cached OCR result for key {cache_key}")
+            logger.info(f'Using cached OCR result for key {cache_key}')
             return cache_data
         except Exception as e:
-            logger.warning(f"Error reading cache file: {e}")
+            logger.warning(f'Error reading cache file: {e}')
             return None
 
     def _write_cache(self, cache_key: str, data: Dict[str, Any]) -> None:
@@ -162,15 +162,15 @@ class OptimizedOCRPipeline(OCRPipeline):
             return
 
         # Add timestamp to cache data
-        cache_data = {"timestamp": time.time(), **data}
+        cache_data = {'timestamp': time.time(), **data}
 
         cache_path = self._get_cache_path(cache_key)
         try:
-            with open(cache_path, "w", encoding="utf-8") as f:
+            with open(cache_path, 'w', encoding='utf-8') as f:
                 json.dump(cache_data, f)
-            logger.debug(f"Wrote cache file: {cache_path}")
+            logger.debug(f'Wrote cache file: {cache_path}')
         except Exception as e:
-            logger.warning(f"Error writing cache file: {e}")
+            logger.warning(f'Error writing cache file: {e}')
 
     def _process_page_with_cache(self, pdf_path: str, image, page_num: int, total_pages: int) -> Tuple[int, str]:
         """Process a single page with caching support.
@@ -189,28 +189,28 @@ class OptimizedOCRPipeline(OCRPipeline):
         cache_key = self._generate_cache_key(pdf_path, page_num)
         cache_data = self._check_cache(cache_key)
 
-        if cache_data and "text" in cache_data:
-            logger.info(f"Using cached OCR for page {page_num + 1}/{total_pages}")
-            return page_num, cache_data["text"]
+        if cache_data and 'text' in cache_data:
+            logger.info(f'Using cached OCR for page {page_num + 1}/{total_pages}')
+            return page_num, cache_data['text']
 
         # Process the page using the base implementation
-        logger.info(f"Processing page {page_num + 1}/{total_pages}")
+        logger.info(f'Processing page {page_num + 1}/{total_pages}')
         ocr_text = self.ocr_engine.process_image(image)
 
         # Clean text with LLM if configured
         if self.config.llm_cleaning_enabled and self.llm_cleaner:
-            confidence = getattr(self.ocr_engine, "last_confidence", None)
+            confidence = getattr(self.ocr_engine, 'last_confidence', None)
             metadata = {
-                "page_number": page_num + 1,
-                "total_pages": total_pages,
-                "document_type": "pdf",
+                'page_number': page_num + 1,
+                'total_pages': total_pages,
+                'document_type': 'pdf',
             }
 
             # If language detection is enabled, it will be performed in the cleaner
             ocr_text = self.llm_cleaner.clean_text(ocr_text, confidence_score=confidence, metadata=metadata)
 
         # Write to cache
-        self._write_cache(cache_key, {"text": ocr_text})
+        self._write_cache(cache_key, {'text': ocr_text})
 
         return page_num, ocr_text
 
@@ -231,20 +231,20 @@ class OptimizedOCRPipeline(OCRPipeline):
         # Track processed files for batch processing
         if self.config.skip_processed_files:
             if pdf_path in self.config.processed_files:
-                logger.info(f"Skipping already processed file: {pdf_path}")
+                logger.info(f'Skipping already processed file: {pdf_path}')
                 # Try to load from document-level cache if available
                 cache_key = self._generate_cache_key(pdf_path)
                 cache_data = self._check_cache(cache_key)
-                if cache_data and "text" in cache_data:
-                    return cache_data["text"]
+                if cache_data and 'text' in cache_data:
+                    return cache_data['text']
 
         # Check if we have a document-level cache
         if pages is None:
             cache_key = self._generate_cache_key(pdf_path)
             cache_data = self._check_cache(cache_key)
-            if cache_data and "text" in cache_data:
-                logger.info(f"Using cached OCR for entire document: {pdf_path}")
-                return cache_data["text"]
+            if cache_data and 'text' in cache_data:
+                logger.info(f'Using cached OCR for entire document: {pdf_path}')
+                return cache_data['text']
 
         # Load PDF converter and get images
         converter = PDFImageConverter(pdf_path, self.config.pdf_dpi)
@@ -252,8 +252,8 @@ class OptimizedOCRPipeline(OCRPipeline):
         total_pages = len(page_images)
 
         if total_pages == 0:
-            logger.warning(f"No pages found in PDF: {pdf_path}")
-            return ""
+            logger.warning(f'No pages found in PDF: {pdf_path}')
+            return ''
 
         # Process pages based on configuration
         if self.config.parallel_processing and total_pages > 1:
@@ -272,7 +272,7 @@ class OptimizedOCRPipeline(OCRPipeline):
         # Cache the complete document result
         if pages is None:
             cache_key = self._generate_cache_key(pdf_path)
-            self._write_cache(cache_key, {"text": formatted_text})
+            self._write_cache(cache_key, {'text': formatted_text})
 
         # Mark as processed
         self.config.processed_files.add(pdf_path)
@@ -293,7 +293,7 @@ class OptimizedOCRPipeline(OCRPipeline):
         total_pages = len(page_images)
         results = []
 
-        logger.info(f"Processing {total_pages} pages in parallel with {self.config.max_workers} workers")
+        logger.info(f'Processing {total_pages} pages in parallel with {self.config.max_workers} workers')
 
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
             # Submit all tasks
@@ -309,7 +309,7 @@ class OptimizedOCRPipeline(OCRPipeline):
                     results.append((page_num, text))
                 except Exception as e:
                     page = future_to_page[future]
-                    logger.error(f"Error processing page {page + 1}: {str(e)}")
+                    logger.error(f'Error processing page {page + 1}: {str(e)}')
 
         return results
 
@@ -327,14 +327,14 @@ class OptimizedOCRPipeline(OCRPipeline):
         total_pages = len(page_images)
         results = []
 
-        logger.info(f"Processing {total_pages} pages sequentially")
+        logger.info(f'Processing {total_pages} pages sequentially')
 
         for page_num, image in page_images:
             try:
                 page_num, text = self._process_page_with_cache(pdf_path, image, page_num, total_pages)
                 results.append((page_num, text))
             except Exception as e:
-                logger.error(f"Error processing page {page_num + 1}: {str(e)}")
+                logger.error(f'Error processing page {page_num + 1}: {str(e)}')
 
         return results
 
@@ -364,7 +364,7 @@ class OptimizedOCRPipeline(OCRPipeline):
 
         """
         # Simple joining of pages with double newlines for raw text output
-        return "\n\n".join(text_pages)
+        return '\n\n'.join(text_pages)
 
     def batch_process_pdfs(self, pdf_paths: List[str]) -> Dict[str, str]:
         """Process multiple PDF documents in batches.
@@ -378,16 +378,16 @@ class OptimizedOCRPipeline(OCRPipeline):
         """
         if not self.config.batched_processing:
             # Process sequentially if batching is disabled
-            logger.info(f"Processing {len(pdf_paths)} documents sequentially")
+            logger.info(f'Processing {len(pdf_paths)} documents sequentially')
             return {path: self.process_pdf(path) for path in pdf_paths}
 
-        logger.info(f"Batch processing {len(pdf_paths)} documents with batch size {self.config.batch_size}")
+        logger.info(f'Batch processing {len(pdf_paths)} documents with batch size {self.config.batch_size}')
 
         results = {}
         batches = [pdf_paths[i : i + self.config.batch_size] for i in range(0, len(pdf_paths), self.config.batch_size)]
 
         for batch_num, batch in enumerate(batches, 1):
-            logger.info(f"Processing batch {batch_num}/{len(batches)}")
+            logger.info(f'Processing batch {batch_num}/{len(batches)}')
 
             with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
                 future_to_path = {executor.submit(self.process_pdf, path): path for path in batch}
@@ -397,7 +397,7 @@ class OptimizedOCRPipeline(OCRPipeline):
                     try:
                         results[path] = future.result()
                     except Exception as e:
-                        logger.error(f"Error processing {path}: {str(e)}")
-                        results[path] = f"ERROR: {str(e)}"
+                        logger.error(f'Error processing {path}: {str(e)}')
+                        results[path] = f'ERROR: {str(e)}'
 
         return results

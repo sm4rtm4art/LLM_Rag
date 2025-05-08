@@ -22,7 +22,7 @@ from src.llm_rag.pipeline import RAGPipeline  # noqa: E402
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def run_rag_pipeline(query, context=None):
     Returns:
         dict: A dictionary containing the response and metadata
     """
-    logger.info(f"Running RAG pipeline with query: {query}")
+    logger.info(f'Running RAG pipeline with query: {query}')
 
     # Initialize the RAG pipeline
     pipeline = RAGPipeline()
@@ -48,21 +48,21 @@ def run_rag_pipeline(query, context=None):
 
     # Extract source documents
     sources = []
-    if metadata and "source_documents" in metadata:
-        for doc in metadata["source_documents"]:
+    if metadata and 'source_documents' in metadata:
+        for doc in metadata['source_documents']:
             source = {
-                "content": (doc.page_content if hasattr(doc, "page_content") else ""),
-                "metadata": doc.metadata if hasattr(doc, "metadata") else {},
+                'content': (doc.page_content if hasattr(doc, 'page_content') else ''),
+                'metadata': doc.metadata if hasattr(doc, 'metadata') else {},
             }
             sources.append(source)
 
     # Format the result for promptfoo
-    result = {"response": response, "sources": sources}
+    result = {'response': response, 'sources': sources}
 
     return result
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Check if a query was provided as a command-line argument
     if len(sys.argv) < 2:
         logger.error("No query provided. Usage: python run_rag_pipeline.py 'your query here'")

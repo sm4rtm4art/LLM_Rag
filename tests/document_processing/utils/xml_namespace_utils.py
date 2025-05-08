@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Union
 from llm_rag.document_processing.loaders import XMLLoader
 
 # Update path to the DIN document
-DIN_DOCUMENT_PATH = "tests/test_data/xml/din_document.xml"
+DIN_DOCUMENT_PATH = 'tests/test_data/xml/din_document.xml'
 
 
 def extract_namespaces(xml_file: Union[str, Path]) -> Dict[str, str]:
@@ -38,7 +38,7 @@ def extract_namespaces(xml_file: Union[str, Path]) -> Dict[str, str]:
     xml_file = Path(xml_file)
 
     # Simple regex approach to extract namespace declarations
-    with open(xml_file, "r", encoding="utf-8") as f:
+    with open(xml_file, 'r', encoding='utf-8') as f:
         content = f.read()
 
     # Find all xmlns:prefix="uri" patterns
@@ -48,7 +48,7 @@ def extract_namespaces(xml_file: Union[str, Path]) -> Dict[str, str]:
     # Check for default namespace (xmlns="uri")
     default_ns = re.search(r'xmlns="([^"]+)"', content)
     if default_ns:
-        namespaces[""] = default_ns.group(1)
+        namespaces[''] = default_ns.group(1)
 
     return namespaces
 
@@ -101,16 +101,16 @@ def find_elements_by_tag(
     root = tree.getroot()
 
     # Handle namespaced tag
-    if ":" in tag_name:
-        prefix, local_name = tag_name.split(":", 1)
+    if ':' in tag_name:
+        prefix, local_name = tag_name.split(':', 1)
         if prefix in namespaces:
             # Search using Clark notation {namespace}localname
             namespace = namespaces[prefix]
-            elements = root.findall(f".//{{{namespace}}}{local_name}")
+            elements = root.findall(f'.//{{{namespace}}}{local_name}')
             return elements
 
     # Fallback to direct search
-    elements = root.findall(f".//{tag_name}")
+    elements = root.findall(f'.//{tag_name}')
     return elements
 
 
@@ -151,9 +151,9 @@ def load_namespaced_xml(
 
 def extract_namespaced_definitions(
     xml_file: Union[str, Path],
-    definition_tag: str = "din:definition",
-    term_tag: str = "din:term",
-    description_tag: str = "din:description",
+    definition_tag: str = 'din:definition',
+    term_tag: str = 'din:term',
+    description_tag: str = 'din:description',
 ) -> Dict[str, str]:
     """Extract term definitions from a namespaced XML document.
 
@@ -180,17 +180,17 @@ def extract_namespaced_definitions(
     definitions = {}
 
     for doc in documents:
-        content = doc["content"]
+        content = doc['content']
 
         # Extract term and description from the content
         term = None
         description = None
 
-        for line in content.split("\n"):
-            if line.startswith(f"{term_tag}:"):
-                term = line[len(f"{term_tag}:") :].strip()
-            elif line.startswith(f"{description_tag}:"):
-                description = line[len(f"{description_tag}:") :].strip()
+        for line in content.split('\n'):
+            if line.startswith(f'{term_tag}:'):
+                term = line[len(f'{term_tag}:') :].strip()
+            elif line.startswith(f'{description_tag}:'):
+                description = line[len(f'{description_tag}:') :].strip()
 
         if term and description:
             definitions[term] = description
@@ -198,36 +198,36 @@ def extract_namespaced_definitions(
     return definitions
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Example usage
     xml_file = DIN_DOCUMENT_PATH
 
     # Make sure the file exists
     if not Path(xml_file).exists():
-        print(f"Error: File not found: {xml_file}")
-        print("Please run this script from the project root directory")
+        print(f'Error: File not found: {xml_file}')
+        print('Please run this script from the project root directory')
         exit(1)
 
     # Example: Extract namespaces
     namespaces = extract_namespaces(xml_file)
-    print("\nNamespaces in the document:")
+    print('\nNamespaces in the document:')
     for prefix, uri in namespaces.items():
-        print(f"  {prefix or '(default)'}: {uri}")
+        print(f'  {prefix or "(default)"}: {uri}')
 
     # Example: Extract definitions
     definitions = extract_namespaced_definitions(xml_file)
-    print("\nDefinitions in the document:")
+    print('\nDefinitions in the document:')
     for term, desc in definitions.items():
         if len(desc) > 100:
-            print(f"  {term}: {desc[:100]}...")
+            print(f'  {term}: {desc[:100]}...')
         else:
-            print(f"  {term}: {desc}")
+            print(f'  {term}: {desc}')
 
     # Example: Find all section titles
-    loader = XMLLoader(file_path=xml_file, split_by_tag="din:section", metadata_tags=["din:title"])
+    loader = XMLLoader(file_path=xml_file, split_by_tag='din:section', metadata_tags=['din:title'])
 
     sections = loader.load()
-    print("\nSections in the document:")
+    print('\nSections in the document:')
     for i, section in enumerate(sections, 1):
-        title = section["metadata"].get("din:title", f"Section {i}")
-        print(f"  {i}. {title}")
+        title = section['metadata'].get('din:title', f'Section {i}')
+        print(f'  {i}. {title}')
