@@ -1,18 +1,22 @@
 """Tests for the EmbeddingComparisonEngine class."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
 import pytest
 
 from llm_rag.document_processing.comparison.comparison_engine import EmbeddingComparisonEngine
-from llm_rag.document_processing.comparison.domain_models import AlignmentPair as DomainAlignmentPair
+from llm_rag.document_processing.comparison.domain_models import (
+    AlignmentPair as DomainAlignmentPair,
+)
 from llm_rag.document_processing.comparison.domain_models import (
     ComparisonConfig,
     ComparisonResultType,
+    LLMAnalysisResult,
     Section,
     SectionType,
 )
+from llm_rag.document_processing.comparison.llm_comparer import LLMComparer
 from llm_rag.utils.errors import DocumentProcessingError
 
 
@@ -85,13 +89,26 @@ def test_init_with_custom_config_ce():
     assert engine.config.embedding_model_name == 'custom-model'
 
 
-def test_compare_sections_ce(mock_alignment_pairs_ce):
+@pytest.mark.asyncio
+async def test_compare_sections_ce(mock_alignment_pairs_ce):
     """Test comparing aligned section pairs."""
     engine = EmbeddingComparisonEngine()
     engine._calculate_similarity = MagicMock()
-    engine._calculate_similarity.side_effect = [0.96, 0.75]
+    engine._calculate_similarity.side_effect = [0.96, 0.75]  # Corresponds to 2 non-LLM pairs
 
-    comparisons = engine.compare_sections(mock_alignment_pairs_ce)
+    # Mock llm_comparer and its analyze_sections method if it might be called
+    # For this test, assuming no LLM analysis is triggered by default or it's handled cleanly
+    engine.llm_comparer = MagicMock(spec=LLMComparer)
+    if engine.llm_comparer:
+        engine.llm_comparer.analyze_sections = AsyncMock(
+            return_value=LLMAnalysisResult(
+                comparison_category='UNCERTAIN',  # Dummy value
+                explanation='Test',
+                confidence=0.5,
+            )
+        )
+
+    comparisons = await engine.compare_sections(mock_alignment_pairs_ce)
 
     assert len(comparisons) == 4
     assert comparisons[0].result_type == ComparisonResultType.SIMILAR
@@ -155,12 +172,18 @@ def test_classify_similarity_ce():
     assert engine._classify_similarity(0.35) == ComparisonResultType.DIFFERENT
 
 
-def test_comparison_with_error_ce(mock_sections_ce):
+@pytest.mark.asyncio
+async def test_comparison_with_error_ce(mock_sections_ce):
     """Test error handling in compare_sections method."""
     engine = EmbeddingComparisonEngine()
-    engine._calculate_similarity = MagicMock(side_effect=ValueError('Test error'))
+    # Ensure the mock is set up to be an async method if llm_comparer might be called
+    engine.llm_comparer = MagicMock(spec=LLMComparer)
+    if engine.llm_comparer:
+        engine.llm_comparer.analyze_sections = AsyncMock(side_effect=ValueError('LLM Test error'))
+
+    engine._calculate_similarity = MagicMock(side_effect=ValueError('Similarity calculation error'))
     with pytest.raises(DocumentProcessingError):
-        engine.compare_sections(
+        await engine.compare_sections(
             [
                 DomainAlignmentPair(
                     source_section=mock_sections_ce[0],

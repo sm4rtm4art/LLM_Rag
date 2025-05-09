@@ -1,6 +1,6 @@
 """Tests for the ComparisonPipeline class."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -82,15 +82,16 @@ def test_init_with_custom_config_cp():
     assert pipeline.config.cache_intermediate_results is True
 
 
-def test_compare_documents_cp(mock_pipeline_cp, mock_sections_cp, mock_aligned_pairs_cp, mock_comparisons_cp):
+@pytest.mark.asyncio
+async def test_compare_documents_cp(mock_pipeline_cp, mock_sections_cp, mock_aligned_pairs_cp, mock_comparisons_cp):
     """Test the compare_documents method with mocked components."""
     mock_pipeline_cp.parser.parse.return_value = mock_sections_cp
     mock_pipeline_cp.aligner.align_sections.return_value = mock_aligned_pairs_cp
-    mock_pipeline_cp.comparison_engine.compare_sections.return_value = mock_comparisons_cp
+    mock_pipeline_cp.comparison_engine.compare_sections = AsyncMock(return_value=mock_comparisons_cp)
     mock_pipeline_cp.formatter.format_comparisons.return_value = 'Mock diff report'
     source = '# Introduction\nThis is a test paragraph.'
     target = '# Introduction\nThis is a test paragraph with minor changes.'
-    result = mock_pipeline_cp.compare_documents(source, target, title='Test Diff')
+    result = await mock_pipeline_cp.compare_documents(source, target, title='Test Diff')
     mock_pipeline_cp.parser.parse.assert_called()
     mock_pipeline_cp.aligner.align_sections.assert_called_once()
     mock_pipeline_cp.comparison_engine.compare_sections.assert_called_once()
@@ -98,12 +99,13 @@ def test_compare_documents_cp(mock_pipeline_cp, mock_sections_cp, mock_aligned_p
     assert result == 'Mock diff report'
 
 
-def test_compare_sections_cp(mock_pipeline_cp, mock_sections_cp, mock_aligned_pairs_cp, mock_comparisons_cp):
+@pytest.mark.asyncio
+async def test_compare_sections_cp(mock_pipeline_cp, mock_sections_cp, mock_aligned_pairs_cp, mock_comparisons_cp):
     """Test the compare_sections method with mocked components."""
     mock_pipeline_cp.aligner.align_sections.return_value = mock_aligned_pairs_cp
-    mock_pipeline_cp.comparison_engine.compare_sections.return_value = mock_comparisons_cp
+    mock_pipeline_cp.comparison_engine.compare_sections = AsyncMock(return_value=mock_comparisons_cp)
     mock_pipeline_cp.formatter.format_comparisons.return_value = 'Mock diff report'
-    result = mock_pipeline_cp.compare_sections(mock_sections_cp, mock_sections_cp, title='Test Diff')
+    result = await mock_pipeline_cp.compare_sections(mock_sections_cp, mock_sections_cp, title='Test Diff')
     mock_pipeline_cp.aligner.align_sections.assert_called_once()
     mock_pipeline_cp.comparison_engine.compare_sections.assert_called_once()
     mock_pipeline_cp.formatter.format_comparisons.assert_called_once()
@@ -193,20 +195,22 @@ def test_align_sections_with_cache_cp(mock_pipeline_cp, mock_sections_cp, mock_a
     assert cache_key in mock_pipeline_cp._cache
 
 
-def test_compare_sections_method_cp(mock_pipeline_cp, mock_aligned_pairs_cp, mock_comparisons_cp):
+@pytest.mark.asyncio
+async def test_compare_sections_method_cp(mock_pipeline_cp, mock_aligned_pairs_cp, mock_comparisons_cp):
     """Test the _compare_sections method."""
-    mock_pipeline_cp.comparison_engine.compare_sections.return_value = mock_comparisons_cp
-    result = mock_pipeline_cp._compare_sections(mock_aligned_pairs_cp)
+    mock_pipeline_cp.comparison_engine.compare_sections = AsyncMock(return_value=mock_comparisons_cp)
+    result = await mock_pipeline_cp._compare_sections(mock_aligned_pairs_cp)
     mock_pipeline_cp.comparison_engine.compare_sections.assert_called_once()
     assert result == mock_comparisons_cp
 
 
-def test_compare_sections_with_cache_cp(mock_pipeline_cp, mock_aligned_pairs_cp, mock_comparisons_cp):
+@pytest.mark.asyncio
+async def test_compare_sections_with_cache_cp(mock_pipeline_cp, mock_aligned_pairs_cp, mock_comparisons_cp):
     """Test caching in the _compare_sections method."""
-    mock_pipeline_cp.comparison_engine.compare_sections.return_value = mock_comparisons_cp
+    mock_pipeline_cp.comparison_engine.compare_sections = AsyncMock(return_value=mock_comparisons_cp)
     mock_pipeline_cp.config.cache_intermediate_results = True
-    result1 = mock_pipeline_cp._compare_sections(mock_aligned_pairs_cp)
-    result2 = mock_pipeline_cp._compare_sections(mock_aligned_pairs_cp)
+    result1 = await mock_pipeline_cp._compare_sections(mock_aligned_pairs_cp)
+    result2 = await mock_pipeline_cp._compare_sections(mock_aligned_pairs_cp)
     assert mock_pipeline_cp.comparison_engine.compare_sections.call_count == 1
     assert result1 == mock_comparisons_cp
     assert result2 == mock_comparisons_cp
@@ -222,21 +226,28 @@ def test_format_results_cp(mock_pipeline_cp, mock_comparisons_cp):
     assert result == 'Mock diff report'
 
 
-def test_error_handling_in_compare_documents_cp(mock_pipeline_cp):
+@pytest.mark.asyncio
+async def test_error_handling_in_compare_documents_cp(mock_pipeline_cp):
     """Test error handling in the compare_documents method."""
     mock_pipeline_cp.parser.parse.side_effect = ValueError('Parser error')
     with pytest.raises(DocumentProcessingError):
-        mock_pipeline_cp.compare_documents('source', 'target')
+        await mock_pipeline_cp.compare_documents('source', 'target')
 
 
-def test_error_handling_in_compare_sections_cp(mock_pipeline_cp, mock_sections_cp):
+@pytest.mark.asyncio
+async def test_error_handling_in_compare_sections_cp(mock_pipeline_cp, mock_sections_cp):
     """Test error handling in the compare_sections method."""
     mock_pipeline_cp.aligner.align_sections.side_effect = ValueError('Aligner error')
+    # comparison_engine.compare_sections is async, ensure its mock is an AsyncMock
+    # if it were to be called before the aligner error.
+    # However, align_sections is called before _compare_sections, so this error should trigger first.
+    mock_pipeline_cp.comparison_engine.compare_sections = AsyncMock()
     with pytest.raises(DocumentProcessingError):
-        mock_pipeline_cp.compare_sections(mock_sections_cp, mock_sections_cp)
+        await mock_pipeline_cp.compare_sections(mock_sections_cp, mock_sections_cp)
 
 
-def test_end_to_end_with_real_components_cp():
+@pytest.mark.asyncio
+async def test_end_to_end_with_real_components_cp():
     """Test pipeline with mocked components to simulate end-to-end workflow."""
     pipeline = ComparisonPipeline()
     pipeline.parser = MagicMock()
@@ -254,21 +265,23 @@ def test_end_to_end_with_real_components_cp():
             similarity_score=1.0,
         )
     ]
-    pipeline.comparison_engine.compare_sections.return_value = [
-        SectionComparison(
-            alignment_pair=AlignmentPair(
-                source_section=Section(title='H1', content='Heading', level=1, section_type=SectionType.HEADING),
-                target_section=Section(title='H1', content='Heading', level=1, section_type=SectionType.HEADING),
+    pipeline.comparison_engine.compare_sections = AsyncMock(
+        return_value=[
+            SectionComparison(
+                alignment_pair=AlignmentPair(
+                    source_section=Section(title='H1', content='Heading', level=1, section_type=SectionType.HEADING),
+                    target_section=Section(title='H1', content='Heading', level=1, section_type=SectionType.HEADING),
+                    similarity_score=1.0,
+                ),
+                result_type=ComparisonResultType.SIMILAR,
                 similarity_score=1.0,
-            ),
-            result_type=ComparisonResultType.SIMILAR,
-            similarity_score=1.0,
-        )
-    ]
+            )
+        ]
+    )
     pipeline.formatter.format_comparisons.return_value = '# Comparison Result\n\nHeading [SIMILAR]'
     source = '# Heading\nThis is a paragraph.'
     target = '# Heading\nThis is a modified paragraph.'
-    result = pipeline.compare_documents(source, target, title='Simple Test')
+    result = await pipeline.compare_documents(source, target, title='Simple Test')
     assert isinstance(result, str)
     assert len(result) > 0
     assert 'Heading' in result
