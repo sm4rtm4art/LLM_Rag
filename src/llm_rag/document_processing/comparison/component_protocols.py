@@ -5,10 +5,11 @@ from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 from .domain_models import (
+    AlignmentPair,
+    # ComparisonResultType, # Not directly used in interface signatures, but SectionComparison uses it
     DocumentFormat,
     Section,
     SectionComparison,
-    # ComparisonResultType, # Not directly used in interface signatures, but SectionComparison uses it
 )
 
 # Attempt to import type definitions from their current locations.
@@ -60,14 +61,12 @@ class IComparisonEngine(ABC):
     """Interface for section comparison engine components."""
 
     @abstractmethod
-    def compare_sections(
-        self, aligned_pairs: List[Tuple[Optional[Section], Optional[Section]]]
-    ) -> List[SectionComparison]:
+    async def compare_sections(self, aligned_pairs: List[AlignmentPair]) -> List[SectionComparison]:
         """Compare aligned pairs of sections.
 
         Args:
-            aligned_pairs: A list of tuples, where each tuple contains an aligned
-                           pair of (source_section, target_section).
+            aligned_pairs: A list of AlignmentPair objects, where each object contains an aligned
+                           pair of (source_section, target_section) and alignment metadata.
 
         Returns:
             A list of SectionComparison objects, each detailing the comparison

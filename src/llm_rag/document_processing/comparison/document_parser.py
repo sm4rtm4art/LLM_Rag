@@ -8,7 +8,7 @@ from llm_rag.utils.errors import DocumentProcessingError
 from llm_rag.utils.logging import get_logger
 
 from .component_protocols import IParser
-from .domain_models import DocumentFormat, ParserConfig, Section, SectionType
+from .domain_models import DocumentFormat, InputChunk, ParserConfig, Section, SectionType
 
 logger = get_logger(__name__)
 
@@ -16,7 +16,11 @@ logger = get_logger(__name__)
 class DocumentParser(IParser):
     """Parses documents into structured sections based on various strategies."""
 
-    def __init__(self, config: Optional[ParserConfig] = None, default_format: DocumentFormat = DocumentFormat.MARKDOWN):
+    def __init__(
+        self,
+        config: Optional[ParserConfig] = None,
+        default_format: DocumentFormat = DocumentFormat.MARKDOWN,
+    ):
         """Initialize the document parser.
 
         Args:
@@ -33,11 +37,13 @@ class DocumentParser(IParser):
             f'min_section_length={self.config.min_section_length}'
         )
 
-    def parse(self, document: Union[str, Path], format_type: Optional[DocumentFormat] = None) -> List[Section]:
+    def parse(
+        self, document: Union[str, Path, List[InputChunk]], format_type: Optional[DocumentFormat] = None
+    ) -> List[Section]:
         """Parse document into sections.
 
         Args:
-            document: The document content as a string or a file path.
+            document: Doc content (str, path, or List[InputChunk]).
             format_type: Format of the document (markdown, json, etc.).
                 If None, will try to guess the format or use default.
 
@@ -51,6 +57,21 @@ class DocumentParser(IParser):
         try:
             doc_format = format_type or self.default_format
             logger.debug(f'Parsing document with format: {doc_format.value}')
+
+            # Handle PRE_CHUNKED format first
+            if doc_format == DocumentFormat.PRE_CHUNKED:
+                if isinstance(document, list):
+                    # Optional: Add a check here to ensure all items in the list are InputChunk instances
+                    # if not all(isinstance(chunk, InputChunk) for chunk in document):
+                    #     raise DocumentProcessingError(
+                    #         "Document is list but items are not InputChunk objects for PRE_CHUNKED format."
+                    #     )
+                    return self.parse_from_input_chunks(document)  # type: ignore
+                else:
+                    raise DocumentProcessingError(
+                        f"For PRE_CHUNKED format, 'document' must be a list of InputChunk objects, "
+                        f'got {type(document)}.'
+                    )
 
             doc_content_str: str
             if isinstance(document, Path):
@@ -71,7 +92,11 @@ class DocumentParser(IParser):
                 else:
                     doc_content_str = document
             else:
-                raise TypeError("Input 'document' must be a string or Path object.")
+                # Consider if this exception type is the most appropriate for a failed type check.
+                # TypeError more specific if 'document' isn't expected type *before* format dispatch.
+                raise TypeError(
+                    "Input 'document' must be a string, Path, or List[InputChunk] for non-PRE_CHUNKED formats."
+                )
 
             if doc_format == DocumentFormat.MARKDOWN:
                 sections = self._parse_markdown(doc_content_str)
@@ -80,6 +105,8 @@ class DocumentParser(IParser):
             elif doc_format == DocumentFormat.TEXT:
                 sections = self._parse_text(doc_content_str)
             else:
+                # This case should ideally not be reached if PRE_CHUNKED is handled above
+                # and other doc_format values are valid.
                 raise ValueError(f'Unsupported document format: {doc_format}')
 
             logger.debug(f'Parsed {len(sections)} sections from document')
@@ -449,3 +476,47 @@ class DocumentParser(IParser):
 
         logger.debug(f'Created {len(sections)} fixed-size chunks')
         return sections
+
+    def parse_from_input_chunks(self, chunks: List[InputChunk]) -> List[Section]:
+        """Parse a list of InputChunk objects into a list of Section objects.
+
+        Args:
+            chunks: A list of InputChunk objects, typically from a semantic chunker.
+
+        Returns:
+            A list of Section objects.
+
+        """
+        logger.debug(f'Parsing {len(chunks)} pre-defined input chunks.')
+        parsed_sections: List[Section] = []
+        for i, chunk in enumerate(chunks):
+            title = chunk.metadata.get(self.config.chunk_title_metadata_key, f'Segment {i + 1}')
+            # A more robust title strategy could be implemented here
+            # e.g. if no title in metadata, check first line of content for heading-like structure
+
+            level = chunk.metadata.get(self.config.chunk_level_metadata_key, self.config.default_chunk_level)
+            if not isinstance(level, int):
+                level = self.config.default_chunk_level
+
+            section_type_str = chunk.metadata.get(self.config.chunk_type_metadata_key)
+            current_section_type = self.config.default_chunk_section_type
+            if section_type_str and isinstance(section_type_str, str):
+                try:
+                    current_section_type = SectionType[section_type_str.upper()]
+                except KeyError:
+                    logger.warning(f"Unknown section type '{section_type_str}' in chunk metadata. Defaulting.")
+
+            # For semantic chunks, parent/children are typically not pre-defined unless chunker provides hierarchy
+            new_section = Section(
+                title=str(title),  # Ensure title is a string
+                content=chunk.content,
+                level=int(level),  # Ensure level is an int
+                section_type=current_section_type,
+                metadata=chunk.metadata.copy() if chunk.metadata else {},  # Pass along metadata
+                parent=None,  # Assuming flat list from chunker for now
+                children=[],  # Assuming flat list
+            )
+            parsed_sections.append(new_section)
+
+        logger.info(f'Successfully parsed {len(parsed_sections)} sections from input chunks.')
+        return parsed_sections

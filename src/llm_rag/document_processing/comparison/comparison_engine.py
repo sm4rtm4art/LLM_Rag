@@ -1,5 +1,6 @@
 """Module for comparing document sections using embeddings."""
 
+import asyncio
 from typing import List, Optional
 
 import numpy as np
@@ -13,9 +14,11 @@ from .domain_models import (
     AlignmentPair,
     ComparisonConfig,
     ComparisonResultType,
+    LLMAnalysisResult,
     Section,
     SectionComparison,
 )
+from .llm_comparer import LLMComparer
 
 logger = get_logger(__name__)
 
@@ -24,29 +27,33 @@ class EmbeddingComparisonEngine(IComparisonEngine):
     """Engine for comparing document sections using embeddings.
 
     This class calculates embeddings for sections and uses them to
-    determine similarity and classify changes.
+    determine similarity and classify changes. It can optionally use an
+    LLMComparer for more detailed analysis of differing sections.
     """
 
-    def __init__(self, config: Optional[ComparisonConfig] = None):
+    def __init__(self, config: Optional[ComparisonConfig] = None, llm_comparer: Optional[LLMComparer] = None):
         """Initialize the comparison engine.
 
         Args:
             config: Configuration for comparison thresholds and behavior.
                 If None, default configuration will be used.
+            llm_comparer: Optional LLMComparer instance for detailed analysis.
 
         """
         self.config = config or ComparisonConfig()
+        self.llm_comparer = llm_comparer
         logger.info(
             f'Initialized EmbeddingComparisonEngine with similar_threshold='
             f'{self.config.similarity_thresholds.similar}, '
-            f'embedding_model={self.config.embedding_model_name}'
+            f'embedding_model={self.config.embedding_model_name}, '
+            f'LLMComparer enabled: {self.llm_comparer is not None}'
         )
 
         # Placeholder for embedding model
         self._embedding_model = None
         self._embedding_cache = {}
 
-    def compare_sections(self, aligned_pairs: List[AlignmentPair]) -> List[SectionComparison]:
+    async def compare_sections(self, aligned_pairs: List[AlignmentPair]) -> List[SectionComparison]:
         """Compare aligned section pairs and classify the changes.
 
         Args:
@@ -61,40 +68,82 @@ class EmbeddingComparisonEngine(IComparisonEngine):
         """
         try:
             logger.debug(f'Comparing {len(aligned_pairs)} aligned section pairs')
-            comparisons = []
+            comparisons: List[SectionComparison] = []
+            llm_tasks = []
 
-            for pair in aligned_pairs:
+            for pair_index, pair in enumerate(aligned_pairs):
+                section_comp: Optional[SectionComparison] = None
+                llm_analysis_needed = False
+
                 if pair.is_source_only:
-                    comparisons.append(
-                        SectionComparison(
-                            result_type=ComparisonResultType.DELETED, alignment_pair=pair, similarity_score=0.0
-                        )
+                    section_comp = SectionComparison(
+                        result_type=ComparisonResultType.DELETED, alignment_pair=pair, similarity_score=0.0
                     )
                 elif pair.is_target_only:
-                    comparisons.append(
-                        SectionComparison(
-                            result_type=ComparisonResultType.NEW, alignment_pair=pair, similarity_score=0.0
-                        )
+                    section_comp = SectionComparison(
+                        result_type=ComparisonResultType.NEW, alignment_pair=pair, similarity_score=0.0
                     )
                 else:
                     if pair.source_section and pair.target_section:
                         similarity = self._calculate_similarity(pair.source_section, pair.target_section)
                         result_classification = self._classify_similarity(similarity)
-                        comparisons.append(
-                            SectionComparison(
-                                result_type=result_classification, alignment_pair=pair, similarity_score=similarity
-                            )
+                        section_comp = SectionComparison(
+                            result_type=result_classification, alignment_pair=pair, similarity_score=similarity
                         )
+
+                        # Condition to trigger LLM analysis
+                        if self.llm_comparer and (
+                            result_classification == ComparisonResultType.DIFFERENT
+                            or result_classification == ComparisonResultType.MODIFIED
+                        ):
+                            llm_analysis_needed = True
                     else:
                         logger.warning(f'Skipping comparison for pair with missing section(s) in aligned pair: {pair}')
+
+                if section_comp:
+                    comparisons.append(section_comp)
+                    if llm_analysis_needed and self.llm_comparer and pair.source_section and pair.target_section:
+                        # Schedule LLM analysis for later execution
+                        # Pass index to update the correct comparison object later
+                        llm_tasks.append(
+                            self._run_llm_analysis_for_pair(
+                                pair.source_section.content,
+                                pair.target_section.content,
+                                pair_index,  # Store index to update the correct comparison
+                            )
+                        )
+
+            # Run all scheduled LLM analyses concurrently
+            if llm_tasks:
+                logger.info(f'Running LLM analysis for {len(llm_tasks)} pairs.')
+                llm_results_with_indices = await asyncio.gather(*llm_tasks)
+                for index, llm_analysis in llm_results_with_indices:
+                    if index < len(comparisons) and llm_analysis:
+                        comparisons[index].llm_analysis_result = llm_analysis
+                        # Optionally, refine comparisons[index].result_type based on llm_analysis.comparison_category
+                        # For now, we just store the LLM result.
+                        logger.debug(f'Stored LLM analysis for pair index {index}: {llm_analysis.comparison_category}')
 
             logger.debug(f'Completed {len(comparisons)} section comparisons')
             return comparisons
 
         except Exception as e:
             error_msg = f'Error comparing document sections: {str(e)}'
-            logger.error(error_msg)
+            logger.error(error_msg, exc_info=True)
             raise DocumentProcessingError(error_msg) from e
+
+    async def _run_llm_analysis_for_pair(
+        self, text_a: str, text_b: str, original_index: int
+    ) -> tuple[int, Optional[LLMAnalysisResult]]:
+        """Run LLM analysis for a text pair and return with original index."""
+        if not self.llm_comparer:
+            return original_index, None
+        try:
+            llm_result = await self.llm_comparer.analyze_sections(text_a, text_b)
+            return original_index, llm_result
+        except Exception as e:
+            logger.error(f'LLM analysis failed for pair index {original_index}: {e}', exc_info=True)
+            return original_index, None
 
     def _calculate_similarity(self, source_section: Section, target_section: Section) -> float:
         """Calculate similarity between two sections using embeddings.
