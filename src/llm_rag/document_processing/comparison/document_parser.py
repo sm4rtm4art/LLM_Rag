@@ -92,6 +92,20 @@ class Section:
             and self.children == other.children
         )
 
+    def __hash__(self):
+        """Calculate hash value for the section.
+
+        This method makes Section objects hashable by using the id attribute
+        as the primary hash key, allowing Section objects to be used in sets.
+
+        Returns:
+            Integer hash value.
+
+        """
+        # Use the id as the primary component for hashing
+        # The id should be unique enough for dictionary/set operations
+        return hash(self.id)
+
     def __repr__(self):
         """Return string representation of the Section."""
         return (

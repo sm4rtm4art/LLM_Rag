@@ -1,6 +1,7 @@
 """Module for formatting document comparison results."""
 
 import difflib
+import html
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional
@@ -502,13 +503,7 @@ class DiffFormatter:
             HTML-escaped text.
 
         """
-        return (
-            text.replace('&', '&amp;')
-            .replace('<', '&lt;')
-            .replace('>', '&gt;')
-            .replace('"', '&quot;')
-            .replace("'", '&#39;')
-        )
+        return html.escape(text)
 
     def _wrap_text(self, text: str) -> str:
         """Wrap text to the configured width.

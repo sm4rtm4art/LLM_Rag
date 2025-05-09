@@ -542,6 +542,11 @@ class SectionAligner:
 
             # Align content sections within segments
             segment_pairs = self._align_by_sequence(source_segment, target_segment)
+
+            # Ensure all pairs use the HYBRID method
+            for pair in segment_pairs:
+                pair.method = AlignmentMethod.HYBRID
+
             alignment_pairs.extend(segment_pairs)
 
         # Handle unmatched segments

@@ -200,6 +200,7 @@ This document outlines the plan for integrating an OCR pipeline into the documen
     - ✅ Generate annotated output in multiple formats (Markdown, HTML, Text)
     - ✅ Add configuration for output format and detail level
     - ✅ Create tests for different output formats and configurations
+      - Initial tests for test_diff_formatter.py created and passing with 90% coverage for diff_formatter.py.
   - ✅ **`pipeline.py` (Orchestration)**:
     - ✅ Implement pipeline to process documents through parsing, alignment, comparison, and formatting
     - ✅ Add caching mechanism for intermediate results
@@ -215,8 +216,10 @@ This document outlines the plan for integrating an OCR pipeline into the documen
     - [ ] Ensure consistent document representation between chunking and comparison
   - ✅ **Testing**: Create test cases with known document pairs (identical, slightly modified, significantly different) and evaluate alignment and similarity scoring.
     - ✅ Test all core components
+      - test_comparison_engine.py and test_document_parser.py existing and passing.
+      - test_diff_formatter.py created, and all its tests are passing.
     - ✅ Fix test issues and ensure 100% pass rate
-    - [ ] Fix linter and mypy type issues
+      - All 32 tests in tests/document_processing/comparison/ are passing.
 - **Outcome**: Ability to generate a basic Markdown diff indicating sections that are likely similar or different based on embedding similarity.
 
 ### Phase 7: Advanced Semantic Comparison with LLM

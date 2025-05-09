@@ -188,5 +188,32 @@ This is paragraph 3."""
             self.assertLessEqual(len(chunk.content), 550)
 
 
+def test_section_hashability():
+    """Test that Section objects are hashable and can be used in sets and dictionaries."""
+    # Create two identical sections with the same ID
+    section1 = Section(id='test1', content='Test content', section_type=SectionType.PARAGRAPH)
+    section2 = Section(id='test1', content='Test content', section_type=SectionType.PARAGRAPH)
+
+    # Create a section with different ID but same content
+    section3 = Section(id='test2', content='Test content', section_type=SectionType.PARAGRAPH)
+
+    # Test using sections in a set
+    section_set = {section1, section2, section3}
+    # Since section1 and section2 have the same ID, they should be considered equal
+    # and there should only be 2 distinct items in the set
+    assert len(section_set) == 2
+
+    # Test using sections as dictionary keys
+    section_dict = {section1: 'value1', section3: 'value3'}
+    assert len(section_dict) == 2
+    assert section_dict[section2] == 'value1'  # section2 should find the same value as section1
+
+    # Test that sections with different IDs hash to different values
+    assert hash(section1) != hash(section3)
+
+    # Test that sections with the same ID hash to the same value
+    assert hash(section1) == hash(section2)
+
+
 if __name__ == '__main__':
     unittest.main()
