@@ -206,10 +206,10 @@ This document outlines the plan for integrating an OCR pipeline into the documen
     - ✅ Add caching mechanism for intermediate results
     - ✅ Implement comprehensive test suite for pipeline workflow
     - [ ] Complete integration with OCR pipeline for end-to-end workflow
-  - [ ] **Architectural Enhancement**:
-    - [ ] Consider refactoring the comparison module to follow a more modular approach similar to the RAG pipeline
-    - [ ] Implement clear interfaces between components for better extensibility
-    - [ ] Design for progressive enhancement with LLM capabilities
+  - [x] **Architectural Enhancement**: (Largely Addressed)
+    - [x] Consider refactoring the comparison module to follow a more modular approach similar to the RAG pipeline (Achieved: centralized domain models, component protocols, updated components)
+    - [x] Implement clear interfaces between components for better extensibility (Achieved: via `component_protocols.py`)
+    - [ ] Design for progressive enhancement with LLM capabilities (Foundation laid)
   - [ ] **S2 Chunking Integration**:
     - [ ] Clarify how S2 Chunking from Phase 5.5 will integrate with document_parser.py
     - [ ] Add adapter code to use chunked output for comparison
@@ -466,7 +466,7 @@ Maintain modularity:
       - _Future Investigation:_ Integration with **ColBERT**.
       - Calculates similarity and/or performs LLM analysis on aligned pairs.
     - **`Diff Formatter`**: Generates the final report (Markdown/HTML).
-    - **Note on Architecture**: Consider refactoring this service to follow the modular pattern established in the RAG pipeline, with clear separation of responsibilities and well-defined interfaces between components.
+    - **Note on Architecture**: Consider refactoring this service to follow the modular pattern established in the RAG pipeline, with clear separation of responsibilities and well-defined interfaces between components. (This refactoring has been substantially completed by centralizing domain models and defining component protocols.)
 
 3.  **Modular Retrieval System**: (Input: Query and document collection -> Output: Relevant chunks/documents)
 

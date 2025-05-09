@@ -1,72 +1,26 @@
 """Module for comparing document sections using embeddings."""
 
-from dataclasses import dataclass
-from enum import Enum
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import numpy as np
 from scipy.spatial.distance import cosine
 
-from llm_rag.document_processing.comparison.alignment import AlignmentPair
-from llm_rag.document_processing.comparison.document_parser import Section
 from llm_rag.utils.errors import DocumentProcessingError
 from llm_rag.utils.logging import get_logger
+
+from .component_protocols import IComparisonEngine
+from .domain_models import (
+    AlignmentPair,
+    ComparisonConfig,
+    ComparisonResultType,
+    Section,
+    SectionComparison,
+)
 
 logger = get_logger(__name__)
 
 
-class ComparisonResult(Enum):
-    """Classification of comparison results."""
-
-    SIMILAR = 'similar'
-    MINOR_CHANGES = 'minor_changes'
-    MAJOR_CHANGES = 'major_changes'
-    REWRITTEN = 'rewritten'
-    NEW = 'new'
-    DELETED = 'deleted'
-
-
-@dataclass
-class SectionComparison:
-    """Result of comparing two document sections.
-
-    Attributes:
-        alignment_pair: The aligned sections being compared.
-        result: Classification of the comparison result.
-        similarity_score: Numeric similarity score between 0 and 1.
-        details: Additional information about the comparison.
-
-    """
-
-    alignment_pair: AlignmentPair
-    result: ComparisonResult
-    similarity_score: float
-    details: Optional[Dict] = None
-
-
-@dataclass
-class ComparisonConfig:
-    """Configuration settings for section comparison.
-
-    Attributes:
-        similar_threshold: Minimum similarity score to consider sections similar.
-        minor_change_threshold: Minimum score for minor changes classification.
-        major_change_threshold: Minimum score for major changes classification.
-        rewritten_threshold: Minimum score to consider text rewritten.
-        embedding_model: Name of the embedding model to use.
-        chunk_size: Size of text chunks for embedding (if applicable).
-
-    """
-
-    similar_threshold: float = 0.9
-    minor_change_threshold: float = 0.8
-    major_change_threshold: float = 0.6
-    rewritten_threshold: float = 0.4
-    embedding_model: str = 'default'
-    chunk_size: int = 512
-
-
-class EmbeddingComparisonEngine:
+class EmbeddingComparisonEngine(IComparisonEngine):
     """Engine for comparing document sections using embeddings.
 
     This class calculates embeddings for sections and uses them to
@@ -83,8 +37,9 @@ class EmbeddingComparisonEngine:
         """
         self.config = config or ComparisonConfig()
         logger.info(
-            f'Initialized EmbeddingComparisonEngine with similar_threshold={self.config.similar_threshold}, '
-            f'embedding_model={self.config.embedding_model}'
+            f'Initialized EmbeddingComparisonEngine with similar_threshold='
+            f'{self.config.similarity_thresholds.similar}, '
+            f'embedding_model={self.config.embedding_model_name}'
         )
 
         # Placeholder for embedding model
@@ -109,29 +64,29 @@ class EmbeddingComparisonEngine:
             comparisons = []
 
             for pair in aligned_pairs:
-                # Handle source-only and target-only cases
                 if pair.is_source_only:
                     comparisons.append(
-                        SectionComparison(alignment_pair=pair, result=ComparisonResult.DELETED, similarity_score=0.0)
+                        SectionComparison(
+                            result_type=ComparisonResultType.DELETED, alignment_pair=pair, similarity_score=0.0
+                        )
                     )
                 elif pair.is_target_only:
                     comparisons.append(
-                        SectionComparison(alignment_pair=pair, result=ComparisonResult.NEW, similarity_score=0.0)
+                        SectionComparison(
+                            result_type=ComparisonResultType.NEW, alignment_pair=pair, similarity_score=0.0
+                        )
                     )
                 else:
-                    # Compare two aligned sections
-                    if pair.similarity_score == 0.0:
-                        # Calculate similarity if not already done during alignment
+                    if pair.source_section and pair.target_section:
                         similarity = self._calculate_similarity(pair.source_section, pair.target_section)
+                        result_classification = self._classify_similarity(similarity)
+                        comparisons.append(
+                            SectionComparison(
+                                result_type=result_classification, alignment_pair=pair, similarity_score=similarity
+                            )
+                        )
                     else:
-                        similarity = pair.similarity_score
-
-                    # Classify the change based on similarity score
-                    result = self._classify_similarity(similarity)
-
-                    comparisons.append(
-                        SectionComparison(alignment_pair=pair, result=result, similarity_score=similarity)
-                    )
+                        logger.warning(f'Skipping comparison for pair with missing section(s) in aligned pair: {pair}')
 
             logger.debug(f'Completed {len(comparisons)} section comparisons')
             return comparisons
@@ -152,19 +107,21 @@ class EmbeddingComparisonEngine:
             Similarity score between 0 and 1.
 
         """
-        logger.debug('Calculating section similarity using embeddings')
-
-        # Get or compute embeddings
+        logger.debug(
+            f'Calculating section similarity for source: {source_section.section_id}, '
+            f'target: {target_section.section_id}'
+        )
         source_embedding = self._get_embedding(source_section.content)
         target_embedding = self._get_embedding(target_section.content)
-
-        # Calculate cosine similarity
-        similarity = 1.0 - cosine(source_embedding, target_embedding)
-
+        similarity = (
+            1.0 - cosine(source_embedding, target_embedding)
+            if source_embedding is not None and target_embedding is not None
+            else 0.0
+        )
         logger.debug(f'Calculated similarity: {similarity:.4f}')
         return similarity
 
-    def _get_embedding(self, text: str) -> np.ndarray:
+    def _get_embedding(self, text: str) -> Optional[np.ndarray]:
         """Get embedding for a text string.
 
         Uses a caching mechanism to avoid recomputing embeddings.
@@ -176,21 +133,21 @@ class EmbeddingComparisonEngine:
             Embedding vector as numpy array.
 
         """
-        # Check cache first
-        cache_key = text[:100]  # Use first 100 chars as key for memory efficiency
+        if not text:
+            return None
+        cache_key = text[:100] + str(len(text))
         if cache_key in self._embedding_cache:
             return self._embedding_cache[cache_key]
-
-        # Initialize embedding model if not already done
         if self._embedding_model is None:
             self._initialize_embedding_model()
 
-        # Compute embedding
-        embedding = self._compute_embedding(text)
-
-        # Cache result
-        self._embedding_cache[cache_key] = embedding
-        return embedding
+        try:
+            embedding = self._compute_embedding(text)
+            self._embedding_cache[cache_key] = embedding
+            return embedding
+        except Exception as e:
+            logger.error(f"Error computing embedding for text snippet '{text[:50]}...': {e}")
+            return None
 
     def _initialize_embedding_model(self):
         """Initialize the embedding model.
@@ -198,17 +155,18 @@ class EmbeddingComparisonEngine:
         This is a placeholder that would be replaced with actual model initialization
         in a production implementation.
         """
-        logger.info(f'Initializing embedding model: {self.config.embedding_model}')
+        logger.info(f'Initializing embedding model: {self.config.embedding_model_name}')
 
         # In a real implementation, this would load a model like:
-        # self._embedding_model = SentenceTransformer(self.config.embedding_model)
+        # from sentence_transformers import SentenceTransformer
+        # self._embedding_model = SentenceTransformer(self.config.embedding_model_name)
         # or integrate with existing RAG embedding infrastructure
 
         # For this implementation, we'll use a simple mock
-        self._embedding_model = 'mock_model'
+        self._embedding_model = 'mock_model_initialized'
         logger.info('Embedding model initialized')
 
-    def _compute_embedding(self, text: str) -> np.ndarray:
+    def _compute_embedding(self, text: str) -> Optional[np.ndarray]:
         """Compute embedding for a text string.
 
         This is a simplified placeholder implementation. In a real system,
@@ -222,10 +180,8 @@ class EmbeddingComparisonEngine:
             Embedding vector as numpy array.
 
         """
-        # For demonstration purposes, we'll create a simple mock embedding
-        # In a real implementation, this would be:
-        # embedding = self._embedding_model.encode(text)
-
+        if not text or not self._embedding_model:
+            return None
         # Create a deterministic but simplified mock embedding based on text features
         words = text.lower().split()
         unique_words = set(words)
@@ -263,7 +219,7 @@ class EmbeddingComparisonEngine:
 
         return mock_embedding
 
-    def _classify_similarity(self, similarity: float) -> ComparisonResult:
+    def _classify_similarity(self, similarity: float) -> ComparisonResultType:
         """Classify the similarity score into a comparison result.
 
         Args:
@@ -273,15 +229,12 @@ class EmbeddingComparisonEngine:
             Classification of the comparison result.
 
         """
-        if similarity >= self.config.similar_threshold:
-            return ComparisonResult.SIMILAR
-        elif similarity >= self.config.minor_change_threshold:
-            return ComparisonResult.MINOR_CHANGES
-        elif similarity >= self.config.major_change_threshold:
-            return ComparisonResult.MAJOR_CHANGES
-        elif similarity >= self.config.rewritten_threshold:
-            return ComparisonResult.REWRITTEN
+        thresholds = self.config.similarity_thresholds
+        if similarity >= thresholds.similar:
+            return ComparisonResultType.SIMILAR
+        elif similarity >= thresholds.modified:
+            return ComparisonResultType.MODIFIED
+        elif similarity >= thresholds.different:
+            return ComparisonResultType.DIFFERENT
         else:
-            # Very low similarity could indicate completely different content,
-            # but the alignment algorithm should have handled this with NEW/DELETED
-            return ComparisonResult.MAJOR_CHANGES
+            return ComparisonResultType.DIFFERENT

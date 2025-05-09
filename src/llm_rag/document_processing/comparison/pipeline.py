@@ -1,42 +1,26 @@
 """Module for orchestrating document comparison workflow."""
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
-from llm_rag.document_processing.comparison.alignment import AlignmentConfig, SectionAligner
-from llm_rag.document_processing.comparison.comparison_engine import (
-    ComparisonConfig,
-    EmbeddingComparisonEngine,
-    SectionComparison,
-)
-from llm_rag.document_processing.comparison.diff_formatter import DiffFormatter, FormatterConfig
-from llm_rag.document_processing.comparison.document_parser import DocumentFormat, DocumentParser, ParserConfig, Section
 from llm_rag.utils.errors import DocumentProcessingError
 from llm_rag.utils.logging import get_logger
 
+# Import component classes
+from .alignment import SectionAligner
+from .comparison_engine import EmbeddingComparisonEngine
+from .diff_formatter import DiffFormatter
+from .document_parser import DocumentParser
+
+# Import ALL data models and Configs from domain_models
+from .domain_models import (
+    ComparisonPipelineConfig,
+    DocumentFormat,
+    Section,
+    SectionComparison,
+)
+
 logger = get_logger(__name__)
-
-
-@dataclass
-class ComparisonPipelineConfig:
-    """Configuration for the document comparison pipeline.
-
-    Attributes:
-        parser_config: Configuration for document parsing.
-        alignment_config: Configuration for section alignment.
-        comparison_config: Configuration for section comparison.
-        formatter_config: Configuration for diff formatting.
-        cache_intermediate_results: Whether to cache results between
-            pipeline stages.
-
-    """
-
-    parser_config: Optional[ParserConfig] = None
-    alignment_config: Optional[AlignmentConfig] = None
-    comparison_config: Optional[ComparisonConfig] = None
-    formatter_config: Optional[FormatterConfig] = None
-    cache_intermediate_results: bool = True
 
 
 class ComparisonPipeline:
@@ -55,9 +39,11 @@ class ComparisonPipeline:
 
         """
         self.config = config or ComparisonPipelineConfig()
-        logger.info('Initialized ComparisonPipeline')
+        logger.info(
+            f'Initialized ComparisonPipeline with cache_intermediate_results={self.config.cache_intermediate_results}'
+        )
 
-        # Initialize components
+        # Initialize components using their respective configs from the pipeline config
         self.parser = DocumentParser(self.config.parser_config)
         self.aligner = SectionAligner(self.config.alignment_config)
         self.comparison_engine = EmbeddingComparisonEngine(self.config.comparison_config)

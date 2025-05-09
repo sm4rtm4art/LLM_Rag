@@ -1,85 +1,20 @@
 """Module for aligning sections between two documents for comparison."""
 
-from dataclasses import dataclass
-from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from llm_rag.document_processing.comparison.document_parser import Section
 from llm_rag.utils.errors import DocumentProcessingError
 from llm_rag.utils.logging import get_logger
+
+from .component_protocols import IAligner
+from .domain_models import AlignmentConfig, AlignmentPair, AlignmentStrategy, Section, SectionType
 
 logger = get_logger(__name__)
 
 
-class AlignmentMethod(Enum):
-    """Methods for aligning document sections."""
-
-    HEADING_MATCH = 'heading_match'
-    SEQUENCE = 'sequence'
-    CONTENT_SIMILARITY = 'content_similarity'
-    HYBRID = 'hybrid'
-
-
-@dataclass
-class AlignmentPair:
-    """Represents a pair of aligned sections from two documents.
-
-    This class holds references to corresponding sections between documents,
-    along with metadata about the alignment.
-    """
-
-    source_section: Optional[Section]
-    target_section: Optional[Section]
-    similarity_score: float = 0.0
-    method: AlignmentMethod = AlignmentMethod.HEADING_MATCH
-
-    @property
-    def is_source_only(self) -> bool:
-        """Check if this is a source-only alignment (deletion)."""
-        return self.source_section is not None and self.target_section is None
-
-    @property
-    def is_target_only(self) -> bool:
-        """Check if this is a target-only alignment (addition)."""
-        return self.source_section is None and self.target_section is not None
-
-    @property
-    def is_aligned(self) -> bool:
-        """Check if this is a valid alignment between two sections."""
-        return self.source_section is not None and self.target_section is not None
-
-
-@dataclass
-class AlignmentConfig:
-    """Configuration for section alignment.
-
-    Attributes:
-        method: The alignment method to use.
-        similarity_threshold: Threshold for considering sections similar.
-        use_sequence_information: Whether to consider section order.
-        heading_weight: Weight for heading-based matches (higher values favor headings).
-        content_weight: Weight for content-based matches.
-        max_gap_penalty: Maximum penalty for sequence gaps.
-
-    """
-
-    method: AlignmentMethod = AlignmentMethod.HYBRID
-    similarity_threshold: float = 0.7
-    use_sequence_information: bool = True
-    heading_weight: float = 2.0
-    content_weight: float = 1.0
-    max_gap_penalty: int = 3
-
-
-class SectionAligner:
-    """Aligns corresponding sections between two documents.
-
-    This class implements several strategies for matching sections between
-    documents, including heading matching, sequence alignment, and content
-    similarity.
-    """
+class SectionAligner(IAligner):
+    """Aligns sections between two documents based on various strategies."""
 
     def __init__(self, config: Optional[AlignmentConfig] = None):
         """Initialize the section aligner.
@@ -89,7 +24,7 @@ class SectionAligner:
 
         """
         self.config = config or AlignmentConfig()
-        logger.info(f'Initialized SectionAligner with method: {self.config.method.value}')
+        logger.info(f'Initialized SectionAligner with strategy: {self.config.strategy.value}')
 
     def align_sections(self, source_sections: List[Section], target_sections: List[Section]) -> List[AlignmentPair]:
         """Align corresponding sections between two documents.
@@ -109,16 +44,16 @@ class SectionAligner:
             logger.debug(f'Aligning {len(source_sections)} source sections with {len(target_sections)} target sections')
 
             # Choose alignment method based on configuration
-            if self.config.method == AlignmentMethod.HEADING_MATCH:
+            if self.config.strategy == AlignmentStrategy.HEADING_MATCH:
                 return self._align_by_headings(source_sections, target_sections)
-            elif self.config.method == AlignmentMethod.SEQUENCE:
+            elif self.config.strategy == AlignmentStrategy.SEQUENCE_ALIGNMENT:
                 return self._align_by_sequence(source_sections, target_sections)
-            elif self.config.method == AlignmentMethod.CONTENT_SIMILARITY:
+            elif self.config.strategy == AlignmentStrategy.CONTENT_SIMILARITY:
                 return self._align_by_content_similarity(source_sections, target_sections)
-            elif self.config.method == AlignmentMethod.HYBRID:
+            elif self.config.strategy == AlignmentStrategy.HYBRID:
                 return self._align_hybrid(source_sections, target_sections)
             else:
-                raise ValueError(f'Unsupported alignment method: {self.config.method}')
+                raise ValueError(f'Unsupported alignment strategy: {self.config.strategy}')
 
         except Exception as e:
             error_msg = f'Error aligning document sections: {str(e)}'
@@ -145,10 +80,10 @@ class SectionAligner:
 
         # Extract headings and create lookup tables
         source_headings = {
-            i: section for i, section in enumerate(source_sections) if section.section_type.value == 'heading'
+            i: section for i, section in enumerate(source_sections) if section.section_type == SectionType.HEADING
         }
         target_headings = {
-            i: section for i, section in enumerate(target_sections) if section.section_type.value == 'heading'
+            i: section for i, section in enumerate(target_sections) if section.section_type == SectionType.HEADING
         }
 
         # Match headings (exact matches first)
@@ -165,7 +100,7 @@ class SectionAligner:
                             source_section=source_heading,
                             target_section=target_heading,
                             similarity_score=1.0,
-                            method=AlignmentMethod.HEADING_MATCH,
+                            method=AlignmentStrategy.HEADING_MATCH,
                         )
                     )
                     break
@@ -193,7 +128,7 @@ class SectionAligner:
                         source_section=section,
                         target_section=None,
                         similarity_score=0.0,
-                        method=AlignmentMethod.HEADING_MATCH,
+                        method=AlignmentStrategy.HEADING_MATCH,
                     )
                 )
 
@@ -206,7 +141,7 @@ class SectionAligner:
                         source_section=None,
                         target_section=section,
                         similarity_score=0.0,
-                        method=AlignmentMethod.HEADING_MATCH,
+                        method=AlignmentStrategy.HEADING_MATCH,
                     )
                 )
 
@@ -227,7 +162,7 @@ class SectionAligner:
         last_heading_idx = None
 
         for i, section in enumerate(sections):
-            if section.section_type.value == 'heading':
+            if section.section_type == SectionType.HEADING:
                 last_heading_idx = i
                 heading_to_sections[i] = []
             elif last_heading_idx is not None:
@@ -268,7 +203,7 @@ class SectionAligner:
                         source_section=source_section,
                         target_section=target_section,
                         similarity_score=similarity,
-                        method=AlignmentMethod.SEQUENCE,
+                        method=AlignmentStrategy.SEQUENCE_ALIGNMENT,
                     )
                 )
             elif i < len(source_idx):
@@ -278,7 +213,7 @@ class SectionAligner:
                         source_section=source_sections[source_idx[i]],
                         target_section=None,
                         similarity_score=0.0,
-                        method=AlignmentMethod.SEQUENCE,
+                        method=AlignmentStrategy.SEQUENCE_ALIGNMENT,
                     )
                 )
             else:
@@ -288,7 +223,7 @@ class SectionAligner:
                         source_section=None,
                         target_section=target_sections[target_idx[i]],
                         similarity_score=0.0,
-                        method=AlignmentMethod.SEQUENCE,
+                        method=AlignmentStrategy.SEQUENCE_ALIGNMENT,
                     )
                 )
 
@@ -331,7 +266,7 @@ class SectionAligner:
                         source_section=source_sections[i],
                         target_section=target_sections[j],
                         similarity_score=similarity_matrix[i, j],
-                        method=AlignmentMethod.SEQUENCE,
+                        method=AlignmentStrategy.SEQUENCE_ALIGNMENT,
                     )
                 )
             elif i is not None:
@@ -341,7 +276,7 @@ class SectionAligner:
                         source_section=source_sections[i],
                         target_section=None,
                         similarity_score=0.0,
-                        method=AlignmentMethod.SEQUENCE,
+                        method=AlignmentStrategy.SEQUENCE_ALIGNMENT,
                     )
                 )
             elif j is not None:
@@ -351,7 +286,7 @@ class SectionAligner:
                         source_section=None,
                         target_section=target_sections[j],
                         similarity_score=0.0,
-                        method=AlignmentMethod.SEQUENCE,
+                        method=AlignmentStrategy.SEQUENCE_ALIGNMENT,
                     )
                 )
 
@@ -473,7 +408,7 @@ class SectionAligner:
                         source_section=source_sections[source_idx],
                         target_section=target_sections[target_idx],
                         similarity_score=score,
-                        method=AlignmentMethod.CONTENT_SIMILARITY,
+                        method=AlignmentStrategy.CONTENT_SIMILARITY,
                     )
                 )
 
@@ -485,7 +420,7 @@ class SectionAligner:
                         source_section=section,
                         target_section=None,
                         similarity_score=0.0,
-                        method=AlignmentMethod.CONTENT_SIMILARITY,
+                        method=AlignmentStrategy.CONTENT_SIMILARITY,
                     )
                 )
 
@@ -497,7 +432,7 @@ class SectionAligner:
                         source_section=None,
                         target_section=section,
                         similarity_score=0.0,
-                        method=AlignmentMethod.CONTENT_SIMILARITY,
+                        method=AlignmentStrategy.CONTENT_SIMILARITY,
                     )
                 )
 
@@ -522,8 +457,8 @@ class SectionAligner:
 
         # First, align headings
         heading_pairs = self._align_by_headings(
-            [s for s in source_sections if s.section_type.value == 'heading'],
-            [s for s in target_sections if s.section_type.value == 'heading'],
+            [s for s in source_sections if s.section_type == SectionType.HEADING],
+            [s for s in target_sections if s.section_type == SectionType.HEADING],
         )
 
         # Use heading alignment to segment the documents
@@ -545,7 +480,7 @@ class SectionAligner:
 
             # Ensure all pairs use the HYBRID method
             for pair in segment_pairs:
-                pair.method = AlignmentMethod.HYBRID
+                pair.method = AlignmentStrategy.HYBRID
 
             alignment_pairs.extend(segment_pairs)
 
@@ -562,7 +497,7 @@ class SectionAligner:
                             source_section=section,
                             target_section=None,
                             similarity_score=0.0,
-                            method=AlignmentMethod.HYBRID,
+                            method=AlignmentStrategy.HYBRID,
                         )
                     )
 
@@ -575,7 +510,7 @@ class SectionAligner:
                             source_section=None,
                             target_section=section,
                             similarity_score=0.0,
-                            method=AlignmentMethod.HYBRID,
+                            method=AlignmentStrategy.HYBRID,
                         )
                     )
 
@@ -596,7 +531,7 @@ class SectionAligner:
         current_segment = []
 
         for section in sections:
-            if section.section_type.value == 'heading' and current_segment:
+            if section.section_type == SectionType.HEADING and current_segment:
                 segments.append(current_segment)
                 current_segment = [section]
             else:
@@ -630,12 +565,12 @@ class SectionAligner:
         # Create lookup dictionaries for heading sections
         source_heading_to_segment = {}
         for i, segment in enumerate(source_segments):
-            if segment and segment[0].section_type.value == 'heading':
+            if segment and segment[0].section_type == SectionType.HEADING:
                 source_heading_to_segment[segment[0]] = i
 
         target_heading_to_segment = {}
         for j, segment in enumerate(target_segments):
-            if segment and segment[0].section_type.value == 'heading':
+            if segment and segment[0].section_type == SectionType.HEADING:
                 target_heading_to_segment[segment[0]] = j
 
         # Match segments based on heading alignment
