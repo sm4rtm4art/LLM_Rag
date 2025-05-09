@@ -49,6 +49,7 @@ dependencies = [
     "idna>=3.7",         # Fix security vulnerabilities
     "certifi>=2024.7.4", # Fix security vulnerabilities
     "configobj>=5.0.9",  # Fix security vulnerabilities
+    "httpx>=0.24.0",  # Required for OllamaClient and FastAPI TestClient
 ]
 
 [project.optional-dependencies]
@@ -60,7 +61,6 @@ dev = [
     "mypy>=1.15.0",
     "nbqa>=1.9.1",
     "jupyter>=1.1.1",
-    "httpx>=0.24.0",  # Required for FastAPI TestClient
     "pre-commit>=4.1.0",  # Added for pre-commit hooks
     "pandas-stubs>=2.2.3",  # Added for mypy pandas type checking
     "promptfoo>=0.1.0",  # For LLM prompt testing and evaluation

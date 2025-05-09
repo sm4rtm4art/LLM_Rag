@@ -22,22 +22,50 @@ from .llm_comparer import LLMComparer
 
 logger = get_logger(__name__)
 
+MIN_LLM_CONTENT_LENGTH = 15  # Minimum character length for content to be sent to LLM
+
 
 class EmbeddingComparisonEngine(IComparisonEngine):
-    """Engine for comparing document sections using embeddings.
+    """Engine for comparing document sections using embeddings and optional LLM analysis.
 
-    This class calculates embeddings for sections and uses them to
-    determine similarity and classify changes. It can optionally use an
-    LLMComparer for more detailed analysis of differing sections.
+    This class forms the core of the document section comparison process.
+    It first calculates semantic similarity between aligned pairs of sections
+    using embeddings. Based on this similarity, it classifies the relationship
+    (e.g., SIMILAR, MODIFIED, DIFFERENT).
+
+    Optionally, if an `LLMComparer` instance is provided, this engine can
+    trigger a more detailed analysis for sections classified as MODIFIED or
+    DIFFERENT. The `LLMComparer` then provides a nuanced categorization
+    (e.g., LEGAL_EFFECT_CHANGE, SEMANTIC_REWRITE) and an explanation, which is
+    stored alongside the embedding-based comparison result.
+
+    The engine handles the orchestration of these steps, including skipping
+    LLM analysis for very short content sections to optimize resource usage.
+
+    Attributes:
+        config: A `ComparisonConfig` object containing thresholds and settings
+            for embedding-based similarity classification.
+        llm_comparer: An optional `LLMComparer` instance. If provided, it's
+            used for detailed LLM-based analysis of differing sections.
+        _embedding_model: Internal placeholder for the embedding model.
+        _embedding_cache: Internal cache for computed embeddings to avoid
+            redundant calculations.
+
     """
 
     def __init__(self, config: Optional[ComparisonConfig] = None, llm_comparer: Optional[LLMComparer] = None):
-        """Initialize the comparison engine.
+        """Initialize the EmbeddingComparisonEngine.
+
+        Sets up the configuration for similarity thresholds and embedding model
+        details. It also accepts an optional `LLMComparer` for performing
+        deeper analysis on sections that differ significantly based on embeddings.
 
         Args:
-            config: Configuration for comparison thresholds and behavior.
-                If None, default configuration will be used.
-            llm_comparer: Optional LLMComparer instance for detailed analysis.
+            config: Configuration for comparison thresholds, embedding model name,
+                and other behavior. If None, a default `ComparisonConfig` is used.
+            llm_comparer: Optional `LLMComparer` instance. If provided, enables
+                detailed LLM-based analysis for sections flagged by the initial
+                embedding comparison as MODIFIED or DIFFERENT.
 
         """
         self.config = config or ComparisonConfig()
@@ -54,16 +82,36 @@ class EmbeddingComparisonEngine(IComparisonEngine):
         self._embedding_cache = {}
 
     async def compare_sections(self, aligned_pairs: List[AlignmentPair]) -> List[SectionComparison]:
-        """Compare aligned section pairs and classify the changes.
+        """Compare aligned section pairs, classify changes, and optionally use LLM.
+
+        This is the main method for processing a list of aligned section pairs.
+        For each pair, it determines if it's an addition, deletion, or an
+        aligned pair requiring similarity calculation. For aligned pairs, it
+        calculates embedding similarity and classifies the result (SIMILAR,
+        MODIFIED, DIFFERENT).
+
+        If an `LLMComparer` is configured and a pair is classified as MODIFIED or
+        DIFFERENT by embeddings, this method schedules an asynchronous LLM
+        analysis via `_run_llm_analysis_for_pair`. The results of these LLM
+        analyses (an `LLMAnalysisResult` object) are then stored within the
+        respective `SectionComparison` objects.
+
+        The primary `result_type` of a `SectionComparison` is based on embedding
+        similarity. The `LLMAnalysisResult`, if present, provides supplementary,
+        more granular details about the nature of the difference.
 
         Args:
-            aligned_pairs: List of aligned section pairs to compare.
+            aligned_pairs: A list of `AlignmentPair` objects representing
+                aligned sections from two documents.
 
         Returns:
-            List of comparison results with classifications.
+            A list of `SectionComparison` objects, each detailing the
+            comparison result for a pair, potentially enriched with
+            `LLMAnalysisResult`.
 
         Raises:
-            DocumentProcessingError: If comparison fails.
+            DocumentProcessingError: If any unrecoverable error occurs during
+                the comparison process.
 
         """
         try:
@@ -120,8 +168,11 @@ class EmbeddingComparisonEngine(IComparisonEngine):
                 for index, llm_analysis in llm_results_with_indices:
                     if index < len(comparisons) and llm_analysis:
                         comparisons[index].llm_analysis_result = llm_analysis
-                        # Optionally, refine comparisons[index].result_type based on llm_analysis.comparison_category
-                        # For now, we just store the LLM result.
+                        # The primary result_type (SIMILAR, MODIFIED, DIFFERENT) is determined
+                        # by embedding similarity. LLMAnalysisResult provides supplementary
+                        # detailed categorization for sections already flagged for LLM review.
+                        # Future enhancements might explore direct mapping or refinement of
+                        # result_type based on LLM categories if deemed robust.
                         logger.debug(f'Stored LLM analysis for pair index {index}: {llm_analysis.comparison_category}')
 
             logger.debug(f'Completed {len(comparisons)} section comparisons')
@@ -135,9 +186,54 @@ class EmbeddingComparisonEngine(IComparisonEngine):
     async def _run_llm_analysis_for_pair(
         self, text_a: str, text_b: str, original_index: int
     ) -> tuple[int, Optional[LLMAnalysisResult]]:
-        """Run LLM analysis for a text pair and return with original index."""
+        """Run LLM analysis for a text pair, skipping if content is too short.
+
+        This helper method is called by `compare_sections` to perform detailed
+        analysis on a pair of text sections using the configured `LLMComparer`.
+
+        It first checks if either text section is shorter than
+        `MIN_LLM_CONTENT_LENGTH` (after stripping whitespace). If so, it
+        bypasses the LLM call and returns an `LLMAnalysisResult` with the
+        category `NO_MEANINGFUL_CONTENT`, providing an appropriate explanation.
+
+        If the content is sufficient, it delegates the analysis to
+        `self.llm_comparer.analyze_sections`. Any exceptions during LLM
+        analysis are caught, logged, and result in an `LLMAnalysisResult` with
+        category `llm_error`.
+
+        Args:
+            text_a: The content of the first text section.
+            text_b: The content of the second text section.
+            original_index: The original index of this pair in the list being
+                processed by `compare_sections`. This is returned to allow
+                asynchronous results to be correctly mapped back.
+
+        Returns:
+            A tuple containing the `original_index` and an `LLMAnalysisResult`
+            object, or None if no `llm_comparer` is configured. The
+            `LLMAnalysisResult` will reflect the LLM's findings, a skipped
+            analysis due to short content, or an error during the LLM call.
+
+        """
         if not self.llm_comparer:
             return original_index, None
+
+        # Check for very short content
+        text_a_len = len(text_a.strip())
+        text_b_len = len(text_b.strip())
+        if text_a_len < MIN_LLM_CONTENT_LENGTH or text_b_len < MIN_LLM_CONTENT_LENGTH:
+            logger.debug(
+                f'Skipping LLM analysis for pair index {original_index} due to short content. '
+                f'Len A: {text_a_len}, Len B: {text_b_len}'
+            )
+            return original_index, LLMAnalysisResult(
+                comparison_category='NO_MEANINGFUL_CONTENT',
+                explanation='One or both sections were too short for LLM analysis.',
+                confidence=1.0,  # Confident in this assessment
+                raw_llm_response=None,
+                metadata={'reason': 'content_too_short'},
+            )
+
         try:
             llm_result = await self.llm_comparer.analyze_sections(text_a, text_b)
             return original_index, llm_result

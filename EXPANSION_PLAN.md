@@ -228,7 +228,7 @@ This section outlines the development of a feature to compare two documents, ide
 
 - **Goal**: Enhance comparison accuracy by using an LLM for nuanced difference analysis, building upon the embedding-based similarity from Phase 6.
 - **Prerequisite**: Phase 6 MVP working.
-- **Status**: Prototyping Initiated.
+- **Status**: Prototyping Enhanced.
 - **Strategy**: Initial development may leverage smaller, faster generative LLMs for rapid prototyping of prompt engineering and LLM response handling, with the option to scale to larger models for production quality.
 - **Tasks**:
 
@@ -250,21 +250,21 @@ This section outlines the development of a feature to compare two documents, ide
     - [ ] Ensure model instructions account for legal effect, roles (e.g., creditor/debtor), and obligations.
     - [ ] Incorporate fallback categories such as `UNCERTAIN` and `NO_MEANINGFUL_CONTENT` for robustness against noise or OCR errors.
 
-  - [ ] **Refine LLM Comparison Logic & Output (Next Steps)**:
-    - [ ] **`diff_formatter.py` (Enhanced)**:
-      - Incorporate LLM analysis results (`LLMAnalysisResult.comparison_category`, `explanation`) into annotations (e.g., `[MODIFIED MEANING (LLM)]`, `[REWRITTEN - SIMILAR MEANING (LLM)]`).
-      - Generate more granular diffs if useful (e.g., using standard diff library output within annotations).
-      - Explore adding HTML output for side-by-side views with color highlighting.
-      - Add metadata to indicate confidence level in each detected difference.
-    - [ ] **LLM Trigger Refinement**: Improve conditions for when to call `LLMComparer` (e.g., handle empty sections, consider lexical overlap vs. embedding similarity).
-    - [ ] **Result Aggregation**: Determine how `LLMAnalysisResult.comparison_category` refines the final `SectionComparison.result_type`.
+  - [x] **Refine LLM Comparison Logic & Output (Next Steps)**:
+    - [x] **`diff_formatter.py` (Enhanced)**:
+      - [/] Incorporate LLM analysis results (`LLMAnalysisResult.comparison_category`, `explanation`) into annotations (e.g., `[MODIFIED MEANING (LLM)]`, `[REWRITTEN - SIMILAR MEANING (LLM)]`). (Done for Markdown, HTML, Text)
+      - [ ] Generate more granular diffs if useful (e.g., using standard diff library output within annotations).
+      - [ ] Explore adding HTML output for side-by-side views with color highlighting.
+      - [ ] Add metadata to indicate confidence level in each detected difference.
+    - [x] **LLM Trigger Refinement**: Improve conditions for when to call `LLMComparer` (e.g., handle empty sections, consider lexical overlap vs. embedding similarity). (Implemented short-content skip)
+    - [x] **Result Aggregation**: Determine how `LLMAnalysisResult.comparison_category` refines the final `SectionComparison.result_type`. (Decision: LLM is supplementary for now, result_type unchanged by LLM category; documented).
     - [ ] **Prompt Iteration**: Refine `LLMComparer` prompts based on testing for accuracy and edge case handling.
     - [ ] **Hallucination Mitigation for Comparison (Initial)**:
       - [ ] Apply constrained prompting techniques specific to comparison (Current prompt asks for JSON, specific categories).
       - [ ] Calculate and store confidence scores for LLM-identified differences (Pydantic model has field, LLM prompt mentions it as optional).
       - [ ] Use thresholds on confidence/change metrics to flag potentially unreliable comparisons (Future step after confidence is reliably extracted).
   - [ ] **Handling Noise/Layout**: Develop strategies within the comparison logic or LLM prompts to be robust to minor residual OCR noise. Structured text output helps abstract layout. (OCR LLM cleaning enabled in E2E script).
-  - [ ] **Evaluation**: Develop metrics for comparison quality (e.g., accuracy in classifying change type, human evaluation of diff readability), especially for LLM-enhanced results.
+  - [/] **Evaluation**: Develop metrics for comparison quality (e.g., accuracy in classifying change type, human evaluation of diff readability), especially for LLM-enhanced results. (Added essential unit tests for LLM logic).
   - [ ] **Refined Alignment**: Improve section alignment logic using more advanced sequence alignment algorithms if needed, possibly guided by embedding similarity.
   - [ ] **Future Enhancement (Post-Phase 7):**
 
@@ -275,7 +275,7 @@ This section outlines the development of a feature to compare two documents, ide
     - [ ] Investigate ColBERT (potentially as part of a JuristenRAG-style approach) as an alignment-sensitive reranker or for fine-grained similarity assessment in long legal contexts (contract clauses, definitions).
     - [ ] Consider RAG-based verification using a legal knowledge base (e.g., German BGB/contract law database via SPARQL or RDF, potentially explored within a JuristenRAG framework).
 
-- **Outcome**: **Initial prototype of LLM-enhanced comparison complete.** Detailed, semantically aware comparison highlighting not just _that_ sections differ, but _how_ they differ (meaning, rewrite, structure), presented in a clearer format. System can now make calls to an LLM (via Ollama) for specified section pairs and store structured results. Next steps focus on surfacing these results and refining the logic. **Further refinement will target legal document specifics.**
+- **Outcome**: **Initial prototype of LLM-enhanced comparison complete and refined.** Detailed, semantically aware comparison highlighting not just _that_ sections differ, but _how_ they differ (meaning, rewrite, structure), presented in a clearer format. System can now make calls to an LLM (via Ollama) for specified section pairs, handles short content, and stores structured results. LLM details are displayed in reports. Core code quality improved with docstrings, formatting, and linting. Essential unit tests for LLM logic added. **Further refinement will target legal document specifics, prompt engineering, and more comprehensive testing.**
 
 ## Enhanced Evaluation Metrics & Framework
 
@@ -430,8 +430,8 @@ This section outlines the development of a feature to compare two documents, ide
       - Align sections (heading matching, sequence).
       - Generate embeddings for aligned pairs.
       - Use cosine similarity with thresholds (e.g., >0.95 = Similar, <0.7 = Different, intermediate = Check Needed).
-    - **Enhancement (Phase 7) - PROTOTYPING INITIATED**:
-      - Feed pairs flagged by embeddings (e.g., `DIFFERENT`, `MODIFIED`) to an LLM (`LLMComparer` with `OllamaClient`).
+    - **Enhancement (Phase 7) - PROTOTYPING INITIATED & REFINED**:
+      - Feed pairs flagged by embeddings (e.g., `DIFFERENT`, `MODIFIED`) to an LLM (`LLMComparer` with `OllamaClient`). (Short content skip added)
       - Prompt the LLM to classify the difference and explain (`DEFAULT_PROMPT_TEMPLATE` in `LLMComparer`, `LLMAnalysisResult` model defined).
     - **Future Enhancement (Post-Phase 7):**
       - _If needed:_ Use ColBERT for token-level similarity assessment on ambiguous segments.
@@ -449,22 +449,22 @@ This section outlines the development of a feature to compare two documents, ide
 4.  **Evaluating Semantic Similarity & Detecting Rewrites**:
 
     - **Embeddings (Phase 6) - COMPLETED**: Cosine similarity provides a good first pass for overall semantic similarity.
-    - **LLMs (Phase 7) - PROTOTYPING INITIATED**: Provide explicit prompts:
+    - **LLMs (Phase 7) - PROTOTYPING INITIATED & REFINED**: Provide explicit prompts:
       - Current `DEFAULT_PROMPT_TEMPLATE` in `LLMComparer` aims to achieve this.
     - **Future Enhancement (Post-Phase 7):**
       - _If needed:_ ColBERT token-level interactions provide fine-grained comparison, potentially effective for detecting rewrites and semantic-preserving edits.
-    - **Hybrid - IMPLEMENTED**: Use embeddings for speed, trigger LLM analysis for ambiguous/different cases.
+    - **Hybrid - IMPLEMENTED & REFINED**: Use embeddings for speed, trigger LLM analysis for ambiguous/different cases (with short content skip).
 
 5.  **Presenting the Comparison**:
     - **MVP (Markdown - Phase 6) - COMPLETED**:
       - Use simple block annotations: `[SIMILAR]`, `[DIFFERENT]`, `[NEW]`, `[DELETED]`.
       - Show content for `DIFFERENT` sections using `---` (Doc A) and `+++` (Doc B).
-    - **Enhanced (Markdown/HTML - Phase 7) - PENDING (Next Step)**:
-      - **TODO**: More descriptive Markdown annotations based on LLM analysis: `[MODIFIED MEANING (LLM)]`, `[REWRITTEN - SIMILAR MEANING (LLM)]`, etc.
-      - **TODO**: Include LLM explanation in the diff output.
-      - Include standard text diffs (e.g., from `difflib`) within sections marked as different.
+    - **Enhanced (Markdown/HTML/Text - Phase 7) - IN PROGRESS**:
+      - [x] More descriptive Markdown annotations based on LLM analysis: `[MODIFIED MEANING (LLM)]`, `[REWRITTEN - SIMILAR MEANING (LLM)]`, etc. (Implemented in `DiffFormatter` for MD, HTML, Text)
+      - [x] Include LLM explanation in the diff output. (Implemented in `DiffFormatter`)
+      - [ ] Include standard text diffs (e.g., from `difflib`) within sections marked as different. (Already present for detailed Markdown)
       - _Future:_ Integrate ColBERT token-level highlighting if implemented.
-      - Generate HTML for interactive side-by-side views with color highlighting for different change types.
+      - [ ] Generate HTML for interactive side-by-side views with color highlighting for different change types. (Basic HTML structure exists; enhancements for specific LLM categories can be added)
 
 ## Proposed Architecture for Document Processing System
 

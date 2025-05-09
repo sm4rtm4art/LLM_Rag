@@ -15,7 +15,18 @@ logger = get_logger(__name__)
 
 
 class DiffFormatter(IDiffFormatter):
-    """Formats comparison results into human-readable diffs."""
+    """Formats comparison results into human-readable diffs.
+
+    This class takes a list of `SectionComparison` objects and generates a
+    human-readable report in various formats (Markdown, HTML, Text).
+    It includes a summary of changes and detailed views of each section
+    comparison.
+
+    If `LLMAnalysisResult` is present in a `SectionComparison`, this
+    formatter will include the LLM's categorized analysis (e.g.,
+    LEGAL_EFFECT_CHANGE), its explanation, and confidence score in the
+    output, providing richer insights into the nature of detected differences.
+    """
 
     def __init__(self, config: Optional[FormatterConfig] = None):
         """Initialize the diff formatter.
@@ -33,6 +44,12 @@ class DiffFormatter(IDiffFormatter):
 
     def format_comparisons(self, comparisons: List[SectionComparison], title: Optional[str] = None) -> str:
         """Format list of section comparisons into a human-readable diff.
+
+        Depending on the configured output format, this method delegates to
+        specific private methods (_format_markdown, _format_html, _format_text).
+        It includes handling for an optional title and overall error management.
+        The formatted output will include LLM analysis details if present in
+        the `SectionComparison` objects.
 
         Args:
             comparisons: List of section comparisons to format.
@@ -64,6 +81,11 @@ class DiffFormatter(IDiffFormatter):
 
     def _format_markdown(self, comparisons: List[SectionComparison], title: Optional[str] = None) -> str:
         """Format comparisons as Markdown.
+
+        Generates a Markdown report detailing each section comparison. If a
+        section has undergone LLM analysis (i.e.,
+        `comparison.llm_analysis_result` is populated), the LLM's category,
+        explanation, and confidence are included in the output for that section.
 
         Args:
             comparisons: List of section comparisons to format.
@@ -109,9 +131,25 @@ class DiffFormatter(IDiffFormatter):
             lines.append('')
 
             # Add similarity score if configured
-            if self.config.include_similarity_scores and comparison.similarity_score > 0:
+            if (
+                self.config.include_similarity_scores
+                and comparison.similarity_score is not None
+                and comparison.similarity_score > 0
+            ):
                 lines.append(f'*Similarity: {comparison.similarity_score:.2f}*')
                 lines.append('')
+
+            # Add LLM analysis result if available
+            if comparison.llm_analysis_result:
+                llm_res = comparison.llm_analysis_result
+                lines.append(f'**LLM Analysis:** {llm_res.comparison_category}')
+                if llm_res.explanation:
+                    # Ensure explanation is not overly long on one line for Markdown
+                    explanation_lines = [f'  _Explanation: {line}_' for line in llm_res.explanation.splitlines()]
+                    lines.extend(explanation_lines)
+                if llm_res.confidence is not None:
+                    lines.append(f'  _Confidence: {llm_res.confidence:.2f}_')
+                lines.append('')  # Add a blank line after LLM details for better spacing
 
             # Format based on result type
             if comparison.result_type == ComparisonResultType.NEW:
@@ -169,6 +207,10 @@ class DiffFormatter(IDiffFormatter):
 
     def _format_html(self, comparisons: List[SectionComparison], title: Optional[str] = None) -> str:
         """Format comparisons as HTML.
+
+        Generates an HTML report. Similar to the Markdown formatter, if LLM
+        analysis results are available for a section comparison, these details
+        (category, explanation, confidence) are included in the HTML output.
 
         Args:
             comparisons: List of section comparisons to format.
@@ -239,8 +281,21 @@ class DiffFormatter(IDiffFormatter):
             html.append(f"<div class='header'>Section {i}: {comparison.result_type.value.upper()}</div>")
 
             # Add similarity score if configured
-            if self.config.include_similarity_scores and comparison.similarity_score > 0:
+            if (
+                self.config.include_similarity_scores
+                and comparison.similarity_score is not None
+                and comparison.similarity_score > 0
+            ):
                 html.append(f"<div class='similarity'>Similarity: {comparison.similarity_score:.2f}</div>")
+
+            # Add LLM analysis result if available
+            if comparison.llm_analysis_result:
+                llm_res = comparison.llm_analysis_result
+                html.append(f"<div class='similarity'>LLM Analysis: {llm_res.comparison_category}</div>")
+                if llm_res.explanation:
+                    html.append(f"<div class='similarity'>Explanation: {llm_res.explanation}</div>")
+                if llm_res.confidence is not None:
+                    html.append(f"<div class='similarity'>Confidence: {llm_res.confidence:.2f}</div>")
 
             # Format based on result type
             if comparison.result_type == ComparisonResultType.NEW:
@@ -293,6 +348,10 @@ class DiffFormatter(IDiffFormatter):
     def _format_text(self, comparisons: List[SectionComparison], title: Optional[str] = None) -> str:
         """Format comparisons as plain text.
 
+        Generates a plain text report. If LLM analysis results are present for
+        a section comparison, its category, explanation, and confidence are
+        included in the text output.
+
         Args:
             comparisons: List of section comparisons to format.
             title: Optional title for the diff report.
@@ -344,6 +403,16 @@ class DiffFormatter(IDiffFormatter):
             # Add similarity score if configured
             if self.config.include_similarity_scores and comparison.similarity_score > 0:
                 lines.append(f'Similarity: {comparison.similarity_score:.2f}')
+                lines.append('')
+
+            # Add LLM analysis result if available
+            if comparison.llm_analysis_result:
+                llm_res = comparison.llm_analysis_result
+                lines.append(f'LLM Analysis: {llm_res.comparison_category}')
+                if llm_res.explanation:
+                    lines.append(f'Explanation: {llm_res.explanation}')
+                if llm_res.confidence is not None:
+                    lines.append(f'Confidence: {llm_res.confidence:.2f}')
                 lines.append('')
 
             # Format based on result type

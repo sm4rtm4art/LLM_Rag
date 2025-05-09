@@ -191,3 +191,65 @@ async def test_comparison_with_error_ce(mock_sections_ce):
                 )
             ]
         )
+
+
+# Directly access the constant from the module it's defined in for consistency
+# If it's not meant to be public, tests might need to redefine it or use a test-specific value.
+# For now, assuming it can be imported or re-defined if necessary for test setup.
+# from llm_rag.document_processing.comparison.comparison_engine import MIN_LLM_CONTENT_LENGTH
+# If the above import causes issues (e.g. circular), we can redefine it in tests:
+MIN_LLM_TEST_CONTENT_LENGTH = 15
+
+LONG_TEXT_SAMPLE = 'This is a sufficiently long text for LLM analysis, it has many words.'
+SHORT_TEXT_SAMPLE = 'Too short'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    'text_a, text_b, should_skip, expected_category',
+    [
+        (SHORT_TEXT_SAMPLE, LONG_TEXT_SAMPLE, True, 'NO_MEANINGFUL_CONTENT'),
+        (LONG_TEXT_SAMPLE, SHORT_TEXT_SAMPLE, True, 'NO_MEANINGFUL_CONTENT'),
+        (SHORT_TEXT_SAMPLE, SHORT_TEXT_SAMPLE, True, 'NO_MEANINGFUL_CONTENT'),
+        (
+            LONG_TEXT_SAMPLE,
+            LONG_TEXT_SAMPLE,
+            False,
+            'UNCERTAIN',  # Example: if LLM was called
+        ),
+    ],
+)
+async def test_run_llm_analysis_for_pair_short_content_skip(text_a, text_b, should_skip, expected_category):
+    """Test _run_llm_analysis_for_pair short content skipping logic."""
+    mock_llm_comparer = MagicMock(spec=LLMComparer)
+    # Setup the mock for analyze_sections to be an async method
+    mock_llm_comparer.analyze_sections = AsyncMock(
+        return_value=LLMAnalysisResult(
+            comparison_category='UNCERTAIN',  # Default for non-skip case
+            explanation='LLM was called',
+            confidence=0.5,
+        )
+    )
+
+    engine = EmbeddingComparisonEngine(llm_comparer=mock_llm_comparer)
+
+    # Access the normally private method for testing - this is a common practice
+    # for unit testing specific pieces of logic.
+    # Ensure MIN_LLM_CONTENT_LENGTH used in the engine is consistent with test value
+    # If engine.MIN_LLM_CONTENT_LENGTH is accessible, use that, otherwise trust the hardcoded one is synced.
+    # For this test, we rely on the value used in the implementation, assumed to be 15.
+
+    original_index = 0
+    index, result = await engine._run_llm_analysis_for_pair(text_a, text_b, original_index)
+
+    assert index == original_index
+    assert result is not None
+    assert result.comparison_category == expected_category
+
+    if should_skip:
+        assert result.explanation == ('One or both sections were too short for LLM analysis.')
+        mock_llm_comparer.analyze_sections.assert_not_called()
+    else:
+        # This part tests that if content is NOT short, the LLM comparer IS called.
+        mock_llm_comparer.analyze_sections.assert_called_once_with(text_a, text_b)
+        assert result.explanation == 'LLM was called'  # From the mock return value

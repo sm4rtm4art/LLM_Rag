@@ -44,7 +44,29 @@ NEW_LEGAL_PROMPT_TEMPLATE = (
 
 
 class LLMComparer:
-    """Compares two text sections using a generative LLM for nuanced analysis."""
+    """Compares two text sections using a generative LLM for nuanced analysis.
+
+    This class orchestrates the process of sending two text sections to a
+    configured Large Language Model (LLM) and parsing the structured JSON
+    response into an `LLMAnalysisResult` object. It is designed to be used
+    for detailed semantic and legal-specific comparison of text, particularly
+    when a simple embedding-based similarity is insufficient.
+
+    The LLM is prompted to categorize the relationship between the texts
+    (e.g., semantic rewrite, legal effect change) and provide an explanation.
+
+    Attributes:
+        llm_client: An instance of a `GenerativeLLMClient` used to interact
+            with the LLM.
+        default_llm_config: Default `LLMRequestConfig` for LLM requests,
+            specifying model name, temperature, max tokens, etc.
+        prompt_template: The string template used to format the prompt sent to
+            the LLM. It should include placeholders for `text_section_a` and
+            `text_section_b`.
+        llm_analysis_model: The Pydantic model (typically `LLMAnalysisResult`)
+            used to validate and parse the JSON response from the LLM.
+
+    """
 
     DEFAULT_PROMPT_TEMPLATE = NEW_LEGAL_PROMPT_TEMPLATE
 
@@ -58,10 +80,16 @@ class LLMComparer:
         """Initialize the LLMComparer.
 
         Args:
-            llm_client: An instance of a GenerativeLLMClient.
-            default_llm_config: Default configuration for LLM requests.
-            prompt_template: The prompt template to use for comparison.
-            llm_analysis_model: The Pydantic model to parse LLM responses into.
+            llm_client: An instance of a `GenerativeLLMClient` responsible for
+                making calls to the underlying LLM (e.g., via Ollama).
+            default_llm_config: Optional `LLMRequestConfig` to set default
+                parameters (model name, temperature, etc.) for LLM calls.
+                If None, a pre-defined default is used.
+            prompt_template: The string template for the prompt. It must contain
+                `{text_section_a}` and `{text_section_b}` placeholders.
+                Defaults to `NEW_LEGAL_PROMPT_TEMPLATE`.
+            llm_analysis_model: The Pydantic model class used to parse and validate
+                the LLM's JSON output. Defaults to `LLMAnalysisResult`.
 
         """
         self.llm_client = llm_client
@@ -83,15 +111,27 @@ class LLMComparer:
         text_section_b: str,
         llm_config_override: Optional[LLMRequestConfig] = None,
     ) -> LLMAnalysisResult:
-        """Analyzes two text sections using an LLM and parses the response.
+        """Analyzes two text sections using an LLM and parses the structured response.
+
+        This method formats a prompt using the provided text sections, sends it
+        to the configured LLM via the `llm_client`, and then attempts to parse
+        the LLM's JSON response into an `LLMAnalysisResult` object.
+
+        It handles potential errors during the LLM call, JSON decoding, and
+        Pydantic model validation, returning an `LLMAnalysisResult` with a
+        comparison category of `llm_error` and an explanation of the error
+        if issues occur.
 
         Args:
-            text_section_a: The first text section.
-            text_section_b: The second text section.
-            llm_config_override: Optional LLM config to override defaults.
+            text_section_a: The content of the first text section for comparison.
+            text_section_b: The content of the second text section for comparison.
+            llm_config_override: Optional `LLMRequestConfig` to override the
+                default configuration for this specific LLM call.
 
         Returns:
-            An LLMAnalysisResult object.
+            An `LLMAnalysisResult` object containing the LLM's structured analysis,
+            including comparison category, explanation, confidence, and raw
+            response. In case of errors, category will be `llm_error`.
 
         """
         current_config = llm_config_override or self.default_llm_config
