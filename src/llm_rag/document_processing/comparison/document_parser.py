@@ -276,43 +276,62 @@ class DocumentParser(IParser):
         import json
 
         data = json.loads(json_content)
-        sections = []
+        sections: List[Section] = []
 
-        # This is a placeholder, actual JSON parsing needs a defined structure.
-        # Assuming a simple structure for now, or adapt to a known one.
         def _extract_sections_recursive(json_node, level, parent_section=None):
             if isinstance(json_node, dict):
-                title = json_node.get('title', json_node.get('heading', 'Section'))
-                content = json_node.get('content', '')
-                children_nodes = json_node.get('children', json_node.get('sections', []))
-                section_type_str = json_node.get('type', 'paragraph').upper()
-                try:
-                    section_type = SectionType[section_type_str]
-                except KeyError:
-                    section_type = SectionType.UNKNOWN
+                # Handle top-level title specifically as a main heading if it's the root call
+                is_root_call = level == 0 and parent_section is None and json_node is data
+
+                node_title_key = 'title' if 'title' in json_node else 'heading'
+                node_title = str(json_node.get(node_title_key, 'Section'))
+                node_content = str(json_node.get('content', ''))
+
+                # Determine section type
+                section_type_str = json_node.get('type', '').upper()
+                if is_root_call and 'title' in json_node and not section_type_str:
+                    # If it's the root and has a 'title' but no explicit 'type', make it a HEADING
+                    current_section_type = SectionType.HEADING
+                elif section_type_str in SectionType.__members__:
+                    current_section_type = SectionType[section_type_str]
+                else:
+                    current_section_type = SectionType.PARAGRAPH if node_content else SectionType.UNKNOWN
+
+                # If it's a heading type and content is empty, use title as content (or keep content empty)
+                # For this parser, a HEADING Section has its text in 'title',
+                # and 'content' can be empty or for subsequent paras.
+                # The refactored markdown parser sets heading content to "".
+                display_content = node_content
+                if current_section_type == SectionType.HEADING and not node_content:
+                    pass  # Title is already set, content can remain empty for heading objects
 
                 current_section = Section(
-                    title=str(title),
-                    content=str(content),
+                    title=node_title,
+                    content=display_content,
                     level=level,
-                    section_type=section_type,
+                    section_type=current_section_type,
                     parent=parent_section,
                 )
                 sections.append(current_section)
                 if parent_section:
                     parent_section.children.append(current_section)
 
-                for child_node in children_nodes:
-                    _extract_sections_recursive(child_node, level + 1, current_section)
+                children_nodes = json_node.get('children', json_node.get('sections', []))
+                if isinstance(children_nodes, list):
+                    for child_node in children_nodes:
+                        _extract_sections_recursive(child_node, level + 1, current_section)
+                elif isinstance(children_nodes, dict):  # Handle if children/sections is a single dict node
+                    _extract_sections_recursive(children_nodes, level + 1, current_section)
 
             elif isinstance(json_node, list):
-                for item in json_node:
-                    _extract_sections_recursive(
-                        item, level, parent_section
-                    )  # Items in list are at same level as parent or need specific handling
+                # If the root itself is a list of sections
+                for _, item in enumerate(json_node):
+                    # Pass parent_section to maintain hierarchy if list items are children of a conceptual parent
+                    _extract_sections_recursive(item, level, parent_section)
 
         _extract_sections_recursive(data, 0)
-        if not sections and json_content:  # Fallback for unhandled JSON structure
+
+        if not sections and json_content:  # Fallback for completely unhandled JSON structure
             sections.append(
                 Section(title='JSON Content', content=json_content, level=0, section_type=SectionType.UNKNOWN)
             )

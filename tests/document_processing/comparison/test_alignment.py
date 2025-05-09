@@ -3,26 +3,27 @@
 import numpy as np
 import pytest
 
-from llm_rag.document_processing.comparison.alignment import (
+from llm_rag.document_processing.comparison.alignment import SectionAligner
+from llm_rag.document_processing.comparison.domain_models import (
     AlignmentConfig,
-    AlignmentMethod,
     AlignmentPair,
-    SectionAligner,
+    AlignmentStrategy,
+    Section,
+    SectionType,
 )
-from llm_rag.document_processing.comparison.document_parser import Section, SectionType
 
 
 @pytest.fixture
 def source_sections():
     """Create a list of source sections for testing."""
     return [
-        Section(id='s1', section_type=SectionType.HEADING, content='Introduction', level=1),
-        Section(id='s2', section_type=SectionType.PARAGRAPH, content='This is the first paragraph.', level=0),
-        Section(id='s3', section_type=SectionType.PARAGRAPH, content='This is the second paragraph.', level=0),
-        Section(id='s4', section_type=SectionType.HEADING, content='Section 1', level=1),
-        Section(id='s5', section_type=SectionType.PARAGRAPH, content='Content for section 1.', level=0),
-        Section(id='s6', section_type=SectionType.HEADING, content='Conclusion', level=1),
-        Section(id='s7', section_type=SectionType.PARAGRAPH, content='Final remarks.', level=0),
+        Section(title='Introduction', section_type=SectionType.HEADING, content='Introduction', level=1),
+        Section(title='P1', section_type=SectionType.PARAGRAPH, content='This is the first paragraph.', level=0),
+        Section(title='P2', section_type=SectionType.PARAGRAPH, content='This is the second paragraph.', level=0),
+        Section(title='Section 1', section_type=SectionType.HEADING, content='Section 1', level=1),
+        Section(title='P3', section_type=SectionType.PARAGRAPH, content='Content for section 1.', level=0),
+        Section(title='Conclusion', section_type=SectionType.HEADING, content='Conclusion', level=1),
+        Section(title='P4', section_type=SectionType.PARAGRAPH, content='Final remarks.', level=0),
     ]
 
 
@@ -30,17 +31,24 @@ def source_sections():
 def target_sections():
     """Create a list of target sections for testing."""
     return [
-        Section(id='t1', section_type=SectionType.HEADING, content='Introduction', level=1),
+        Section(title='Introduction', section_type=SectionType.HEADING, content='Introduction', level=1),
         Section(
-            id='t2', section_type=SectionType.PARAGRAPH, content='This is the first paragraph with changes.', level=0
+            title='P1 modified',
+            section_type=SectionType.PARAGRAPH,
+            content='This is the first paragraph with changes.',
+            level=0,
         ),
-        Section(id='t3', section_type=SectionType.PARAGRAPH, content='This is the second paragraph.', level=0),
-        Section(id='t4', section_type=SectionType.HEADING, content='Section 1', level=1),
-        Section(id='t5', section_type=SectionType.PARAGRAPH, content='Updated content for section 1.', level=0),
-        Section(id='t6', section_type=SectionType.HEADING, content='New Section', level=1),
-        Section(id='t7', section_type=SectionType.PARAGRAPH, content='Content for the new section.', level=0),
-        Section(id='t8', section_type=SectionType.HEADING, content='Conclusion', level=1),
-        Section(id='t9', section_type=SectionType.PARAGRAPH, content='Final thoughts and remarks.', level=0),
+        Section(title='P2', section_type=SectionType.PARAGRAPH, content='This is the second paragraph.', level=0),
+        Section(title='Section 1', section_type=SectionType.HEADING, content='Section 1', level=1),
+        Section(
+            title='P3 modified', section_type=SectionType.PARAGRAPH, content='Updated content for section 1.', level=0
+        ),
+        Section(title='New Section', section_type=SectionType.HEADING, content='New Section', level=1),
+        Section(title='P new', section_type=SectionType.PARAGRAPH, content='Content for the new section.', level=0),
+        Section(title='Conclusion', section_type=SectionType.HEADING, content='Conclusion', level=1),
+        Section(
+            title='P4 modified', section_type=SectionType.PARAGRAPH, content='Final thoughts and remarks.', level=0
+        ),
     ]
 
 
@@ -54,26 +62,26 @@ def test_init_with_default_config():
     """Test initialization with default configuration."""
     aligner = SectionAligner()
     assert isinstance(aligner.config, AlignmentConfig)
-    assert aligner.config.method == AlignmentMethod.HYBRID
+    assert aligner.config.strategy == AlignmentStrategy.HYBRID
     assert aligner.config.similarity_threshold == 0.7
 
 
 def test_init_with_custom_config():
     """Test initialization with custom configuration."""
     config = AlignmentConfig(
-        method=AlignmentMethod.HEADING_MATCH,
+        strategy=AlignmentStrategy.HEADING_MATCH,
         similarity_threshold=0.8,
         heading_weight=3.0,
     )
     aligner = SectionAligner(config)
-    assert aligner.config.method == AlignmentMethod.HEADING_MATCH
+    assert aligner.config.strategy == AlignmentStrategy.HEADING_MATCH
     assert aligner.config.similarity_threshold == 0.8
     assert aligner.config.heading_weight == 3.0
 
 
 def test_align_sections_heading_match(source_sections, target_sections):
     """Test alignment using the heading match method."""
-    config = AlignmentConfig(method=AlignmentMethod.HEADING_MATCH)
+    config = AlignmentConfig(strategy=AlignmentStrategy.HEADING_MATCH)
     aligner = SectionAligner(config)
 
     alignment_pairs = aligner.align_sections(source_sections, target_sections)
@@ -112,7 +120,7 @@ def test_align_sections_heading_match(source_sections, target_sections):
 
 def test_align_sections_sequence(source_sections, target_sections):
     """Test alignment using the sequence method."""
-    config = AlignmentConfig(method=AlignmentMethod.SEQUENCE)
+    config = AlignmentConfig(strategy=AlignmentStrategy.SEQUENCE_ALIGNMENT)
     aligner = SectionAligner(config)
 
     alignment_pairs = aligner.align_sections(source_sections, target_sections)
@@ -125,7 +133,7 @@ def test_align_sections_sequence(source_sections, target_sections):
 
     # Verify method is set correctly
     for pair in aligned_pairs:
-        assert pair.method == AlignmentMethod.SEQUENCE
+        assert pair.method == AlignmentStrategy.SEQUENCE_ALIGNMENT
 
     # Verify we also have source-only and target-only pairs
     source_only = [pair for pair in alignment_pairs if pair.is_source_only]
@@ -137,7 +145,7 @@ def test_align_sections_sequence(source_sections, target_sections):
 
 def test_align_sections_content_similarity(source_sections, target_sections):
     """Test alignment using the content similarity method."""
-    config = AlignmentConfig(method=AlignmentMethod.CONTENT_SIMILARITY, similarity_threshold=0.3)
+    config = AlignmentConfig(strategy=AlignmentStrategy.CONTENT_SIMILARITY, similarity_threshold=0.3)
     aligner = SectionAligner(config)
 
     alignment_pairs = aligner.align_sections(source_sections, target_sections)
@@ -146,7 +154,7 @@ def test_align_sections_content_similarity(source_sections, target_sections):
 
     # Check for aligned pairs
     aligned_pairs = [
-        pair for pair in alignment_pairs if pair.is_aligned and pair.method == AlignmentMethod.CONTENT_SIMILARITY
+        pair for pair in alignment_pairs if pair.is_aligned and pair.method == AlignmentStrategy.CONTENT_SIMILARITY
     ]
     assert len(aligned_pairs) > 0
 
@@ -165,7 +173,7 @@ def test_align_sections_content_similarity(source_sections, target_sections):
 
 def test_align_sections_hybrid(source_sections, target_sections):
     """Test alignment using the hybrid method."""
-    config = AlignmentConfig(method=AlignmentMethod.HYBRID)
+    config = AlignmentConfig(strategy=AlignmentStrategy.HYBRID)
     aligner = SectionAligner(config)
 
     alignment_pairs = aligner.align_sections(source_sections, target_sections)
@@ -173,7 +181,7 @@ def test_align_sections_hybrid(source_sections, target_sections):
     assert len(alignment_pairs) > 0
 
     # Verify we have aligned pairs with hybrid method
-    hybrid_pairs = [pair for pair in alignment_pairs if pair.is_aligned and pair.method == AlignmentMethod.HYBRID]
+    hybrid_pairs = [pair for pair in alignment_pairs if pair.is_aligned and pair.method == AlignmentStrategy.HYBRID]
     assert len(hybrid_pairs) > 0
 
     # Check that all sections are accounted for
@@ -195,7 +203,7 @@ def test_align_sections_with_empty_input(empty_sections):
 
     # Empty source, non-empty target
     pairs1 = aligner.align_sections(
-        empty_sections, [Section(id='t1', section_type=SectionType.PARAGRAPH, content='Test', level=0)]
+        empty_sections, [Section(title='T1', section_type=SectionType.PARAGRAPH, content='Test', level=0)]
     )
     assert len(pairs1) == 1
     assert pairs1[0].source_section is None
@@ -203,7 +211,7 @@ def test_align_sections_with_empty_input(empty_sections):
 
     # Non-empty source, empty target
     pairs2 = aligner.align_sections(
-        [Section(id='s1', section_type=SectionType.PARAGRAPH, content='Test', level=0)], empty_sections
+        [Section(title='S1', section_type=SectionType.PARAGRAPH, content='Test', level=0)], empty_sections
     )
     assert len(pairs2) == 1
     assert pairs2[0].source_section is not None
@@ -219,20 +227,20 @@ def test_align_sections_with_invalid_method():
     # Create a custom config with invalid method
     invalid_config = AlignmentConfig()
     # Set the method to an invalid value, using an Enum property that doesn't exist
-    invalid_config.method = AlignmentMethod.HEADING_MATCH  # First set a valid method
+    invalid_config.strategy = AlignmentStrategy.HEADING_MATCH  # First set a valid method
 
     aligner = SectionAligner(invalid_config)
 
     # Override the method with an incorrect value after initialization
     def mock_align_sections(source, target):
-        raise ValueError('Unsupported alignment method')
+        raise ValueError('Unsupported alignment strategy')
 
     aligner.align_sections = mock_align_sections
 
     with pytest.raises(ValueError):
         aligner.align_sections(
-            [Section(id='s1', section_type=SectionType.PARAGRAPH, content='Test', level=0)],
-            [Section(id='t1', section_type=SectionType.PARAGRAPH, content='Test', level=0)],
+            [Section(title='S1', section_type=SectionType.PARAGRAPH, content='Test', level=0)],
+            [Section(title='T1', section_type=SectionType.PARAGRAPH, content='Test', level=0)],
         )
 
 
@@ -304,23 +312,25 @@ def test_calculate_text_similarity():
 def test_alignment_pair_properties():
     """Test the properties of the AlignmentPair class."""
     # Create test sections
-    source = Section(id='s1', section_type=SectionType.PARAGRAPH, content='Source', level=0)
-    target = Section(id='t1', section_type=SectionType.PARAGRAPH, content='Target', level=0)
+    source = Section(title='S1', section_type=SectionType.PARAGRAPH, content='Source', level=0)
+    target = Section(title='T1', section_type=SectionType.PARAGRAPH, content='Target', level=0)
 
     # Test aligned pair
-    aligned_pair = AlignmentPair(source_section=source, target_section=target, similarity_score=0.9)
+    aligned_pair = AlignmentPair(
+        source_section=source, target_section=target, similarity_score=0.9, method=AlignmentStrategy.HYBRID
+    )
     assert aligned_pair.is_aligned is True
     assert aligned_pair.is_source_only is False
     assert aligned_pair.is_target_only is False
 
     # Test source-only pair (deletion)
-    source_only = AlignmentPair(source_section=source, target_section=None)
+    source_only = AlignmentPair(source_section=source, target_section=None, method=AlignmentStrategy.HYBRID)
     assert source_only.is_aligned is False
     assert source_only.is_source_only is True
     assert source_only.is_target_only is False
 
     # Test target-only pair (addition)
-    target_only = AlignmentPair(source_section=None, target_section=target)
+    target_only = AlignmentPair(source_section=None, target_section=target, method=AlignmentStrategy.HYBRID)
     assert target_only.is_aligned is False
     assert target_only.is_source_only is False
     assert target_only.is_target_only is True

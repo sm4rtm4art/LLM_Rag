@@ -84,14 +84,13 @@ class DiffFormatter(IDiffFormatter):
         similar_count = sum(1 for c in comparisons if c.result_type == ComparisonResultType.SIMILAR)
         modified_count = sum(1 for c in comparisons if c.result_type == ComparisonResultType.MODIFIED)
         different_count = sum(1 for c in comparisons if c.result_type == ComparisonResultType.DIFFERENT)
-        rewritten_count = sum(1 for c in comparisons if c.result_type == ComparisonResultType.MODIFIED)
         new_count = sum(1 for c in comparisons if c.result_type == ComparisonResultType.NEW)
         deleted_count = sum(1 for c in comparisons if c.result_type == ComparisonResultType.DELETED)
 
         lines.append('## Summary')
         lines.append('')
         lines.append(f'- Similar sections: {similar_count}')
-        lines.append(f'- Modified sections: {modified_count + rewritten_count}')
+        lines.append(f'- Modified sections: {modified_count}')
         lines.append(f'- Different sections: {different_count}')
         lines.append(f'- New: {new_count}')
         lines.append(f'- Deleted: {deleted_count}')
@@ -101,8 +100,8 @@ class DiffFormatter(IDiffFormatter):
 
         # Add each section comparison
         for i, comparison in enumerate(comparisons, 1):
-            # Skip unchanged sections if configured
-            if not self.config.show_unchanged and comparison.result_type == ComparisonResultType.SIMILAR:
+            # Use show_similar_content
+            if not self.config.show_similar_content and comparison.result_type == ComparisonResultType.SIMILAR:
                 continue
 
             # Section header
@@ -192,7 +191,6 @@ class DiffFormatter(IDiffFormatter):
             '.similar { background-color: #f0f8ff; }',  # Light blue
             '.modified { background-color: #e6ffe6; }',  # Light green
             '.different { background-color: #fff0e6; }',  # Light orange
-            '.rewritten { background-color: #fff0f0; }',  # Light red
             '.new { background-color: #e6ffee; }',  # Light mint
             '.deleted { background-color: #ffe6e6; }',  # Light pink
             '.header { font-weight: bold; margin-bottom: 10px; }',
@@ -232,8 +230,8 @@ class DiffFormatter(IDiffFormatter):
 
         # Add each section comparison
         for i, comparison in enumerate(comparisons, 1):
-            # Skip unchanged sections if configured
-            if not self.config.show_unchanged and comparison.result_type == ComparisonResultType.SIMILAR:
+            # Use show_similar_content
+            if not self.config.show_similar_content and comparison.result_type == ComparisonResultType.SIMILAR:
                 continue
 
             result_class = comparison.result_type.value.lower()
@@ -333,8 +331,8 @@ class DiffFormatter(IDiffFormatter):
 
         # Add each section comparison
         for i, comparison in enumerate(comparisons, 1):
-            # Skip unchanged sections if configured
-            if not self.config.show_unchanged and comparison.result_type == ComparisonResultType.SIMILAR:
+            # Use show_similar_content
+            if not self.config.show_similar_content and comparison.result_type == ComparisonResultType.SIMILAR:
                 continue
 
             # Section header

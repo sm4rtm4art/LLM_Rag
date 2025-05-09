@@ -182,42 +182,42 @@ class EmbeddingComparisonEngine(IComparisonEngine):
         """
         if not text or not self._embedding_model:
             return None
-        # Create a deterministic but simplified mock embedding based on text features
-        words = text.lower().split()
-        unique_words = set(words)
 
-        # Simple features:
-        # - Normalized text length
-        # - Unique word ratio
-        # - Average word length
-
-        text_length = min(1.0, len(text) / 1000)
-        unique_ratio = len(unique_words) / max(1, len(words))
-        avg_word_len = sum(len(w) for w in words) / max(1, len(words)) / 10
-
-        # Create a mock 10-dimensional embedding with some randomness but
-        # deterministic for the same input
         import hashlib
 
-        # Get a hash-based seed for reproducibility
-        hash_obj = hashlib.md5(text.encode('utf-8'), usedforsecurity=False)
-        hash_val = int(hash_obj.hexdigest(), 16)
+        # Use a combination of text features and hash for more robust mock embeddings
+        text_bytes = text.encode('utf-8')
+        hash_obj = hashlib.md5(text_bytes, usedforsecurity=False)
+        hash_val_int = int(hash_obj.hexdigest(), 16)
 
-        # Ensure hash_val is within valid range for numpy's random seed (0 to 2^32-1)
-        hash_val = hash_val % (2**32)
+        # Simple features
+        f1 = len(text) / 1000.0  # Normalized length
+        f2 = len(set(text.split())) / (len(text.split()) + 1e-6)  # Unique word ratio
+        f3 = sum(ord(c) for c in text[:10]) / (10 * 128.0)  # Avg char value of first 10 chars
 
-        # Create a mock embedding with some simple features and some hash-based values
-        np.random.seed(hash_val)
-        random_vals = np.random.rand(7)
+        # Create embedding based on these features and hash parts
+        # Ensure a fixed size, e.g., 10 dimensions
+        embedding_vals = [
+            f1,
+            f2,
+            f3,
+            (hash_val_int & 0xFF) / 255.0,
+            ((hash_val_int >> 8) & 0xFF) / 255.0,
+            ((hash_val_int >> 16) & 0xFF) / 255.0,
+            ((hash_val_int >> 24) & 0xFF) / 255.0,
+            ((hash_val_int >> 32) & 0xFF) / 255.0,  # Add more components if vector needs to be longer
+            ((hash_val_int >> 40) & 0xFF) / 255.0,
+            ((hash_val_int >> 48) & 0xFF) / 255.0,
+        ]
+        # If embedding_vals is shorter than 10, pad with parts of hash_val_int or repeat, etc.
+        # For simplicity, if we need exactly 10, and have 10 above, it's fine.
+        # Let's ensure it is 10 dimensional for the test that checks shape[0]
+        # Current embedding_vals has 10 elements. Perfect.
 
-        mock_embedding = np.array([text_length, unique_ratio, avg_word_len, *random_vals])
+        mock_embedding = np.array(embedding_vals[:10])  # Ensure fixed size
 
-        # Normalize embedding
         norm = np.linalg.norm(mock_embedding)
-        if norm > 0:
-            mock_embedding = mock_embedding / norm
-
-        return mock_embedding
+        return mock_embedding / norm if norm > 0 else mock_embedding
 
     def _classify_similarity(self, similarity: float) -> ComparisonResultType:
         """Classify the similarity score into a comparison result.
