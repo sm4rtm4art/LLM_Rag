@@ -19,7 +19,7 @@ VALID_LLM_RESPONSE_DATA = {
     'confidence': 0.9,
 }
 
-MALFORMED_JSON_STRING = '{"comparison_category": "SEMANTIC_REWRITE", "explanation": "Oops, no closing brace"}'
+MALFORMED_JSON_STRING = '{"comparison_category": "SEMANTIC_REWRITE", "explanation": "Oops, no closing brace'
 
 # Valid JSON, but does not match LLMAnalysisResult structure
 # (e.g., missing required fields)
