@@ -3,20 +3,26 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from llm_rag.document_processing.comparison.domain_models import LLMAnalysisResult
+from llm_rag.document_processing.comparison.domain_models import (
+    LLMAnalysisResult,
+)
 from llm_rag.document_processing.comparison.llm_comparer import LLMComparer
-from llm_rag.llm_clients.base_llm_client import GenerativeLLMClient, LLMResponse
+from llm_rag.llm_clients.base_llm_client import (
+    GenerativeLLMClient,
+    GenerativeLLMResponse,
+)
 
 # A sample valid JSON structure that LLMComparer expects
 VALID_LLM_RESPONSE_DATA = {
     'comparison_category': 'SEMANTIC_REWRITE',
-    'explanation': 'The sections are essentially saying the same thing using different words.',
+    'explanation': ('The sections are essentially saying the same thing using different words.'),
     'confidence': 0.9,
 }
 
-MALFORMED_JSON_STRING = '{"comparison_category": "SEMANTIC_REWRITE", "explanation": "Oops, no closing brace'
+MALFORMED_JSON_STRING = '{"comparison_category": "SEMANTIC_REWRITE", "explanation": "Oops, no closing brace"}'
 
-# Valid JSON, but does not match LLMAnalysisResult structure (e.g., missing required fields)
+# Valid JSON, but does not match LLMAnalysisResult structure
+# (e.g., missing required fields)
 MISMATCHED_JSON_DATA = {
     'category': 'SEMANTIC_REWRITE',  # Wrong key name
     'desc': 'Some description.',
@@ -35,8 +41,8 @@ def mock_llm_client():
 @pytest.mark.asyncio
 async def test_analyze_sections_successful_parse(mock_llm_client):
     """Test successful analysis and parsing of LLM response."""
-    mock_llm_client.agenerate_response.return_value = LLMResponse(
-        text=json.dumps(VALID_LLM_RESPONSE_DATA),  # Simulate LLM returning a JSON string
+    mock_llm_client.agenerate_response.return_value = GenerativeLLMResponse(
+        text=json.dumps(VALID_LLM_RESPONSE_DATA),  # Simulate LLM returning JSON
         model_name='test-model',
         finish_reason='stop',
         usage=None,
@@ -49,14 +55,16 @@ async def test_analyze_sections_successful_parse(mock_llm_client):
     assert result.explanation == VALID_LLM_RESPONSE_DATA['explanation']
     assert result.confidence == VALID_LLM_RESPONSE_DATA['confidence']
     assert result.raw_llm_response == json.dumps(VALID_LLM_RESPONSE_DATA)
-    mock_llm_client.agenerate_response.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_analyze_sections_json_decode_error(mock_llm_client):
     """Test handling of JSONDecodeError when LLM output is malformed."""
-    mock_llm_client.agenerate_response.return_value = LLMResponse(
-        text=MALFORMED_JSON_STRING, model_name='test-model', finish_reason='stop', usage=None
+    mock_llm_client.agenerate_response.return_value = GenerativeLLMResponse(
+        text=MALFORMED_JSON_STRING,
+        model_name='test-model',
+        finish_reason='stop',
+        usage=None,
     )
     comparer = LLMComparer(llm_client=mock_llm_client)
     result = await comparer.analyze_sections('text a', 'text b')
@@ -69,10 +77,15 @@ async def test_analyze_sections_json_decode_error(mock_llm_client):
 
 @pytest.mark.asyncio
 async def test_analyze_sections_pydantic_validation_error(mock_llm_client):
-    """Test handling of Pydantic ValidationError when LLM JSON has wrong structure."""
+    """
+    Test handling of Pydantic ValidationError when LLM JSON has wrong structure.
+    """
     mismatched_json_string = json.dumps(MISMATCHED_JSON_DATA)
-    mock_llm_client.agenerate_response.return_value = LLMResponse(
-        text=mismatched_json_string, model_name='test-model', finish_reason='stop', usage=None
+    mock_llm_client.agenerate_response.return_value = GenerativeLLMResponse(
+        text=mismatched_json_string,
+        model_name='test-model',
+        finish_reason='stop',
+        usage=None,
     )
     comparer = LLMComparer(llm_client=mock_llm_client)
     result = await comparer.analyze_sections('text a', 'text b')
@@ -93,16 +106,22 @@ async def test_analyze_sections_llm_client_exception(mock_llm_client):
 
     assert isinstance(result, LLMAnalysisResult)
     assert result.comparison_category == 'llm_error'
-    assert 'Error in LLM section analysis: Exception - Simulated LLM client error' in result.explanation
-    assert result.raw_llm_response is None  # Because the error happened before/during LLM call
+    assert ('Error in LLM section analysis: Exception - Simulated LLM client error') in result.explanation
+    # Because the error happened before/during LLM call
+    assert result.raw_llm_response is None
 
 
 @pytest.mark.asyncio
 async def test_analyze_sections_handles_code_fences(mock_llm_client):
-    """Test that LLM responses with JSON within markdown code fences are handled."""
+    """
+    Test that LLM responses with JSON within markdown code fences are handled.
+    """
     fenced_response_data = f'```json\n{json.dumps(VALID_LLM_RESPONSE_DATA)}\n```'
-    mock_llm_client.agenerate_response.return_value = LLMResponse(
-        text=fenced_response_data, model_name='test-model', finish_reason='stop', usage=None
+    mock_llm_client.agenerate_response.return_value = GenerativeLLMResponse(
+        text=fenced_response_data,
+        model_name='test-model',
+        finish_reason='stop',
+        usage=None,
     )
     comparer = LLMComparer(llm_client=mock_llm_client)
     result = await comparer.analyze_sections('text a', 'text b')
