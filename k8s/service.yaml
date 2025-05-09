@@ -6,7 +6,7 @@ metadata:
     app: llm-rag
     component: api
   annotations:
-    service.kubernetes.io/topology-aware-hints: auto
+    service.kubernetes.io/topology-mode: auto
 spec:
   selector:
     app: llm-rag

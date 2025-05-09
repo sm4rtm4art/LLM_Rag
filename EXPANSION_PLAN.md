@@ -176,9 +176,11 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 
 ## Part 2: Document Comparison Feature
 
+This section outlines the development of a feature to compare two documents, identify differences and similarities, and present them in a human-readable format. The initial MVP (Phase 6) focuses on establishing the pipeline with section alignment and embedding-based similarity. This serves as a crucial foundation for Phase 7, which introduces Large Language Models (LLMs) to perform advanced semantic analysis and provide nuanced explanations of the differences, representing the core objective of the comparison feature.
+
 ### Phase 6: Section Alignment & Embedding-Based Similarity (Comparison MVP)
 
-- **Goal**: Compare two processed documents (output from Phase 3+) section-by-section using embeddings, identifying major similarities/differences. Output basic annotated Markdown.
+- **Goal**: Compare two processed documents (output from Phase 3+) section-by-section using embeddings, identifying major similarities/differences. Output basic annotated Markdown. This phase provides the essential structure and first-pass analysis for the more advanced LLM-based comparison in Phase 7.
 - **Prerequisite**: Reliable structured text output (Markdown) from the core OCR pipeline (Phase 3+).
 - **Tasks**:
   - ✅ **`document_parser.py`**: Develop a module to parse the structured output (Markdown/JSON) from the OCR pipeline into logical sections/paragraphs (e.g., based on headings, semantic breaks, or fixed chunks). _(Status: Core Markdown parsing refactored with delegated strategy; Pydantic models implemented; List parsing verified; Setext heading parsing fixed)_
@@ -190,7 +192,7 @@ This document outlines the plan for integrating an OCR pipeline into the documen
     - ✅ Fix unhashable type issue with Section objects in sets
     - ✅ Implement comprehensive tests covering alignment strategies
   - ✅ **`comparison_engine.py` (Embeddings)**:
-    - ✅ Integrate an embedding model (mock implementation for now)
+    - ✅ Integrate an embedding model (mock implementation for now, actual model path configurable)
     - ✅ Generate embeddings for each aligned section pair
     - ✅ Calculate cosine similarity between embeddings
     - ✅ Implement comparison result classification
@@ -200,56 +202,80 @@ This document outlines the plan for integrating an OCR pipeline into the documen
     - ✅ Generate annotated output in multiple formats (Markdown, HTML, Text)
     - ✅ Add configuration for output format and detail level
     - ✅ Create tests for different output formats and configurations
+      - Initial tests for test_diff_formatter.py created and passing with 90% coverage for diff_formatter.py.
   - ✅ **`pipeline.py` (Orchestration)**:
     - ✅ Implement pipeline to process documents through parsing, alignment, comparison, and formatting
     - ✅ Add caching mechanism for intermediate results
     - ✅ Implement comprehensive test suite for pipeline workflow
-    - [ ] Complete integration with OCR pipeline for end-to-end workflow
-  - [ ] **Architectural Enhancement**:
-    - [ ] Consider refactoring the comparison module to follow a more modular approach similar to the RAG pipeline
-    - [ ] Implement clear interfaces between components for better extensibility
-    - [ ] Design for progressive enhancement with LLM capabilities
+    - [x] Complete integration with OCR pipeline for end-to-end workflow (Conceptual integration via Markdown confirmed, E2E test script `demos/document_comparison/run_ocr_comparison_e2e.py` created and updated for async LLM calls.)
+  - [x] **Architectural Enhancement**: (Largely Addressed)
+    - [x] Consider refactoring the comparison module to follow a more modular approach similar to the RAG pipeline (Achieved: centralized domain models, component protocols, updated components)
+    - [x] Implement clear interfaces between components for better extensibility (Achieved: via `component_protocols.py`)
+    - [x] Design for progressive enhancement with LLM capabilities (Foundation laid, initial LLM integration prototyped in Phase 7 section)
   - [ ] **S2 Chunking Integration**:
-    - [ ] Clarify how S2 Chunking from Phase 5.5 will integrate with document_parser.py
-    - [ ] Add adapter code to use chunked output for comparison
+    - [/'] Clarify how S2 Chunking from Phase 5.5 will integrate with document*parser.py (`DocumentParser` ready for `List[InputChunk]` via `PRE_CHUNKED` format. Next: Determine \_where* chunking occurs and how `InputChunk` list is generated and passed to `ComparisonPipeline`.)
+    - [x] Add adapter code to use chunked output for comparison (`DocumentParser`'s `parse_from_input_chunks` method serves as this adapter within the parser for `InputChunk` lists.)
     - [ ] Ensure consistent document representation between chunking and comparison
   - ✅ **Testing**: Create test cases with known document pairs (identical, slightly modified, significantly different) and evaluate alignment and similarity scoring.
     - ✅ Test all core components
+      - test_comparison_engine.py and test_document_parser.py existing and passing.
+      - test_diff_formatter.py created, and all its tests are passing.
     - ✅ Fix test issues and ensure 100% pass rate
-    - [ ] Fix linter and mypy type issues
-- **Outcome**: Ability to generate a basic Markdown diff indicating sections that are likely similar or different based on embedding similarity.
+      - All 32 tests in tests/document_processing/comparison/ are passing.
+- **Outcome**: Ability to generate a basic Markdown diff indicating sections that are likely similar or different based on embedding similarity. **This phase is foundational for Phase 7, and its components are now capable of supporting initial LLM integration.**
 
 ### Phase 7: Advanced Semantic Comparison with LLM
 
 - **Goal**: Enhance comparison accuracy by using an LLM for nuanced difference analysis, building upon the embedding-based similarity from Phase 6.
 - **Prerequisite**: Phase 6 MVP working.
+- **Status**: Prototyping Enhanced.
+- **Strategy**: Initial development may leverage smaller, faster generative LLMs for rapid prototyping of prompt engineering and LLM response handling, with the option to scale to larger models for production quality.
 - **Tasks**:
 
-  - [ ] **`comparison_engine.py` (LLM Integration)**:
-    - [ ] Design modular architecture for embedding-based and LLM-based comparison
-    - [ ] Create a strategy pattern for selecting comparison method based on requirements
-    - [ ] Integrate a local LLM (e.g., Gemma, Mistral) capable of comparing text snippets.
-    - [ ] Use the LLM to analyze section pairs flagged as `DIFFERENT` by embeddings, or pairs with high similarity (>0.9) but low lexical overlap (e.g., low BLEU/ROUGE score).
-    - [ ] **Prompt Engineering**: Design prompts for the LLM to:
-      - Compare meaning: "Do these two paragraphs convey the same core meaning? Explain the difference if not."
-      - Identify rewrites: "Is the second paragraph a rewrite of the first, maintaining the meaning but changing the wording significantly?"
-      - Assess structural changes within sections.
-    - [ ] **Hallucination Mitigation for Comparison**:
-      - [ ] **Initial:** Apply constrained prompting techniques specific to comparison.
-      - [ ] **Initial:** Calculate and store confidence scores for LLM-identified differences (if model provides them, or via heuristics).
-      - [ ] **Initial:** Use thresholds on confidence/change metrics to flag potentially unreliable comparisons.
-    - [ ] **`diff_formatter.py` (Enhanced)**:
-      - Incorporate LLM analysis results into annotations (e.g., `[MODIFIED MEANING]`, `[REWRITTEN - SIMILAR MEANING]`, `[STRUCTURAL CHANGE]`).
-      - Generate more granular diffs (e.g., using standard diff library output within annotations).
-      - Explore adding HTML output for side-by-side views with color highlighting.
-      - Add metadata to indicate confidence level in each detected difference.
-    - [ ] **Handling Noise/Layout**: Develop strategies within the comparison logic or LLM prompts to be robust to minor residual OCR noise. Structured text output helps abstract layout.
-    - [ ] **Evaluation**: Develop metrics for comparison quality (e.g., accuracy in classifying change type, human evaluation of diff readability).
-    - [ ] **Refined Alignment**: Improve section alignment logic using more advanced sequence alignment algorithms if needed, possibly guided by embedding similarity.
-    - [ ] **Future Enhancement (Post-Phase 7):**
-      - _If needed:_ Use ColBERT for token-level similarity assessment on ambiguous segments.
+  - [x] **`comparison_engine.py` (LLM Integration Prototyped)**:
 
-- **Outcome**: Detailed, semantically aware comparison highlighting not just _that_ sections differ, but _how_ they differ (meaning, rewrite, structure), presented in a clearer format. Token-level precision via ColBERT remains an option for future optimization.
+    - [x] Design modular architecture: `LLMComparer` component created for LLM interactions, used by `EmbeddingComparisonEngine`.
+    - [ ] Create a strategy pattern for selecting comparison method based on requirements (Future refinement).
+    - [x] Integrate a local LLM (e.g., Phi-3 via Ollama) capable of comparing text snippets (`OllamaClient` created).
+    - [x] Use the LLM to analyze section pairs flagged as `DIFFERENT` or `MODIFIED` by embeddings (Implemented in `EmbeddingComparisonEngine`).
+    - [x] **Prompt Engineering (Initial Draft)**: Develop first-pass prompts for the LLM to:
+      - Compare meaning and categorize differences (Initial `DEFAULT_PROMPT_TEMPLATE` in `LLMComparer`).
+    - [x] **Configuration**: Add `LLMComparerPipelineConfig` to `ComparisonPipelineConfig` for LLM settings. Update E2E script to use this.
+    - [x] **Async Operations**: Update `ComparisonPipeline`, `EmbeddingComparisonEngine`, and relevant protocols for asynchronous LLM calls.
+
+  - [ ] **🔍 Domain-Specific Prompting and Legal Awareness (NEW)**:
+
+    - [ ] Update the `LLMComparer.DEFAULT_PROMPT_TEMPLATE` to handle legal/contractual documents.
+    - [ ] Include semantic-ontological classifications relevant to legal texts (e.g., `SEMANTIC_REWRITE`, `ONTOLOGICAL_SUBSUMPTION`, `LEGAL_EFFECT_CHANGE`, `STRUCTURAL_REORDERING`, `DIFFERENT_CONCEPTS`).
+    - [ ] Ensure model instructions account for legal effect, roles (e.g., creditor/debtor), and obligations.
+    - [ ] Incorporate fallback categories such as `UNCERTAIN` and `NO_MEANINGFUL_CONTENT` for robustness against noise or OCR errors.
+
+  - [x] **Refine LLM Comparison Logic & Output (Next Steps)**:
+    - [x] **`diff_formatter.py` (Enhanced)**:
+      - [/] Incorporate LLM analysis results (`LLMAnalysisResult.comparison_category`, `explanation`) into annotations (e.g., `[MODIFIED MEANING (LLM)]`, `[REWRITTEN - SIMILAR MEANING (LLM)]`). (Done for Markdown, HTML, Text)
+      - [ ] Generate more granular diffs if useful (e.g., using standard diff library output within annotations).
+      - [ ] Explore adding HTML output for side-by-side views with color highlighting.
+      - [ ] Add metadata to indicate confidence level in each detected difference.
+    - [x] **LLM Trigger Refinement**: Improve conditions for when to call `LLMComparer` (e.g., handle empty sections, consider lexical overlap vs. embedding similarity). (Implemented short-content skip)
+    - [x] **Result Aggregation**: Determine how `LLMAnalysisResult.comparison_category` refines the final `SectionComparison.result_type`. (Decision: LLM is supplementary for now, result_type unchanged by LLM category; documented).
+    - [ ] **Prompt Iteration**: Refine `LLMComparer` prompts based on testing for accuracy and edge case handling.
+    - [ ] **Hallucination Mitigation for Comparison (Initial)**:
+      - [ ] Apply constrained prompting techniques specific to comparison (Current prompt asks for JSON, specific categories).
+      - [ ] Calculate and store confidence scores for LLM-identified differences (Pydantic model has field, LLM prompt mentions it as optional).
+      - [ ] Use thresholds on confidence/change metrics to flag potentially unreliable comparisons (Future step after confidence is reliably extracted).
+  - [ ] **Handling Noise/Layout**: Develop strategies within the comparison logic or LLM prompts to be robust to minor residual OCR noise. Structured text output helps abstract layout. (OCR LLM cleaning enabled in E2E script).
+  - [/] **Evaluation**: Develop metrics for comparison quality (e.g., accuracy in classifying change type, human evaluation of diff readability), especially for LLM-enhanced results. (Added essential unit tests for LLM logic).
+  - [ ] **Refined Alignment**: Improve section alignment logic using more advanced sequence alignment algorithms if needed, possibly guided by embedding similarity.
+  - [ ] **Future Enhancement (Post-Phase 7):**
+
+    - _If needed:_ Use ColBERT for token-level similarity assessment on ambiguous segments.
+
+  - [ ] **📘 Future Legal LLM Options (Post-Phi/Gemma Prototyping) (NEW)**:
+    - [ ] Evaluate specialized legal models (e.g., Legal-BERT, CaseLaw-BERT, GerDaL-BERT, or custom fine-tuned BERT/other architectures for EU/German civil law).
+    - [ ] Investigate ColBERT (potentially as part of a JuristenRAG-style approach) as an alignment-sensitive reranker or for fine-grained similarity assessment in long legal contexts (contract clauses, definitions).
+    - [ ] Consider RAG-based verification using a legal knowledge base (e.g., German BGB/contract law database via SPARQL or RDF, potentially explored within a JuristenRAG framework).
+
+- **Outcome**: **Initial prototype of LLM-enhanced comparison complete and refined.** Detailed, semantically aware comparison highlighting not just _that_ sections differ, but _how_ they differ (meaning, rewrite, structure), presented in a clearer format. System can now make calls to an LLM (via Ollama) for specified section pairs, handles short content, and stores structured results. LLM details are displayed in reports. Core code quality improved with docstrings, formatting, and linting. Essential unit tests for LLM logic added. **Further refinement will target legal document specifics, prompt engineering, and more comprehensive testing.**
 
 ## Enhanced Evaluation Metrics & Framework
 
@@ -399,20 +425,20 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 
 1.  **Document Comparison Logic**:
 
-    - **MVP (Phase 6):**
+    - **MVP (Phase 6) - COMPLETED**:
       - Parse structured text (Markdown/JSON) into sections/paragraphs.
       - Align sections (heading matching, sequence).
       - Generate embeddings for aligned pairs.
       - Use cosine similarity with thresholds (e.g., >0.95 = Similar, <0.7 = Different, intermediate = Check Needed).
-    - **Enhancement (Phase 7):**
-      - Feed pairs below a similarity threshold (e.g., <0.9) or pairs with high similarity (>0.9) but low lexical overlap (e.g., low BLEU/ROUGE score) to an LLM.
-      - Prompt the LLM to classify the difference: Meaning Change, Rewrite (Same Meaning), Minor Edit, Structural Change.
+    - **Enhancement (Phase 7) - PROTOTYPING INITIATED & REFINED**:
+      - Feed pairs flagged by embeddings (e.g., `DIFFERENT`, `MODIFIED`) to an LLM (`LLMComparer` with `OllamaClient`). (Short content skip added)
+      - Prompt the LLM to classify the difference and explain (`DEFAULT_PROMPT_TEMPLATE` in `LLMComparer`, `LLMAnalysisResult` model defined).
     - **Future Enhancement (Post-Phase 7):**
       - _If needed:_ Use ColBERT for token-level similarity assessment on ambiguous segments.
 
 2.  **Handling OCR Noise During Comparison**:
 
-    - **Primary Strategy:** Rely on the LLM Cleaning step (Phase 3) to produce clean text _before_ comparison.
+    - **Primary Strategy:** Rely on the LLM Cleaning step (Phase 3) to produce clean text _before_ comparison. (Enabled in E2E script via `OCRPipelineConfig`).
     - **Secondary Strategy (Phase 7):** Instruct the comparison LLM (via prompts) to be robust to minor variations typical of OCR noise when assessing semantic meaning. Embeddings are often inherently robust to minor noise.
 
 3.  **Handling Different Layouts**:
@@ -422,23 +448,23 @@ This document outlines the plan for integrating an OCR pipeline into the documen
 
 4.  **Evaluating Semantic Similarity & Detecting Rewrites**:
 
-    - **Embeddings (Phase 6):** Cosine similarity provides a good first pass for overall semantic similarity.
-    - **LLMs (Phase 7):** Provide explicit prompts:
-      - "Compare the core meaning of Text A and Text B. Are they semantically equivalent? Explain differences."
-      - "Is Text B a rewrite of Text A, preserving the main ideas but using different phrasing? Describe the nature of the rewrite."
+    - **Embeddings (Phase 6) - COMPLETED**: Cosine similarity provides a good first pass for overall semantic similarity.
+    - **LLMs (Phase 7) - PROTOTYPING INITIATED & REFINED**: Provide explicit prompts:
+      - Current `DEFAULT_PROMPT_TEMPLATE` in `LLMComparer` aims to achieve this.
     - **Future Enhancement (Post-Phase 7):**
       - _If needed:_ ColBERT token-level interactions provide fine-grained comparison, potentially effective for detecting rewrites and semantic-preserving edits.
-    - **Hybrid:** Use embeddings for speed, trigger LLM analysis for ambiguous cases or potential rewrites.
+    - **Hybrid - IMPLEMENTED & REFINED**: Use embeddings for speed, trigger LLM analysis for ambiguous/different cases (with short content skip).
 
 5.  **Presenting the Comparison**:
-    - **MVP (Markdown - Phase 6):**
+    - **MVP (Markdown - Phase 6) - COMPLETED**:
       - Use simple block annotations: `[SIMILAR]`, `[DIFFERENT]`, `[NEW]`, `[DELETED]`.
       - Show content for `DIFFERENT` sections using `---` (Doc A) and `+++` (Doc B).
-    - **Enhanced (Markdown/HTML - Phase 7):**
-      - More descriptive Markdown annotations based on LLM analysis: `[MODIFIED MEANING]`, `[REWRITTEN - SIMILAR MEANING]`, etc.
-      - Include standard text diffs (e.g., from `difflib`) within sections marked as different.
+    - **Enhanced (Markdown/HTML/Text - Phase 7) - IN PROGRESS**:
+      - [x] More descriptive Markdown annotations based on LLM analysis: `[MODIFIED MEANING (LLM)]`, `[REWRITTEN - SIMILAR MEANING (LLM)]`, etc. (Implemented in `DiffFormatter` for MD, HTML, Text)
+      - [x] Include LLM explanation in the diff output. (Implemented in `DiffFormatter`)
+      - [ ] Include standard text diffs (e.g., from `difflib`) within sections marked as different. (Already present for detailed Markdown)
       - _Future:_ Integrate ColBERT token-level highlighting if implemented.
-      - Generate HTML for interactive side-by-side views with color highlighting for different change types.
+      - [ ] Generate HTML for interactive side-by-side views with color highlighting for different change types. (Basic HTML structure exists; enhancements for specific LLM categories can be added)
 
 ## Proposed Architecture for Document Processing System
 
@@ -459,11 +485,11 @@ Maintain modularity:
     - **`Alignment Engine`**: Aligns sections between the two documents.
     - **`Comparison Engine`**:
       - Interfaces with **Embedding Model Service/Library**.
-      - (Optionally) Interfaces with **Comparison LLM Service/Library**.
+      - (Optionally) Interfaces with **Comparison LLM Service/Library** (Prototyped with `LLMComparer` and `OllamaClient`).
       - _Future Investigation:_ Integration with **ColBERT**.
       - Calculates similarity and/or performs LLM analysis on aligned pairs.
     - **`Diff Formatter`**: Generates the final report (Markdown/HTML).
-    - **Note on Architecture**: Consider refactoring this service to follow the modular pattern established in the RAG pipeline, with clear separation of responsibilities and well-defined interfaces between components.
+    - **Note on Architecture**: Consider refactoring this service to follow the modular pattern established in the RAG pipeline, with clear separation of responsibilities and well-defined interfaces between components. (This refactoring has been substantially completed by centralizing domain models and defining component protocols.)
 
 3.  **Modular Retrieval System**: (Input: Query and document collection -> Output: Relevant chunks/documents)
 

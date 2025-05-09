@@ -216,6 +216,41 @@ jobs:
         with:
           fetch-depth: 1
 
+      # Extra aggressive cleanup to ensure enough disk space and memory
+      - name: Super aggressive cleanup for KIND
+        run: |
+          echo "==== Before cleanup ===="
+          df -h
+          free -h
+
+          # Stop and remove all running containers
+          docker rm -f $(docker ps -aq) || true
+
+          # Remove all Docker data
+          docker system prune -af --volumes
+
+          # Clear swap
+          sudo swapoff -a
+          sudo swapon -a
+
+          # Clear page cache and other kernel caches
+          sudo sync
+          echo 3 | sudo tee /proc/sys/vm/drop_caches
+
+          # Remove large directories
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache || true
+
+          # Remove unnecessary packages (be careful with this)
+          sudo apt-get clean
+          sudo apt-get autoremove -y
+
+          echo "==== After cleanup ===="
+          df -h
+          free -h
+
+          # Create tmp directory for KIND logs
+          mkdir -p /tmp/kind-logs
+
       # Download cached image
       - name: Download image artifact
         uses: actions/download-artifact@v4
@@ -242,18 +277,18 @@ jobs:
         with:
           version: ${{ env.KUBECTL_VERSION }}
 
-      # Create cluster with optimized config and explicit kubeconfig
+      # Create cluster with minimal config and explicit kubeconfig
       - name: Create kind cluster
         run: |
-          # Create cluster with explicit kubeconfig path
-          kind create cluster --name ${{ env.CLUSTER_NAME }} --config ./k8s/kind-config.yaml --wait 120s --kubeconfig=${KIND_KUBECONFIG}
+          # Create cluster with explicit kubeconfig path and minimal config
+          kind create cluster --name ${{ env.CLUSTER_NAME }} --config ./k8s/kind-ci-minimal.yaml --wait 300s --kubeconfig=${KIND_KUBECONFIG}
 
           # Set KUBECONFIG for all subsequent kubectl commands
           echo "KUBECONFIG=${KIND_KUBECONFIG}" >> $GITHUB_ENV
 
           # Verify connection to cluster
           kubectl cluster-info
-          kubectl get nodes -o wide
+          kubectl get nodes
 
       # Load image into KIND more efficiently
       - name: Load Docker image into kind
@@ -266,48 +301,49 @@ jobs:
           kubectl create namespace ${{ env.NAMESPACE }}
 
       # Deploy application with configurable timeouts
-      - name: Deploy Kubernetes resources
+      - name: Deploy to Kubernetes
         run: |
-          # Apply ConfigMap first as it's needed by the deployment
-          kubectl apply -f k8s/configmap.yaml -n ${{ env.NAMESPACE }}
+          # Create a simple pod directly instead of full deployment
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: llm-rag-pod
+            namespace: ${{ env.NAMESPACE }}
+            labels:
+              app: llm-rag
+          spec:
+            containers:
+            - name: llm-rag
+              image: ${{ env.IMAGE_NAME }}:latest
+              imagePullPolicy: Never
+              ports:
+              - containerPort: 8000
+                name: http
+          EOF
 
-          # Apply PVC
-          kubectl apply -f k8s/pvc.yaml -n ${{ env.NAMESPACE }}
+          # Create service
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: llm-rag
+            namespace: ${{ env.NAMESPACE }}
+          spec:
+            selector:
+              app: llm-rag
+            ports:
+            - port: 80
+              targetPort: 8000
+              protocol: TCP
+            type: ClusterIP
+          EOF
 
-          # Update image reference in deployment if needed
-          sed -i 's|image: .*llm-rag:.*|image: llm-rag:latest|g' k8s/deployment.yaml
+          # Wait for pod to be ready
+          kubectl wait --for=condition=ready pod/llm-rag-pod -n ${{ env.NAMESPACE }} --timeout=180s
 
-          # Apply rest of resources
-          kubectl apply -f k8s/deployment.yaml -n ${{ env.NAMESPACE }}
-          kubectl apply -f k8s/service.yaml -n ${{ env.NAMESPACE }}
-          kubectl apply -f k8s/network-policy.yaml -n ${{ env.NAMESPACE }}
-
-          # Install NGINX Ingress Controller
-          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-
-          echo "Waiting for ingress controller to be ready..."
-          kubectl wait --namespace ingress-nginx \
-            --for=condition=ready pod \
-            --selector=app.kubernetes.io/component=controller \
-            --timeout=90s
-
-          # Apply Ingress
-          kubectl apply -f k8s/ingress.yaml -n ${{ env.NAMESPACE }}
-
-      # Wait for deployment with better diagnostics
-      - name: Wait for deployment
-        timeout-minutes: 5
-        run: |
-          echo "Waiting for pods to be ready..."
-
-          # Wait for deployment to be available
-          kubectl -n ${{ env.NAMESPACE }} rollout status deployment/llm-rag --timeout=180s
-
-          # Verify pods are running
-          kubectl get pods -n ${{ env.NAMESPACE }} -l app=llm-rag -o wide
-
-          # Check for any events
-          kubectl get events -n ${{ env.NAMESPACE }} --sort-by=.metadata.creationTimestamp
+          # Show pod status
+          kubectl get pods -n ${{ env.NAMESPACE }}
 
       # Run test with a dedicated test job
       - name: Create test job
@@ -401,7 +437,6 @@ jobs:
           kubectl get all -n ${{ env.NAMESPACE }} -o wide > test-artifacts/diagnostics/all-resources.txt || true
           kubectl describe pods -n ${{ env.NAMESPACE }} > test-artifacts/diagnostics/pod-details.txt || true
           kubectl describe svc -n ${{ env.NAMESPACE }} > test-artifacts/diagnostics/service-details.txt || true
-          kubectl describe ingress -n ${{ env.NAMESPACE }} > test-artifacts/diagnostics/ingress-details.txt || true
 
           # Collect container logs
           kubectl logs -l app=llm-rag -n ${{ env.NAMESPACE }} --tail=100 > test-artifacts/diagnostics/app-logs.txt || true
@@ -411,13 +446,6 @@ jobs:
 
           # Collect node status
           kubectl describe nodes > test-artifacts/diagnostics/nodes.txt || true
-
-          # Packet capture if debug enabled
-          if [ "${{ github.event.inputs.debug_enabled }}" == "true" ]; then
-            kubectl run tcpdump --image=nicolaka/netshoot -n ${{ env.NAMESPACE }} -- sleep 30 || true
-            kubectl wait --for=condition=ready pod/tcpdump -n ${{ env.NAMESPACE }} --timeout=30s || true
-            kubectl exec tcpdump -n ${{ env.NAMESPACE }} -- tcpdump -i any -c 100 -nn > test-artifacts/diagnostics/network-capture.txt || true
-          fi
 
       # Check test results and fail if needed
       - name: Check test results

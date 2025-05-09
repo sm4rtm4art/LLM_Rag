@@ -1,42 +1,30 @@
 """Module for orchestrating document comparison workflow."""
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 
-from llm_rag.document_processing.comparison.alignment import AlignmentConfig, SectionAligner
-from llm_rag.document_processing.comparison.comparison_engine import (
-    ComparisonConfig,
-    EmbeddingComparisonEngine,
-    SectionComparison,
-)
-from llm_rag.document_processing.comparison.diff_formatter import DiffFormatter, FormatterConfig
-from llm_rag.document_processing.comparison.document_parser import DocumentFormat, DocumentParser, ParserConfig, Section
+from llm_rag.llm_clients.base_llm_client import LLMRequestConfig
+from llm_rag.llm_clients.ollama_client import OllamaClient
 from llm_rag.utils.errors import DocumentProcessingError
 from llm_rag.utils.logging import get_logger
 
+# Import component classes
+from .alignment import SectionAligner
+from .comparison_engine import EmbeddingComparisonEngine
+from .diff_formatter import DiffFormatter
+from .document_parser import DocumentParser
+
+# Import ALL data models and Configs from domain_models
+from .domain_models import (
+    AlignmentPair,
+    ComparisonPipelineConfig,
+    DocumentFormat,
+    Section,
+    SectionComparison,
+)
+from .llm_comparer import LLMComparer
+
 logger = get_logger(__name__)
-
-
-@dataclass
-class ComparisonPipelineConfig:
-    """Configuration for the document comparison pipeline.
-
-    Attributes:
-        parser_config: Configuration for document parsing.
-        alignment_config: Configuration for section alignment.
-        comparison_config: Configuration for section comparison.
-        formatter_config: Configuration for diff formatting.
-        cache_intermediate_results: Whether to cache results between
-            pipeline stages.
-
-    """
-
-    parser_config: Optional[ParserConfig] = None
-    alignment_config: Optional[AlignmentConfig] = None
-    comparison_config: Optional[ComparisonConfig] = None
-    formatter_config: Optional[FormatterConfig] = None
-    cache_intermediate_results: bool = True
 
 
 class ComparisonPipeline:
@@ -55,18 +43,47 @@ class ComparisonPipeline:
 
         """
         self.config = config or ComparisonPipelineConfig()
-        logger.info('Initialized ComparisonPipeline')
+        self.llm_comparer = None  # Initialize as None
+        if self.config.llm_comparer_pipeline_config.enable_llm_analysis:
+            # Initialize LLMComparer only if enabled
+            try:
+                # Attempt to create OllamaClient
+                ollama_client = OllamaClient(base_url=self.config.llm_comparer_pipeline_config.ollama_base_url)
+                self.llm_comparer = LLMComparer(
+                    llm_client=ollama_client,
+                    default_llm_config=LLMRequestConfig(
+                        model_name=self.config.llm_comparer_pipeline_config.llm_model_name,
+                        temperature=self.config.llm_comparer_pipeline_config.llm_temperature,
+                        max_tokens=self.config.llm_comparer_pipeline_config.llm_max_tokens,
+                    ),
+                )
+                logger.info(
+                    f'LLMComparer initialized with model: {self.config.llm_comparer_pipeline_config.llm_model_name}'
+                )
+            except Exception as e:
+                logger.error(f'Failed to initialize LLMComparer: {e}', exc_info=True)
+                # Potentially set a flag or raise an error if LLM is critical but failed
+                # For now, it will proceed without LLM if initialization fails.
 
-        # Initialize components
+        logger.info(
+            f'Initialized ComparisonPipeline. '
+            f'LLM Analysis: {self.config.llm_comparer_pipeline_config.enable_llm_analysis}. '
+            f'Cache: {self.config.cache_intermediate_results}'
+        )
+
+        # Initialize components using their respective configs from the pipeline config
         self.parser = DocumentParser(self.config.parser_config)
         self.aligner = SectionAligner(self.config.alignment_config)
-        self.comparison_engine = EmbeddingComparisonEngine(self.config.comparison_config)
+
+        self.comparison_engine = EmbeddingComparisonEngine(
+            config=self.config.comparison_config, llm_comparer=self.llm_comparer
+        )
         self.formatter = DiffFormatter(self.config.formatter_config)
 
         # Cache for intermediate results
         self._cache = {}
 
-    def compare_documents(
+    async def compare_documents(
         self,
         source_document: Union[str, Path],
         target_document: Union[str, Path],
@@ -101,7 +118,7 @@ class ComparisonPipeline:
             aligned_pairs = self._align_sections(source_sections, target_sections)
 
             # Compare sections
-            comparison_results = self._compare_sections(aligned_pairs)
+            comparison_results = await self._compare_sections(aligned_pairs)
 
             # Format results
             diff_report = self._format_results(comparison_results, title)
@@ -111,10 +128,10 @@ class ComparisonPipeline:
 
         except Exception as e:
             error_msg = f'Error in document comparison pipeline: {str(e)}'
-            logger.error(error_msg)
+            logger.error(error_msg, exc_info=True)
             raise DocumentProcessingError(error_msg) from e
 
-    def compare_sections(
+    async def compare_sections(
         self,
         source_sections: List[Section],
         target_sections: List[Section],
@@ -141,7 +158,7 @@ class ComparisonPipeline:
             aligned_pairs = self._align_sections(source_sections, target_sections)
 
             # Compare sections
-            comparison_results = self._compare_sections(aligned_pairs)
+            comparison_results = await self._compare_sections(aligned_pairs)
 
             # Format results
             diff_report = self._format_results(comparison_results, title)
@@ -151,7 +168,7 @@ class ComparisonPipeline:
 
         except Exception as e:
             error_msg = f'Error in section comparison: {str(e)}'
-            logger.error(error_msg)
+            logger.error(error_msg, exc_info=True)
             raise DocumentProcessingError(error_msg) from e
 
     def _load_document(self, document: Union[str, Path]) -> str:
@@ -224,9 +241,7 @@ class ComparisonPipeline:
 
         return sections
 
-    def _align_sections(
-        self, source_sections: List[Section], target_sections: List[Section]
-    ) -> List[Tuple[Optional[Section], Optional[Section]]]:
+    def _align_sections(self, source_sections: List[Section], target_sections: List[Section]) -> List[AlignmentPair]:
         """Align sections between source and target documents.
 
         Args:
@@ -250,9 +265,9 @@ class ComparisonPipeline:
 
         return aligned_pairs
 
-    def _compare_sections(
+    async def _compare_sections(
         self,
-        aligned_pairs: List[Tuple[Optional[Section], Optional[Section]]],
+        aligned_pairs: List[AlignmentPair],
     ) -> List[SectionComparison]:
         """Compare aligned section pairs.
 
@@ -269,7 +284,7 @@ class ComparisonPipeline:
             return self._cache[cache_key]
 
         logger.debug('Comparing aligned section pairs')
-        comparisons = self.comparison_engine.compare_sections(aligned_pairs)
+        comparisons = await self.comparison_engine.compare_sections(aligned_pairs)
 
         if self.config.cache_intermediate_results:
             self._cache[cache_key] = comparisons
