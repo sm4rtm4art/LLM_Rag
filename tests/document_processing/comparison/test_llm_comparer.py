@@ -43,9 +43,8 @@ async def test_analyze_sections_successful_parse(mock_llm_client):
     """Test successful analysis and parsing of LLM response."""
     mock_llm_client.agenerate_response.return_value = GenerativeLLMResponse(
         text=json.dumps(VALID_LLM_RESPONSE_DATA),  # Simulate LLM returning JSON
-        model_name='test-model',
+        model_name_used='test-model',
         finish_reason='stop',
-        usage=None,
     )
     comparer = LLMComparer(llm_client=mock_llm_client)
     result = await comparer.analyze_sections('text a', 'text b')
@@ -62,9 +61,8 @@ async def test_analyze_sections_json_decode_error(mock_llm_client):
     """Test handling of JSONDecodeError when LLM output is malformed."""
     mock_llm_client.agenerate_response.return_value = GenerativeLLMResponse(
         text=MALFORMED_JSON_STRING,
-        model_name='test-model',
+        model_name_used='test-model',
         finish_reason='stop',
-        usage=None,
     )
     comparer = LLMComparer(llm_client=mock_llm_client)
     result = await comparer.analyze_sections('text a', 'text b')
@@ -83,9 +81,8 @@ async def test_analyze_sections_pydantic_validation_error(mock_llm_client):
     mismatched_json_string = json.dumps(MISMATCHED_JSON_DATA)
     mock_llm_client.agenerate_response.return_value = GenerativeLLMResponse(
         text=mismatched_json_string,
-        model_name='test-model',
+        model_name_used='test-model',
         finish_reason='stop',
-        usage=None,
     )
     comparer = LLMComparer(llm_client=mock_llm_client)
     result = await comparer.analyze_sections('text a', 'text b')
@@ -119,9 +116,8 @@ async def test_analyze_sections_handles_code_fences(mock_llm_client):
     fenced_response_data = f'```json\n{json.dumps(VALID_LLM_RESPONSE_DATA)}\n```'
     mock_llm_client.agenerate_response.return_value = GenerativeLLMResponse(
         text=fenced_response_data,
-        model_name='test-model',
+        model_name_used='test-model',
         finish_reason='stop',
-        usage=None,
     )
     comparer = LLMComparer(llm_client=mock_llm_client)
     result = await comparer.analyze_sections('text a', 'text b')
