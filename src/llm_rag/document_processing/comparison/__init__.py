@@ -1,41 +1,58 @@
 """Document comparison module for identifying differences between documents."""
 
-from llm_rag.document_processing.comparison.alignment import AlignmentConfig, AlignmentPair, SectionAligner
-from llm_rag.document_processing.comparison.comparison_engine import (
-    ComparisonConfig,
-    ComparisonResult,
-    EmbeddingComparisonEngine,
-    SectionComparison,
-)
-from llm_rag.document_processing.comparison.diff_formatter import (
+# Import from component_protocols and domain_models first
+# Then import implementations
+from .alignment import SectionAligner
+from .comparison_engine import EmbeddingComparisonEngine
+from .component_protocols import IAligner, IComparisonEngine, IDiffFormatter, IParser  # If they are meant to be public
+from .diff_formatter import DiffFormatter
+from .document_parser import DocumentParser
+from .domain_models import (
+    AlignmentConfig,
+    AlignmentPair,
+    AlignmentStrategy,  # Added
     AnnotationStyle,
+    ComparisonConfig,
+    ComparisonPipelineConfig,
+    ComparisonResultType,  # Changed from ComparisonResult, imported from domain_models
     DiffFormat,
-    DiffFormatter,
+    DocumentFormat,
     FormatterConfig,
+    ParserConfig,  # Added
+    Section,
+    SectionComparison,
+    SectionType,  # Added
+    SimilarityThresholds,  # Added
 )
-from llm_rag.document_processing.comparison.document_parser import DocumentFormat, DocumentParser, Section
-from llm_rag.document_processing.comparison.pipeline import ComparisonPipeline, ComparisonPipelineConfig
+from .pipeline import ComparisonPipeline
 
+# Update __all__ accordingly
 __all__ = [
-    # Document parsing
-    'DocumentParser',
+    # Protocols (Interfaces)
+    'IParser',
+    'IAligner',
+    'IComparisonEngine',
+    'IDiffFormatter',
+    # Domain Models & Enums
     'Section',
     'DocumentFormat',
-    # Section alignment
-    'SectionAligner',
+    'SectionType',
+    'ParserConfig',
     'AlignmentPair',
+    'AlignmentStrategy',
     'AlignmentConfig',
-    # Comparison engine
-    'EmbeddingComparisonEngine',
+    'ComparisonResultType',  # Changed from ComparisonResult
+    'SimilarityThresholds',
     'ComparisonConfig',
     'SectionComparison',
-    'ComparisonResult',
-    # Diff formatting
-    'DiffFormatter',
-    'FormatterConfig',
     'DiffFormat',
     'AnnotationStyle',
-    # Pipeline
-    'ComparisonPipeline',
+    'FormatterConfig',
     'ComparisonPipelineConfig',
+    # Implementations
+    'DocumentParser',
+    'SectionAligner',
+    'EmbeddingComparisonEngine',
+    'DiffFormatter',
+    'ComparisonPipeline',
 ]
