@@ -297,7 +297,7 @@ pandas==2.2.3
     #   tabula-py
 pdf2image==1.17.0
     # via llm-rag (pyproject.toml)
-pillow==11.2.1
+pillow==11.3.0
     # via
     #   llm-rag (pyproject.toml)
     #   pdf2image
