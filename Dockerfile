@@ -1,5 +1,5 @@
 # === Stage 1: UV Base ===
-FROM ghcr.io/astral-sh/uv:0.6.6 AS uv
+FROM ghcr.io/astral-sh/uv:0.8.14 AS uv
 
 # === Stage 2: Builder ===
 FROM python:3.12-slim AS builder
