@@ -31,7 +31,7 @@ bitsandbytes==0.48.1
     # via llm-rag (pyproject.toml)
 build==1.3.0
     # via chromadb
-cachetools==5.5.2
+cachetools==6.0.0
     # via google-auth
 certifi==2025.10.5
     # via
