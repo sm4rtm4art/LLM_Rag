@@ -41,7 +41,7 @@ jobs:
       cache_hit: ${{ steps.restore-kind-cache.outputs.cache-hit }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
@@ -91,7 +91,7 @@ jobs:
       image_exists: ${{ steps.check-image-existence.outputs.image_exists }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Check if image exists in Docker Hub
       - name: Check if image exists in registry
@@ -154,7 +154,7 @@ jobs:
     if: needs.build-or-pull.outputs.image_exists != 'true' || github.event_name == 'pull_request'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
@@ -212,7 +212,7 @@ jobs:
       (needs.pull-image.result == 'success' || needs.build-image.result == 'success')
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
