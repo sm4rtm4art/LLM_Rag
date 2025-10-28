@@ -46,7 +46,7 @@ charset-normalizer==3.4.4
     # via requests
 chroma-hnswlib==0.7.6
     # via chromadb
-chromadb==0.6.3
+chromadb==1.0.12
     # via
     #   llm-rag (pyproject.toml)
     #   langchain-chroma
