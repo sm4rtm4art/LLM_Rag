@@ -130,14 +130,14 @@ jobs:
           cache-dir: .trivy-cache
 
       - name: Upload vulnerability scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: "trivy-results.sarif"
           category: "trivy-container"
 
       - name: Upload comprehensive scan results
         if: env.SCAN_MODE == 'full' || github.event_name == 'schedule'
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: "trivy-comprehensive.sarif"
           category: "trivy-container-comprehensive"
