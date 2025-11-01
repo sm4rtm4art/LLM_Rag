@@ -95,7 +95,7 @@ jobs:
           echo "Final comprehensive SARIF file contains $RUN_COUNT runs (limit: 20)"
 
       - name: Upload comprehensive Trivy SARIF results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-full-results.sarif
           category: trivy-comprehensive
