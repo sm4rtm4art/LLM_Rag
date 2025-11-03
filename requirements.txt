@@ -180,7 +180,7 @@ langchain-core==0.3.79
     #   langchain-text-splitters
 langchain-huggingface==1.0.0
     # via llm-rag (pyproject.toml)
-langchain-text-splitters==0.3.11
+langchain-text-splitters==1.0.0
     # via langchain
 langdetect==1.0.9
     # via llm-rag (pyproject.toml)
