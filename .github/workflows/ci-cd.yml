@@ -154,7 +154,7 @@ jobs:
 
       # Setup Python environment
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -340,7 +340,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -375,7 +375,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -432,7 +432,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: "${{ env.PYTHON_VERSION }}"
       - name: Cache Python venv
