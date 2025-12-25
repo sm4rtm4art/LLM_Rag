@@ -161,7 +161,7 @@ jsonpatch==1.33
     # via langchain-core
 jsonpointer==3.0.0
     # via jsonpatch
-kubernetes==32.0.1
+kubernetes==34.1.0
     # via chromadb
 langchain==0.3.27
     # via
