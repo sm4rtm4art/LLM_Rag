@@ -36,7 +36,7 @@ jobs:
       - run: python -m venv .venv && echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
       - run: .venv/bin/python -m pip install bandit
       - run: bandit -r src -c pyproject.toml -f json -o bandit.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: bandit-results
           path: bandit.json
@@ -95,7 +95,7 @@ jobs:
           echo "Final comprehensive SARIF file contains $RUN_COUNT runs (limit: 20)"
 
       - name: Upload comprehensive Trivy SARIF results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-full-results.sarif
           category: trivy-comprehensive
@@ -120,7 +120,7 @@ jobs:
           # If we wanted to extract actual vulnerability counts, we would need to parse the SARIF files here
 
       - name: Upload security summary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: security-summary
           path: security-summary.md

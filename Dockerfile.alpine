@@ -3,7 +3,7 @@
 FROM ghcr.io/astral-sh/uv:0.9.7 AS uv
 
 # === Stage 1: Builder ===
-FROM python:3.13-alpine AS builder
+FROM python:3.14-alpine AS builder
 
 # Set environment variables for performance and timeouts.
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -59,7 +59,7 @@ RUN echo '#!/bin/sh\nif [ "$1" = "api" ]; then\n  exec uvicorn llm_rag.api.main:
     chmod +x /app/entrypoint.sh
 
 # === Stage 2: Final Runtime Image ===
-FROM python:3.13-alpine AS final
+FROM python:3.14-alpine AS final
 
 WORKDIR /app
 

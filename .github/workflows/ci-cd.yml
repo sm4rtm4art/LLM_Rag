@@ -173,7 +173,7 @@ jobs:
       - name: Run bandit
         run: bandit -r src -c pyproject.toml -f json -o bandit.json
       - name: Upload bandit results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: bandit-results
           path: bandit.json
@@ -329,7 +329,7 @@ jobs:
           fi
 
       - name: Upload Trivy SARIF results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
 
@@ -600,7 +600,7 @@ jobs:
 
       # Upload scan results
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
           category: container-security
