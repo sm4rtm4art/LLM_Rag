@@ -171,7 +171,7 @@ langchain-chroma==0.2.6
     # via llm-rag (pyproject.toml)
 langchain-community==0.4.1
     # via llm-rag (pyproject.toml)
-langchain-core==1.1.0
+langchain-core==1.2.5
     # via
     #   langchain
     #   langchain-chroma
