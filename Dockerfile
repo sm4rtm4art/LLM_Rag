@@ -2,7 +2,7 @@
 FROM ghcr.io/astral-sh/uv:0.9.7 AS uv
 
 # === Stage 2: Builder ===
-FROM python:3.14.0-slim AS builder
+FROM python:3.14.2-slim AS builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -46,7 +46,7 @@ COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # === Stage 3: Runtime ===
-FROM python:3.14.0-slim AS final
+FROM python:3.14.2-slim AS final
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
