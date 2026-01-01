@@ -14,7 +14,7 @@ jobs:
     # Note: Create 'production' environment in GitHub repository settings before uncommenting
     # environment: production
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
