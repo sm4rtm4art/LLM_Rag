@@ -375,7 +375,7 @@ pyyaml==6.0.3
     #   langchain-core
     #   transformers
     #   uvicorn
-regex==2024.11.6
+regex==2025.11.3
     # via
     #   tiktoken
     #   transformers
