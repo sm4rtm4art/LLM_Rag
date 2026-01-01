@@ -417,7 +417,7 @@ scipy==1.16.3
     #   bitsandbytes
     #   scikit-learn
     #   sentence-transformers
-sentence-transformers==4.1.0
+sentence-transformers==5.2.0
     # via
     #   llm-rag (pyproject.toml)
     #   langchain-huggingface
