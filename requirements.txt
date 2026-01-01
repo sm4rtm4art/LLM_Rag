@@ -343,7 +343,7 @@ pygments==2.19.2
     # via rich
 pymupdf==1.26.6
     # via llm-rag (pyproject.toml)
-pypdf==5.4.0
+pypdf==6.5.0
     # via llm-rag (pyproject.toml)
 pypika==0.48.9
     # via chromadb
