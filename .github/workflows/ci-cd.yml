@@ -173,7 +173,7 @@ jobs:
       - name: Run bandit
         run: bandit -r src -c pyproject.toml -f json -o bandit.json
       - name: Upload bandit results
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: bandit-results
           path: bandit.json

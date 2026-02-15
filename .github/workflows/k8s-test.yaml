@@ -142,7 +142,7 @@ jobs:
           docker save ${IMAGE_NAME}:latest -o /tmp/images/image.tar
 
       - name: Upload image artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: docker-image
           path: /tmp/images/image.tar
@@ -197,7 +197,7 @@ jobs:
           docker save ${IMAGE_NAME}:latest -o /tmp/images/image.tar
 
       - name: Upload image artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: docker-image
           path: /tmp/images/image.tar
@@ -457,7 +457,7 @@ jobs:
       # Upload test logs and diagnostics as artifacts
       - name: Upload test artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: test-artifacts
           path: test-artifacts/
