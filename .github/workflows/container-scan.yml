@@ -35,7 +35,7 @@ jobs:
       SCAN_MODE: ${{ github.event_name == 'pull_request' && 'quick' || (github.event_name == 'workflow_dispatch' && github.event.inputs.scan_level) || 'full' }}
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Aggressive cleanup before Docker build
         run: |
